@@ -2,6 +2,8 @@ package lowgc_quadtree
 
 import (
 	"fmt"
+
+	"github.com/fmstephe/location-system/pkg/store"
 )
 
 // Returns a new empty QuadTree whose View extends from
@@ -56,10 +58,10 @@ type node[K any] struct {
 	ps [LEAF_SIZE]vpoint[K]
 
 	// Used if this node is not a leaf
-	children [4]pointer
+	children [4]store.ObjectPointer[node[K]]
 }
 
-func makeNode[K any](view View, store *treeStore[K]) pointer {
+func makeNode[K any](view View, store *treeStore[K]) store.ObjectPointer[node[K]] {
 	nodePointer, newNode := store.newNode(view)
 	views := view.quarters()
 	for i, view := range views {
@@ -161,7 +163,7 @@ func (n *node[K]) String() string {
 //   - Allocating and recycling leaf and node elements
 type root[K any] struct {
 	store       *treeStore[K]
-	rootPointer pointer
+	rootPointer store.ObjectPointer[node[K]]
 	view        View
 }
 

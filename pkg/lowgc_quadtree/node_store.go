@@ -1,72 +1,31 @@
 package lowgc_quadtree
 
-type treeStore[T any] struct {
-	nodeStore objectStore[node[T]]
+import "github.com/fmstephe/location-system/pkg/store"
+
+type nodeStore[T any] struct {
+	nodes *store.ObjectStore[node[T]]
 }
 
-func newTreeStore[T any]() *treeStore[T] {
-	return &treeStore[T]{
-		nodeStore: newObjectStore[node[T]](),
+func newTreeStore[T any]() *nodeStore[T] {
+	return &nodeStore[T]{
+		nodes: store.NewObjectStore[node[T]](),
 	}
 }
 
-func (s *treeStore[T]) newNode(view View) (pointer, *node[T]) {
-	p, newNode := s.nodeStore.newObject()
+func (s *nodeStore[T]) newNode(view View) (store.ObjectPointer[node[T]], *node[T]) {
+	p, newNode := s.nodes.New()
 	newNode.view = view
 	newNode.isLeaf = false
 	return p, newNode
 }
 
-func (s *treeStore[T]) newLeaf(view View) pointer {
-	p, newLeaf := s.nodeStore.newObject()
+func (s *nodeStore[T]) newLeaf(view View) store.ObjectPointer[node[T]] {
+	p, newLeaf := s.nodes.New()
 	newLeaf.view = view
 	newLeaf.isLeaf = true
 	return p
 }
 
-func (s *treeStore[T]) get(p pointer) *node[T] {
-	return s.nodeStore.getObject(p)
-}
-
-type objectStore[O any] struct {
-	// Immutable fields
-	chunkSize int32
-
-	offset  int32
-	objects [][]O
-}
-
-type pointer struct {
-	chunk  int32
-	offset int32
-}
-
-func newObjectStore[O any]() objectStore[O] {
-	chunkSize := int32(1024)
-	// Initialise the first chunk
-	objects := [][]O{make([]O, chunkSize)}
-	return objectStore[O]{
-		chunkSize: chunkSize,
-		offset:    0,
-		objects:   objects,
-	}
-}
-
-func (s *objectStore[O]) newObject() (pointer, *O) {
-	chunk := int32(len(s.objects) - 1)
-	offset := s.offset
-	s.offset++
-	if s.offset == s.chunkSize {
-		// Create a new chunk
-		s.objects = append(s.objects, make([]O, s.chunkSize))
-		s.offset = 0
-	}
-	return pointer{
-		chunk:  chunk,
-		offset: offset,
-	}, &s.objects[chunk][offset]
-}
-
-func (s *objectStore[O]) getObject(p pointer) *O {
-	return &s.objects[p.chunk][p.offset]
+func (s *nodeStore[T]) get(p store.ObjectPointer[node[T]]) *node[T] {
+	return s.nodes.Get(p)
 }
