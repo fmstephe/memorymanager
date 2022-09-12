@@ -13,6 +13,10 @@ type ObjectPointer[O any] struct {
 	offset int32
 }
 
+func (p ObjectPointer[O]) IsNil() bool {
+	return p.chunk == 0 && p.offset == 0
+}
+
 func NewObjectStore[O any]() *ObjectStore[O] {
 	chunkSize := int32(1024)
 	// Initialise the first chunk
@@ -25,9 +29,9 @@ func NewObjectStore[O any]() *ObjectStore[O] {
 }
 
 func (s *ObjectStore[O]) New() (ObjectPointer[O], *O) {
-	chunk := int32(len(s.objects) - 1)
-	offset := s.offset
+	chunk := int32(len(s.objects))
 	s.offset++
+	offset := s.offset
 	if s.offset == s.chunkSize {
 		// Create a new chunk
 		s.objects = append(s.objects, make([]O, s.chunkSize))
@@ -36,9 +40,9 @@ func (s *ObjectStore[O]) New() (ObjectPointer[O], *O) {
 	return ObjectPointer[O]{
 		chunk:  chunk,
 		offset: offset,
-	}, &s.objects[chunk][offset]
+	}, &s.objects[chunk-1][offset-1]
 }
 
 func (s *ObjectStore[O]) Get(p ObjectPointer[O]) *O {
-	return &s.objects[p.chunk][p.offset]
+	return &s.objects[p.chunk-1][p.offset-1]
 }

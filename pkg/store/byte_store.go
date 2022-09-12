@@ -8,6 +8,10 @@ type BytePointer struct {
 	size   int32
 }
 
+func (p BytePointer) IsNil() bool {
+	return p.chunk == 0 && p.offset == 0
+}
+
 type ByteStore struct {
 	// Immutable fields
 	chunkSize int32
@@ -47,8 +51,8 @@ func (s *ByteStore) New(data []byte) (BytePointer, error) {
 
 	// Create BytePointer pointing recently copied data
 	obj := BytePointer{
-		chunk:  int32(len(s.bytes) - 1),
-		offset: s.offset,
+		chunk:  int32(len(s.bytes)),
+		offset: s.offset + 1,
 		size:   size,
 	}
 
@@ -61,5 +65,5 @@ func (s *ByteStore) New(data []byte) (BytePointer, error) {
 func (s *ByteStore) Get(obj BytePointer) []byte {
 	// There are no pre-checks here - if you pass in a malformed BytePointer
 	// this method may return nonsense or just panic
-	return s.bytes[obj.chunk][obj.offset:obj.size]
+	return s.bytes[obj.chunk-1][obj.offset-1 : obj.size]
 }
