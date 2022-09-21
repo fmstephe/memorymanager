@@ -32,24 +32,18 @@ func NewByteStore(chunkSize int32) *ByteStore {
 	}
 }
 
-func (s *ByteStore) New(data []byte) (BytePointer, error) {
-	// Here we check the size of data at word size (likely int64)
-	// Because the fields are always int32 if we pass this step, int32 is always large enough
-	if len(data) > int(s.chunkSize) {
-		return BytePointer{}, fmt.Errorf("data of size %d, is greater than object size limit %d", len(data), s.chunkSize)
+func (s *ByteStore) New(size int32) (BytePointer, error) {
+	if size > s.chunkSize {
+		return BytePointer{}, fmt.Errorf("data of size %d, is greater than object size limit %d", size, s.chunkSize)
 	}
 
-	size := int32(len(data))
-
-	// If current chunk is too small, move to the next one
+	// If current chunk is too small, create a new chunk and use that
 	if s.offset+size > s.chunkSize {
 		s.offset = 0
 		s.bytes = append(s.bytes, make([]byte, s.chunkSize))
 	}
 
-	copy(s.bytes[len(s.bytes)-1][s.offset:], data)
-
-	// Create BytePointer pointing recently copied data
+	// Create BytePointer pointing to the new slice
 	obj := BytePointer{
 		chunk:  int32(len(s.bytes)),
 		offset: s.offset + 1,
@@ -65,5 +59,15 @@ func (s *ByteStore) New(data []byte) (BytePointer, error) {
 func (s *ByteStore) Get(obj BytePointer) []byte {
 	// There are no pre-checks here - if you pass in a malformed BytePointer
 	// this method may return nonsense or just panic
-	return s.bytes[obj.chunk-1][obj.offset-1 : obj.size]
+
+	// Note the chunk and offset are always 1 greater than their actual
+	// values so we subtract 1 from them before use.  They are 1 greater to
+	// allow a pointer with zero values to represent 'nil'
+	chunk := obj.chunk - 1
+	offset := obj.offset - 1
+
+	// Grab the actual byte values.  It's worth noting here that a pointer
+	// can have size 0, in this case a zero length slice is returned
+	bytes := s.bytes[chunk][offset : offset+obj.size]
+	return bytes
 }

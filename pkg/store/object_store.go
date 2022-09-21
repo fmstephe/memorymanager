@@ -1,5 +1,7 @@
 package store
 
+const objectChunkSize = 1024
+
 type ObjectStore[O any] struct {
 	// Immutable fields
 	chunkSize int32
@@ -18,7 +20,7 @@ func (p ObjectPointer[O]) IsNil() bool {
 }
 
 func NewObjectStore[O any]() *ObjectStore[O] {
-	chunkSize := int32(1024)
+	chunkSize := int32(objectChunkSize)
 	// Initialise the first chunk
 	objects := [][]O{make([]O, chunkSize)}
 	return &ObjectStore[O]{
