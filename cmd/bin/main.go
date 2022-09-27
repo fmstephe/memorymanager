@@ -36,7 +36,7 @@ func main() {
 		if line.Error != nil {
 			fmt.Printf("%d: %s - %d\n", line.LineNum, line.Error)
 		} else {
-			fmt.Printf("%d: %v - %d\n", line.LineNum, line.Plot.Box, line.Id)
+			fmt.Printf("%d: %v - %d\n", line.LineNum, line.Parcel.Plot.Box, line.Parcel.Id)
 		}
 	}
 }
