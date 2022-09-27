@@ -2,12 +2,18 @@ package lds_csv
 
 import (
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"math"
 	"strconv"
 	"strings"
 )
+
+// In the case that the CSV reader generates an error we generate a line
+// ([]string) with two elements, the first is the errString constant and the
+// second is the error itself
+const errString = "error"
 
 type RawCSVEntry struct {
 	LineNum          int
@@ -22,6 +28,8 @@ type RawCSVEntry struct {
 	Titles           string
 	SurveyArea       float64
 	CalcArea         float64
+	// If Error is not nil, then all other fields must be zeroed
+	Error error
 }
 
 type ParcelDimensions struct {
@@ -43,20 +51,7 @@ type Point struct {
 	Latitude  float64
 }
 
-func ReadCSVDataAsync(r io.Reader) (chan RawCSVEntry, error) {
-	// Read all of the csv data from the reader
-	csvR := csv.NewReader(r)
-	lineChan, err := readCSVLinesAsync(csvR)
-	if err != nil {
-		return nil, err
-	}
-
-	entriesChan := processCSVLinesAsync(lineChan)
-
-	return entriesChan, nil
-}
-
-func ReadCSVDataSync(r io.Reader) ([]RawCSVEntry, error) {
+func ReadAllCSVData(r io.Reader) ([]RawCSVEntry, error) {
 	// Read all of the csv data from the reader
 	csvR := csv.NewReader(r)
 
@@ -76,55 +71,30 @@ func ReadCSVDataSync(r io.Reader) ([]RawCSVEntry, error) {
 
 	// Shift the read csv data into a nice struct
 	entries := []RawCSVEntry{}
-	for i, line := range data {
-		lineNum := i + 1
-		// We expect exactly 11 data elements per line
-		if len(line) != 11 {
-			return nil, fmt.Errorf("Error reading line %d, %d parts expect 11 in %v", lineNum, len(line), line)
-		}
-
-		// Read the polygon(s) which define the physical dimensions of the parcel
-		plot, err := parseParcelDimensions(line[0])
-		if err != nil {
-			return nil, fmt.Errorf("Error reading line %d bad plot %q in %v %s", lineNum, line[0], line, err)
-		}
-
-		// Read the ID of the parcel as an integer
-		id, err := strconv.ParseInt(line[1], 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("Error reading line %d bad Id %s in %v %s", lineNum, line[1], line, err)
-		}
-
-		// Read the survey area of the parcel as a float
-		surveyArea, err := parseFloat(line[9])
-		if err != nil {
-			return nil, fmt.Errorf("Error reading line %d bad Survey Area %q in %v %s", lineNum, line[9], line, err)
-		}
-
-		// Read the calculated area of the parcel as a float
-		calcArea, err := parseFloat(line[10])
-		if err != nil {
-			return nil, fmt.Errorf("Error reading line %d bad Calc Area %q in %v %s", lineNum, line[10], line, err)
-		}
-
-		entry := RawCSVEntry{
-			LineNum:          lineNum,
-			Plot:             plot,
-			Id:               id,
-			Appellation:      line[2],
-			AffectedSurveys:  line[3],
-			ParcelIntent:     line[4],
-			TopologyType:     line[5],
-			StatutoryActions: line[6],
-			LandDistrict:     line[7],
-			Titles:           line[8],
-			SurveyArea:       surveyArea,
-			CalcArea:         calcArea,
-		}
+	lineNum := 0
+	for _, line := range data {
+		lineNum++
+		entry := processCSVLine(line, lineNum)
 		entries = append(entries, entry)
 	}
 
 	return entries, nil
+}
+
+// TODO right now errors just get printed and processing stops
+// This is ok for a prototype, but isn't reasonable for a proper implementation
+// Errors will likely need to be folded into the RawCSVEntry struct itself
+func ReadCSVDataAsync(r io.Reader) (chan RawCSVEntry, error) {
+	// Read all of the csv data from the reader
+	csvR := csv.NewReader(r)
+	lineChan, err := readCSVLinesAsync(csvR)
+	if err != nil {
+		return nil, err
+	}
+
+	entriesChan := processCSVLinesAsync(lineChan)
+
+	return entriesChan, nil
 }
 
 func readCSVLinesAsync(csvR *csv.Reader) (chan []string, error) {
@@ -147,9 +117,9 @@ func readCSVLinesAsync(csvR *csv.Reader) (chan []string, error) {
 				return
 			}
 			if err != nil {
-				// TODO print an error here
-				return
+				lineChan <- []string{errString, err.Error()}
 			}
+
 			lineChan <- line
 		}
 	}()
@@ -166,59 +136,63 @@ func processCSVLinesAsync(lineChan chan []string) chan RawCSVEntry {
 		lineNum := 0
 		for line := range lineChan {
 			lineNum++
-			// We expect exactly 11 data elements per line
-			if len(line) != 11 {
-				fmt.Printf("Error reading line %d, %d parts expect 11 in %v", lineNum, len(line), line)
-				return
-			}
-
-			// Read the polygon(s) which define the physical dimensions of the parcel
-			plot, err := parseParcelDimensions(line[0])
-			if err != nil {
-				fmt.Printf("Error reading line %d bad plot %q in %v %s", lineNum, line[0], line, err)
-				return
-			}
-
-			// Read the ID of the parcel as an integer
-			id, err := strconv.ParseInt(line[1], 10, 64)
-			if err != nil {
-				fmt.Printf("Error reading line %d bad Id %s in %v %s", lineNum, line[1], line, err)
-				return
-			}
-
-			// Read the survey area of the parcel as a float
-			surveyArea, err := parseFloat(line[9])
-			if err != nil {
-				fmt.Printf("Error reading line %d bad Survey Area %q in %v %s", lineNum, line[9], line, err)
-				return
-			}
-
-			// Read the calculated area of the parcel as a float
-			calcArea, err := parseFloat(line[10])
-			if err != nil {
-				fmt.Printf("Error reading line %d bad Calc Area %q in %v %s", lineNum, line[10], line, err)
-				return
-			}
-
-			entry := RawCSVEntry{
-				LineNum:          lineNum,
-				Plot:             plot,
-				Id:               id,
-				Appellation:      line[2],
-				AffectedSurveys:  line[3],
-				ParcelIntent:     line[4],
-				TopologyType:     line[5],
-				StatutoryActions: line[6],
-				LandDistrict:     line[7],
-				Titles:           line[8],
-				SurveyArea:       surveyArea,
-				CalcArea:         calcArea,
-			}
+			entry := processCSVLine(line, lineNum)
 			entriesChan <- entry
 		}
 	}()
 
 	return entriesChan
+}
+
+func processCSVLine(line []string, lineNum int) RawCSVEntry {
+	// First case is we may be consuming an error line
+	if len(line) == 2 && line[0] == errString {
+		return RawCSVEntry{LineNum: lineNum, Error: errors.New(line[1])}
+	}
+
+	// We expect exactly 11 data elements per line
+	if len(line) != 11 {
+		return RawCSVEntry{LineNum: lineNum, Error: fmt.Errorf("Error reading line %d, %d parts expect 11 in %v", lineNum, len(line), line)}
+	}
+
+	// Read the polygon(s) which define the physical dimensions of the parcel
+	plot, err := parseParcelDimensions(line[0])
+	if err != nil {
+		return RawCSVEntry{LineNum: lineNum, Error: fmt.Errorf("Error reading line %d bad plot %q in %v %s", lineNum, line[0], line, err)}
+	}
+
+	// Read the ID of the parcel as an integer
+	id, err := strconv.ParseInt(line[1], 10, 64)
+	if err != nil {
+		return RawCSVEntry{LineNum: lineNum, Error: fmt.Errorf("Error reading line %d bad Id %s in %v %s", lineNum, line[1], line, err)}
+	}
+
+	// Read the survey area of the parcel as a float
+	surveyArea, err := parseFloat(line[9])
+	if err != nil {
+		return RawCSVEntry{LineNum: lineNum, Error: fmt.Errorf("Error reading line %d bad Survey Area %q in %v %s", lineNum, line[9], line, err)}
+	}
+
+	// Read the calculated area of the parcel as a float
+	calcArea, err := parseFloat(line[10])
+	if err != nil {
+		return RawCSVEntry{LineNum: lineNum, Error: fmt.Errorf("Error reading line %d bad Calc Area %q in %v %s", lineNum, line[10], line, err)}
+	}
+
+	return RawCSVEntry{
+		LineNum:          lineNum,
+		Plot:             plot,
+		Id:               id,
+		Appellation:      line[2],
+		AffectedSurveys:  line[3],
+		ParcelIntent:     line[4],
+		TopologyType:     line[5],
+		StatutoryActions: line[6],
+		LandDistrict:     line[7],
+		Titles:           line[8],
+		SurveyArea:       surveyArea,
+		CalcArea:         calcArea,
+	}
 }
 
 func parseFloat(raw string) (float64, error) {
