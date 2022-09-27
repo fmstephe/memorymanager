@@ -28,7 +28,8 @@ type RawCSVEntry struct {
 	Titles           string
 	SurveyArea       float64
 	CalcArea         float64
-	// If Error is not nil, then all other fields must be zeroed
+	// If Error is not nil, then all other fields must be zeroed except
+	// for LineNum
 	Error error
 }
 
