@@ -6,8 +6,6 @@ import (
 	"strconv"
 )
 
-var invalidView View
-
 // A View is a rectangle defined by four points, from two x coords and two y
 // coords. The coordinate system places the origin (0,0) in the top left
 // hand corner if you drew it on a piece of paper. However, it is allowed
@@ -189,7 +187,7 @@ func (v View) Intersect(ov View) View {
 		return v
 	}
 	if !v.overlaps(ov) {
-		return invalidView
+		return View{}
 	}
 	ilx := math.Max(v.lx, ov.lx)
 	irx := math.Min(v.rx, ov.rx)
