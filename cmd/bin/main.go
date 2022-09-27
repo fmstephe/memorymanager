@@ -26,15 +26,13 @@ func main() {
 		return
 	}
 
-	data, err := lds_csv.ReadCSVData(f)
+	entriesChan, err := lds_csv.ReadCSVDataAsync(f)
 	if err != nil {
 		fmt.Printf("Error reading csv data %s\n", err)
 		return
 	}
 
-	fmt.Printf("Successfully read %d lds data-points\n", len(data))
-
-	for i, line := range data {
-		fmt.Printf("%d: %v - %d\n", i, line.Plot, line.Id)
+	for line := range entriesChan {
+		fmt.Printf("%d: %v - %d\n", line.LineNum, line.Plot.Box, line.Id)
 	}
 }

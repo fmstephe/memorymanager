@@ -4,12 +4,14 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 )
 
 type RawCSVEntry struct {
-	Plot             []Polygon
+	LineNum          int
+	Plot             ParcelDimensions
 	Id               int64
 	Appellation      string
 	AffectedSurveys  string
@@ -22,18 +24,51 @@ type RawCSVEntry struct {
 	CalcArea         float64
 }
 
+type ParcelDimensions struct {
+	Polygons []Polygon
+	Box      BoundingBox
+}
+
 type Polygon struct {
 	Points []Point
 }
 
-type Point struct {
-	Longitude float64
-	Lattitude float64
+type BoundingBox struct {
+	NorthWest Point
+	SouthEast Point
 }
 
-func ReadCSVData(r io.Reader) ([]RawCSVEntry, error) {
+type Point struct {
+	Longitude float64
+	Latitude  float64
+}
+
+func ReadCSVDataAsync(r io.Reader) (chan RawCSVEntry, error) {
 	// Read all of the csv data from the reader
 	csvR := csv.NewReader(r)
+	lineChan, err := readCSVLinesAsync(csvR)
+	if err != nil {
+		return nil, err
+	}
+
+	entriesChan := processCSVLinesAsync(lineChan)
+
+	return entriesChan, nil
+}
+
+func ReadCSVDataSync(r io.Reader) ([]RawCSVEntry, error) {
+	// Read all of the csv data from the reader
+	csvR := csv.NewReader(r)
+
+	// Consume the first line and ignore it
+	// This line contains the column names and no data
+	// TODO actually read and validate the column names
+	_, err := csvR.Read()
+	if err != nil {
+		return nil, err
+	}
+
+	// Consume all data lines
 	data, err := csvR.ReadAll()
 	if err != nil {
 		return nil, err
@@ -42,37 +77,38 @@ func ReadCSVData(r io.Reader) ([]RawCSVEntry, error) {
 	// Shift the read csv data into a nice struct
 	entries := []RawCSVEntry{}
 	for i, line := range data {
-		if i == 0 {
-			// the first line simply names all the csv columns
-			// Ignore this
-			continue
-		}
-
-		plot, err := parsePlot(line[0])
-		if err != nil {
-			return nil, fmt.Errorf("Error reading line %d bad plot %q in %v %s", i, line[0], line, err)
-		}
-
+		lineNum := i + 1
+		// We expect exactly 11 data elements per line
 		if len(line) != 11 {
-			return nil, fmt.Errorf("Bad line %v has %d parts, expect 11 %s", line, len(line), err)
+			return nil, fmt.Errorf("Error reading line %d, %d parts expect 11 in %v", lineNum, len(line), line)
 		}
 
+		// Read the polygon(s) which define the physical dimensions of the parcel
+		plot, err := parseParcelDimensions(line[0])
+		if err != nil {
+			return nil, fmt.Errorf("Error reading line %d bad plot %q in %v %s", lineNum, line[0], line, err)
+		}
+
+		// Read the ID of the parcel as an integer
 		id, err := strconv.ParseInt(line[1], 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("Error reading line %d bad Id %s in %v %s", i, line[1], line, err)
+			return nil, fmt.Errorf("Error reading line %d bad Id %s in %v %s", lineNum, line[1], line, err)
 		}
 
+		// Read the survey area of the parcel as a float
 		surveyArea, err := parseFloat(line[9])
 		if err != nil {
-			return nil, fmt.Errorf("Error reading line %d bad Survey Area %q in %v %s", i, line[9], line, err)
+			return nil, fmt.Errorf("Error reading line %d bad Survey Area %q in %v %s", lineNum, line[9], line, err)
 		}
 
+		// Read the calculated area of the parcel as a float
 		calcArea, err := parseFloat(line[10])
 		if err != nil {
-			return nil, fmt.Errorf("Error reading line %d bad Calc Area %q in %v %s", i, line[10], line, err)
+			return nil, fmt.Errorf("Error reading line %d bad Calc Area %q in %v %s", lineNum, line[10], line, err)
 		}
 
 		entry := RawCSVEntry{
+			LineNum:          lineNum,
 			Plot:             plot,
 			Id:               id,
 			Appellation:      line[2],
@@ -89,6 +125,100 @@ func ReadCSVData(r io.Reader) ([]RawCSVEntry, error) {
 	}
 
 	return entries, nil
+}
+
+func readCSVLinesAsync(csvR *csv.Reader) (chan []string, error) {
+	lineChan := make(chan []string, 1024)
+
+	// Consume the first line and ignore it
+	// This line contains the column names and no data
+	// TODO actually read and validate the column names
+	_, err := csvR.Read()
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		defer close(lineChan)
+		for {
+			line, err := csvR.Read()
+			if err == io.EOF {
+				// No more csv data
+				return
+			}
+			if err != nil {
+				// TODO print an error here
+				return
+			}
+			lineChan <- line
+		}
+	}()
+	return lineChan, nil
+}
+
+func processCSVLinesAsync(lineChan chan []string) chan RawCSVEntry {
+	// Shift the read csv data into a nice struct
+	entriesChan := make(chan RawCSVEntry, 1024)
+
+	go func() {
+		defer close(entriesChan)
+
+		lineNum := 0
+		for line := range lineChan {
+			lineNum++
+			// We expect exactly 11 data elements per line
+			if len(line) != 11 {
+				fmt.Printf("Error reading line %d, %d parts expect 11 in %v", lineNum, len(line), line)
+				return
+			}
+
+			// Read the polygon(s) which define the physical dimensions of the parcel
+			plot, err := parseParcelDimensions(line[0])
+			if err != nil {
+				fmt.Printf("Error reading line %d bad plot %q in %v %s", lineNum, line[0], line, err)
+				return
+			}
+
+			// Read the ID of the parcel as an integer
+			id, err := strconv.ParseInt(line[1], 10, 64)
+			if err != nil {
+				fmt.Printf("Error reading line %d bad Id %s in %v %s", lineNum, line[1], line, err)
+				return
+			}
+
+			// Read the survey area of the parcel as a float
+			surveyArea, err := parseFloat(line[9])
+			if err != nil {
+				fmt.Printf("Error reading line %d bad Survey Area %q in %v %s", lineNum, line[9], line, err)
+				return
+			}
+
+			// Read the calculated area of the parcel as a float
+			calcArea, err := parseFloat(line[10])
+			if err != nil {
+				fmt.Printf("Error reading line %d bad Calc Area %q in %v %s", lineNum, line[10], line, err)
+				return
+			}
+
+			entry := RawCSVEntry{
+				LineNum:          lineNum,
+				Plot:             plot,
+				Id:               id,
+				Appellation:      line[2],
+				AffectedSurveys:  line[3],
+				ParcelIntent:     line[4],
+				TopologyType:     line[5],
+				StatutoryActions: line[6],
+				LandDistrict:     line[7],
+				Titles:           line[8],
+				SurveyArea:       surveyArea,
+				CalcArea:         calcArea,
+			}
+			entriesChan <- entry
+		}
+	}()
+
+	return entriesChan
 }
 
 func parseFloat(raw string) (float64, error) {
@@ -108,7 +238,7 @@ func parseFloat(raw string) (float64, error) {
 //
 // Example a POLYGON would look like
 // "MULTIPOLYGON (((11.123 -22.123,33.123 -44.123)),((55.123 -66.123, 77.123 -88.123)))"
-func parsePlot(raw string) ([]Polygon, error) {
+func parseParcelDimensions(raw string) (ParcelDimensions, error) {
 	polys := []Polygon{}
 
 	// Remove leading POLYGON/MULTIPOLYGON string
@@ -123,11 +253,17 @@ func parsePlot(raw string) ([]Polygon, error) {
 		}
 		poly, err := parsePolygon(part)
 		if err != nil {
-			return nil, err
+			return ParcelDimensions{}, err
 		}
 		polys = append(polys, poly)
 	}
-	return polys, nil
+
+	boundingBox := getBoundingBox(polys)
+
+	return ParcelDimensions{
+		Polygons: polys,
+		Box:      boundingBox,
+	}, nil
 }
 
 // Expects a string with "((" + "long-lat pairs separated by comma" + "))"
@@ -171,6 +307,45 @@ func parseLongLatPair(raw string) (Point, error) {
 
 	return Point{
 		Longitude: long,
-		Lattitude: lat,
+		Latitude:  lat,
 	}, nil
+}
+
+func getBoundingBox(polygons []Polygon) BoundingBox {
+	// This will be the lowest longitude value
+	westLongitude := math.MaxFloat64
+	// This will be the largest longitude value
+	eastLongitude := -westLongitude
+	// This will be the lowest latitude value
+	southLatitude := math.MaxFloat64
+	// This will be the largest latitude value
+	northLatitude := -southLatitude
+
+	for _, polygon := range polygons {
+		for _, point := range polygon.Points {
+			if westLongitude > point.Longitude {
+				westLongitude = point.Longitude
+			}
+			if eastLongitude < point.Longitude {
+				eastLongitude = point.Longitude
+			}
+			if southLatitude > point.Latitude {
+				southLatitude = point.Latitude
+			}
+			if northLatitude < point.Latitude {
+				northLatitude = point.Latitude
+			}
+		}
+	}
+
+	return BoundingBox{
+		NorthWest: Point{
+			Longitude: westLongitude,
+			Latitude:  northLatitude,
+		},
+		SouthEast: Point{
+			Longitude: eastLongitude,
+			Latitude:  southLatitude,
+		},
+	}
 }
