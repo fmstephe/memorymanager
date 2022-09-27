@@ -20,22 +20,22 @@ var testRand = rand.New(rand.NewSource(1))
 
 func buildTestTrees() []T[string] {
 	return []T[string]{
-		NewQuadTree[string](0, 10, 0, 10),
-		NewQuadTree[string](0, 1, 0, 2),
-		NewQuadTree[string](0, 100, 0, 300),
-		NewQuadTree[string](0, 20.4, 0, 35.6),
-		NewQuadTree[string](0, 1e10, 0, 500.00000001),
+		NewQuadTree[string](NewView(0, 10, 10, 0)),
+		NewQuadTree[string](NewView(0, 1, 2, 0)),
+		NewQuadTree[string](NewView(0, 100, 300, 0)),
+		NewQuadTree[string](NewView(0, 20.4, 35.6, 0)),
+		NewQuadTree[string](NewView(0, 1e10, 500.00000001, 0)),
 		// Negative regions
-		NewQuadTree[string](-10, 10, -10, 10),
-		NewQuadTree[string](-1, 1, -2, 2),
-		NewQuadTree[string](-100, 100, -300, 300),
-		NewQuadTree[string](-20.4, 20.4, -35.6, 35.6),
-		NewQuadTree[string](-1e10, 1e10, -500.00000001, 500.00000001),
+		NewQuadTree[string](NewView(-10, 10, 10, -10)),
+		NewQuadTree[string](NewView(-1, 1, 2, -2)),
+		NewQuadTree[string](NewView(-100, 100, 300, -300)),
+		NewQuadTree[string](NewView(-20.4, 20.4, 35.6, -35.6)),
+		NewQuadTree[string](NewView(-1e10, 1e10, 500.00000001, -500.00000001)),
 	}
 }
 
 func TestOverflowLeaf(t *testing.T) {
-	tree := NewQuadTree[string](0, 1, 0, 1)
+	tree := NewQuadTree[string](NewView(0, 1, 1, 0))
 	ps := fillView(tree.View(), 70)
 	for i, p := range ps {
 		tree.Insert(p.x, p.y, fmt.Sprintf("test-%d", i))
@@ -193,7 +193,7 @@ func fillView(v View, c int) []point {
 func subView(v View) View {
 	lx := testRand.Float64()*(v.rx-v.lx) + v.lx
 	rx := testRand.Float64()*(v.rx-lx) + lx
-	ty := testRand.Float64()*(v.by-v.ty) + v.ty
-	by := testRand.Float64()*(v.by-ty) + ty
+	by := testRand.Float64()*(v.ty-v.by) + v.by
+	ty := testRand.Float64()*(v.ty-by) + by
 	return NewView(lx, rx, ty, by)
 }

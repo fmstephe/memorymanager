@@ -11,9 +11,8 @@ import (
 // topY down to bottomY along the y axis
 // leftX < rightX
 // topY < bottomY
-func NewQuadTree[K any](leftX, rightX, topY, bottomY float64) T[K] {
-	var newView = NewView(leftX, rightX, topY, bottomY)
-	return newRoot[K](newView)
+func NewQuadTree[K any](view View) T[K] {
+	return newRoot[K](view)
 }
 
 // A point with a slice of stored elements
