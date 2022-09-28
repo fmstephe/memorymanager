@@ -173,10 +173,14 @@ func newRoot[K any](view View) *root[K] {
 }
 
 // Inserts the value nval into this tree
-func (r *root[K]) Insert(x, y float64, nval K) {
+func (r *root[K]) Insert(x, y float64, nval K) error {
+	if !r.view.contains(x, y) {
+		return fmt.Errorf("cannot insert x(%f) y(%f) into view %s", x, y, r.view)
+	}
 	elemsP := r.store.newElem(nval)
 	st := r.store.getNode(r.rootPointer)
 	st.insert(x, y, elemsP, r.store)
+	return nil
 }
 
 // Applies fun to every element occurring within view in this tree

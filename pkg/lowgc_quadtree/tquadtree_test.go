@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const dups = 10
@@ -38,7 +40,8 @@ func TestOverflowLeaf(t *testing.T) {
 	tree := NewQuadTree[string](NewView(0, 1, 1, 0))
 	ps := fillView(tree.View(), 70)
 	for i, p := range ps {
-		tree.Insert(p.x, p.y, fmt.Sprintf("test-%d", i))
+		err := tree.Insert(p.x, p.y, fmt.Sprintf("test-%d", i))
+		assert.NoError(t, err)
 	}
 	fun, results := SimpleSurvey[string]()
 	tree.Survey(tree.View(), fun)
@@ -57,7 +60,8 @@ func TestOneElement(t *testing.T) {
 
 func testOneElement(tree T[string], t *testing.T) {
 	x, y := randomPosition(tree.View())
-	tree.Insert(x, y, "test")
+	err := tree.Insert(x, y, "test")
+	assert.NoError(t, err)
 	fun, results := SimpleSurvey[string]()
 	tree.Survey(tree.View(), fun)
 	if results.Len() != 1 || "test" != results.Front().Value {
@@ -65,11 +69,10 @@ func testOneElement(tree T[string], t *testing.T) {
 	}
 }
 
-// Test that if we add 5 elements into a single quadrant of a fresh tree
-// We can successfully retrieve those elements. This test is tied to
-// the implementation detail that a quadrant with 5 elements will
-// over-load a single leaf and must rearrange itself to fit the 5th
-// element in.
+// Here we fill up each quadrant of the root leaves of the tree. We exploit the
+// implementation detail that each quadrant can hold LEAF_SIZE many elements
+// before it overflows.  So we take care to insert more than LEAF_SIZE many
+// elements into each quadrant.
 func TestFullLeaf(t *testing.T) {
 	testTrees := buildTestTrees()
 	for _, tree := range testTrees {
@@ -81,15 +84,29 @@ func TestFullLeaf(t *testing.T) {
 }
 
 func testFullLeaf(tree T[string], v View, msg string, t *testing.T) {
-	for i := 0; i < LEAF_SIZE; i++ {
+	inserts := LEAF_SIZE * 2
+	for i := 0; i < inserts; i++ {
 		x, y := randomPosition(v)
 		name := "test" + strconv.Itoa(i)
-		tree.Insert(x, y, name)
+		err := tree.Insert(x, y, name)
+		assert.NoError(t, err)
 	}
 	fun, results := SimpleSurvey[string]()
 	tree.Survey(v, fun)
-	if results.Len() != LEAF_SIZE {
-		t.Error(msg, "Inserted 5 elements into a fresh quadtree and retrieved only ", results.Len())
+	if results.Len() != inserts {
+		t.Error(msg, "Inserted %d elements into a fresh quadtree and retrieved only %s", inserts, results.Len())
+	}
+}
+
+// Show that any insert of a point which is not contained in the view of a tree
+// returns and error
+func TestBadInsert(t *testing.T) {
+	v1, v2 := disjoint()
+	tree := NewQuadTree[string](v1)
+	ps := fillView(v2, 100)
+	for _, p := range ps {
+		err := tree.Insert(p.x, p.y, "test")
+		assert.Error(t, err)
 	}
 }
 
@@ -110,7 +127,8 @@ func testScatter(tree T[string], t *testing.T) {
 	t.Helper()
 	ps := fillView(tree.View(), 1000)
 	for _, p := range ps {
-		tree.Insert(p.x, p.y, "test")
+		err := tree.Insert(p.x, p.y, "test")
+		assert.NoError(t, err)
 	}
 	for i := 0; i < 1000; i++ {
 		sv := subView(tree.View())
@@ -135,7 +153,8 @@ func testScatterDup(tree T[string], t *testing.T) {
 	ps := fillView(tree.View(), 1000)
 	for _, p := range ps {
 		for i := 0; i < dups; i++ {
-			tree.Insert(p.x, p.y, "test_"+strconv.Itoa(i))
+			err := tree.Insert(p.x, p.y, "test_"+strconv.Itoa(i))
+			assert.NoError(t, err)
 		}
 	}
 	for i := 0; i < 1000; i++ {
