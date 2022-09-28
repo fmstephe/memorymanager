@@ -1,13 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
 
 	"github.com/fmstephe/location-system/pkg/lds/lds_csv"
 	"github.com/fmstephe/location-system/pkg/lowgc_quadtree"
+	"github.com/fmstephe/location-system/pkg/store"
 )
 
 var (
@@ -34,19 +37,20 @@ func main() {
 		return
 	}
 
-	tree := fillTree(entriesChan)
+	tree, byteStore := fillTree(entriesChan)
 
 	handler := ParcelHandler{
-		tree: tree,
+		byteStore: byteStore,
+		tree:      tree,
 	}
 
 	http.HandleFunc("/survey", handler.Handle)
 	http.ListenAndServe(":8080", nil)
 }
 
-func fillTree(parcelChan chan lds_csv.CSVParcelData) lowgc_quadtree.T[lds_csv.ParcelData] {
-	// TODO convert this to use a byte store
-	tree := lowgc_quadtree.NewQuadTree[lds_csv.ParcelData](lowgc_quadtree.NewLongLatView())
+func fillTree(parcelChan chan lds_csv.CSVParcelData) (lowgc_quadtree.T[store.BytePointer], *store.ByteStore) {
+	byteStore := store.NewByteStore(100 * store.MB)
+	tree := lowgc_quadtree.NewQuadTree[store.BytePointer](lowgc_quadtree.NewLongLatView())
 
 	count := 0
 	errCount := 0
@@ -61,22 +65,38 @@ func fillTree(parcelChan chan lds_csv.CSVParcelData) lowgc_quadtree.T[lds_csv.Pa
 			westLat := line.Parcel.Plot.Box.NorthWest.Latitude
 			eastLat := line.Parcel.Plot.Box.SouthEast.Latitude
 
-			if err := tree.Insert(northLong, westLat, line.Parcel); err != nil {
+			// Json marshal the parcel data
+			bytes, err := json.Marshal(line.Parcel)
+			if err != nil {
 				fmt.Printf("%d: %s\n", line.LineNum, err)
 				errCount++
 				continue
 			}
-			if err := tree.Insert(northLong, eastLat, line.Parcel); err != nil {
+			op, err := byteStore.New(int32(len(bytes)))
+			if err != nil {
 				fmt.Printf("%d: %s\n", line.LineNum, err)
 				errCount++
 				continue
 			}
-			if err := tree.Insert(southLong, westLat, line.Parcel); err != nil {
+			buffer := byteStore.Get(op)
+			copy(buffer, bytes)
+
+			if err := tree.Insert(northLong, westLat, op); err != nil {
 				fmt.Printf("%d: %s\n", line.LineNum, err)
 				errCount++
 				continue
 			}
-			if err := tree.Insert(southLong, eastLat, line.Parcel); err != nil {
+			if err := tree.Insert(northLong, eastLat, op); err != nil {
+				fmt.Printf("%d: %s\n", line.LineNum, err)
+				errCount++
+				continue
+			}
+			if err := tree.Insert(southLong, westLat, op); err != nil {
+				fmt.Printf("%d: %s\n", line.LineNum, err)
+				errCount++
+				continue
+			}
+			if err := tree.Insert(southLong, eastLat, op); err != nil {
 				fmt.Printf("%d: %s\n", line.LineNum, err)
 				errCount++
 				continue
@@ -89,5 +109,7 @@ func fillTree(parcelChan chan lds_csv.CSVParcelData) lowgc_quadtree.T[lds_csv.Pa
 	fmt.Printf("Inserted %d parcels into database\n", count)
 	fmt.Printf("Failed to insert %d parcels into database\n", errCount)
 
-	return tree
+	runtime.GC()
+
+	return tree, byteStore
 }

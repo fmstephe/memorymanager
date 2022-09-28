@@ -1,18 +1,19 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime"
 	"runtime/metrics"
 	"strconv"
 
-	"github.com/fmstephe/location-system/pkg/lds/lds_csv"
 	"github.com/fmstephe/location-system/pkg/lowgc_quadtree"
+	"github.com/fmstephe/location-system/pkg/store"
 )
 
 type ParcelHandler struct {
-	tree lowgc_quadtree.T[lds_csv.ParcelData]
+	byteStore *store.ByteStore
+	tree      lowgc_quadtree.T[store.BytePointer]
 }
 
 func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {
@@ -54,24 +55,30 @@ func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	view := lowgc_quadtree.NewView(lx, rx, ty, by)
 	w.Write(startArray)
-	s.tree.Survey(view, surveyFunc(w))
+	s.tree.Survey(view, surveyFunc(w, s.byteStore))
 	w.Write(endArray)
 
 	printHeapAllocs("finish")
+	runtime.GC()
 }
 
 var startArray = []byte("[")
 var endArray = []byte("nil]")
-var comma = []byte(",")
+var comma = []byte(",\n")
 
-func surveyFunc(w http.ResponseWriter) func(_, _ float64, e lds_csv.ParcelData) {
-	return func(_, _ float64, e lds_csv.ParcelData) {
-		bytes, err := json.Marshal(e)
-		if err != nil {
-			// TODO handle error
+func surveyFunc(w http.ResponseWriter, byteStore *store.ByteStore) func(_, _ float64, bp store.BytePointer) {
+	pointerSet := map[store.BytePointer]struct{}{}
+	return func(_, _ float64, bp store.BytePointer) {
+		if _, ok := pointerSet[bp]; ok {
+			// We've already seen this pointer, don't write it out again
+			return
 		}
 
-		_, err = w.Write(bytes)
+		pointerSet[bp] = struct{}{}
+
+		bytes := byteStore.Get(bp)
+
+		_, err := w.Write(bytes)
 		if err != nil {
 			// TODO handle error
 		}
@@ -80,7 +87,6 @@ func surveyFunc(w http.ResponseWriter) func(_, _ float64, e lds_csv.ParcelData) 
 		if err != nil {
 			// TODO handle error
 		}
-
 	}
 }
 

@@ -21,12 +21,20 @@ type ByteStore struct {
 	bytes  [][]byte
 }
 
-func NewByteStore(chunkSize int32) *ByteStore {
+// Convenience constants to make it easier to declare large max object size values
+const (
+	_        = iota // ignore first value by assigning to blank identifier
+	KB int32 = 1 << (10 * iota)
+	MB
+	GB
+)
+
+func NewByteStore(maxObjectSize int32) *ByteStore {
 	// Initialise bytes with a single empty chunk available
-	bytes := [][]byte{make([]byte, chunkSize)}
+	bytes := [][]byte{make([]byte, maxObjectSize)}
 
 	return &ByteStore{
-		chunkSize: chunkSize,
+		chunkSize: maxObjectSize,
 		offset:    0,
 		bytes:     bytes,
 	}
