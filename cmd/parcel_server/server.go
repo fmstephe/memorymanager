@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime/metrics"
 	"strconv"
 
 	"github.com/fmstephe/location-system/pkg/lds/lds_csv"
@@ -15,6 +16,8 @@ type ParcelHandler struct {
 }
 
 func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {
+	printHeapAllocs("start")
+
 	err := r.ParseForm()
 	if err != nil {
 		// TODO handle error
@@ -53,6 +56,8 @@ func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	w.Write(startArray)
 	s.tree.Survey(view, surveyFunc(w))
 	w.Write(endArray)
+
+	printHeapAllocs("finish")
 }
 
 var startArray = []byte("[")
@@ -77,4 +82,19 @@ func surveyFunc(w http.ResponseWriter) func(_, _ float64, e lds_csv.ParcelData) 
 		}
 
 	}
+}
+
+func printHeapAllocs(prefix string) {
+	// Name of the metric we want to read.
+	const myMetric = "/gc/heap/objects:objects"
+
+	// Create a sample for the metric.
+	sample := make([]metrics.Sample, 1)
+	sample[0].Name = myMetric
+
+	// Sample the metric.
+	metrics.Read(sample)
+
+	objects := sample[0].Value.Uint64()
+	fmt.Printf("%s objects %d\n", prefix, objects)
 }
