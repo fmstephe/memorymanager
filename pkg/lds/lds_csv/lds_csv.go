@@ -282,6 +282,11 @@ func parseLongLatPair(raw string) (Point, error) {
 		return Point{}, err
 	}
 
+	// Ensure that the coordinates are within expected long/lat bounds
+	if long > 180 || long < -180 || lat > 90 || lat < -90 {
+		return Point{}, fmt.Errorf("illegal coordinate values long/lat %f/%f", long, lat)
+	}
+
 	return Point{
 		Longitude: long,
 		Latitude:  lat,
