@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"runtime"
@@ -45,7 +46,8 @@ func main() {
 	}
 
 	http.HandleFunc("/survey", handler.Handle)
-	http.ListenAndServe(":8080", nil)
+	http.Handle("/", http.FileServer(http.Dir("./html")))
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func fillTree(parcelChan chan lds_csv.CSVParcelData) (lowgc_quadtree.T[store.BytePointer], *store.ByteStore) {
