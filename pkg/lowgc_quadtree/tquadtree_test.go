@@ -20,8 +20,8 @@ type point struct {
 // This is done to make the benchmarks consistent between runs
 var testRand = rand.New(rand.NewSource(1))
 
-func buildTestTrees() []T[string] {
-	return []T[string]{
+func buildTestTrees() []Tree[string] {
+	return []Tree[string]{
 		NewQuadTree[string](NewView(0, 10, 10, 0)),
 		NewQuadTree[string](NewView(0, 1, 2, 0)),
 		NewQuadTree[string](NewView(0, 100, 300, 0)),
@@ -58,7 +58,7 @@ func TestOneElement(t *testing.T) {
 	}
 }
 
-func testOneElement(tree T[string], t *testing.T) {
+func testOneElement(tree Tree[string], t *testing.T) {
 	x, y := randomPosition(tree.View())
 	err := tree.Insert(x, y, "test")
 	assert.NoError(t, err)
@@ -83,7 +83,7 @@ func TestFullLeaf(t *testing.T) {
 	}
 }
 
-func testFullLeaf(tree T[string], v View, msg string, t *testing.T) {
+func testFullLeaf(tree Tree[string], v View, msg string, t *testing.T) {
 	inserts := LEAF_SIZE * 2
 	for i := 0; i < inserts; i++ {
 		x, y := randomPosition(v)
@@ -123,7 +123,7 @@ func TestScatter(t *testing.T) {
 	}
 }
 
-func testScatter(tree T[string], t *testing.T) {
+func testScatter(tree Tree[string], t *testing.T) {
 	t.Helper()
 	ps := fillView(tree.View(), 1000)
 	for _, p := range ps {
@@ -149,7 +149,7 @@ func testScatter(tree T[string], t *testing.T) {
 // Tests that we can add multiple elements to the same location
 // and still retrieve all elements, including duplicates, using
 // randomly generated views.
-func testScatterDup(tree T[string], t *testing.T) {
+func testScatterDup(tree Tree[string], t *testing.T) {
 	ps := fillView(tree.View(), 1000)
 	for _, p := range ps {
 		for i := 0; i < dups; i++ {
@@ -173,7 +173,7 @@ func testScatterDup(tree T[string], t *testing.T) {
 	}
 }
 
-func testSurvey(tree T[string], view View, fun func(x, y float64, e string), collected, expCol *list.List, t *testing.T, errPfx string) {
+func testSurvey(tree Tree[string], view View, fun func(x, y float64, e string), collected, expCol *list.List, t *testing.T, errPfx string) {
 	tree.Survey(view, fun)
 	if collected.Len() != expCol.Len() {
 		t.Errorf("%s: Expecting %v collected element(s), found %v", errPfx, expCol.Len(), collected.Len())

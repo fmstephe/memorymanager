@@ -11,7 +11,7 @@ import (
 // topY down to bottomY along the y axis
 // leftX < rightX
 // topY < bottomY
-func NewQuadTree[K any](view View) T[K] {
+func NewQuadTree[K any](view View) Tree[K] {
 	return newRoot[K](view)
 }
 

@@ -13,7 +13,7 @@ import (
 
 type ParcelHandler struct {
 	byteStore *store.ByteStore
-	tree      lowgc_quadtree.T[store.BytePointer]
+	tree      lowgc_quadtree.Tree[store.BytePointer]
 }
 
 func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {

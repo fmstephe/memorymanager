@@ -1,7 +1,7 @@
 package lowgc_quadtree
 
 // Public interface for quadtrees.
-type T[K any] interface {
+type Tree[K any] interface {
 	View() View
 	// Inserts e into this quadtree at point (x,y)
 	Insert(x, y float64, e K) error

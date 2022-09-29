@@ -34,7 +34,7 @@ func main() {
 
 	for line := range entriesChan {
 		if line.Error != nil {
-			fmt.Printf("%d: %s - %d\n", line.LineNum, line.Error)
+			fmt.Printf("%d: %s\n", line.LineNum, line.Error)
 		} else {
 			fmt.Printf("%d: %v - %d\n", line.LineNum, line.Parcel.Plot.Box, line.Parcel.Id)
 		}
