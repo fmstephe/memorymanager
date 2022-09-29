@@ -63,7 +63,7 @@ func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {
 }
 
 var startArray = []byte("[")
-var endArray = []byte("nil]")
+var endArray = []byte("null]")
 var comma = []byte(",\n")
 
 func surveyFunc(w http.ResponseWriter, byteStore *store.ByteStore) func(_, _ float64, bp store.BytePointer) {
