@@ -1,42 +1,91 @@
 <html>
-	<head>
+		<head>
 
-		<style>
+				<style>
 #map { height: 900px; }
-		</style>
+				</style>
 
-		<link rel="stylesheet"
-		      href="https://unpkg.com/leaflet@1.9.1/dist/leaflet.css"
-		      integrity="sha256-sA+zWATbFveLLNqWO2gtiw3HL/lh1giY/Inf1BJ0z14="
-		      crossorigin=""/>
+				<link rel="stylesheet"
+										href="https://unpkg.com/leaflet@1.9.1/dist/leaflet.css"
+										integrity="sha256-sA+zWATbFveLLNqWO2gtiw3HL/lh1giY/Inf1BJ0z14="
+										crossorigin=""/>
 
-		<!-- Make sure you put this AFTER Leaflet's CSS -->
-		<script src="https://unpkg.com/leaflet@1.9.1/dist/leaflet.js"
-			integrity="sha256-NDI0K41gVbWqfkkaHj15IzU7PtMoelkzyKp8TOaFQ3s="
-			crossorigin="">
-		</script>
-	</head>
+				<!-- Make sure you put this AFTER Leaflet's CSS -->
+				<script src="https://unpkg.com/leaflet@1.9.1/dist/leaflet.js"
+												integrity="sha256-NDI0K41gVbWqfkkaHj15IzU7PtMoelkzyKp8TOaFQ3s="
+												crossorigin="">
+				</script>
 
-	<body>
-		<div id="map"></div>
-		<script>
-			var map = L.map('map').setView([-41.236511, 174.041485], 6);
-			L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-							maxZoom: 19,
-							attribution: '© OpenStreetMap'
-						}).addTo(map);
-			var marker = L.marker([-41.236511, 174.041485]).addTo(map);
-			var polygon = L.polygon([
-							[-41.2, 174],
-							[-41.2, 174.2],
-							[-41.4, 174.1]
-						]).addTo(map);
-			function onMapClick(e) {
-							alert("You clicked the map at " + e.latlng);
-						}
+				<script>
 
-			map.on('click', onMapClick);
-		</script>
-	</body>
+						function onMapClick(e) {
+														const boundaries = map.getBounds();
+														console.log(boundaries);
+														const bodyArr = [];
+														bodyArr.push("lx="+encodeURIComponent(boundaries.getWest()));
+														bodyArr.push("rx="+encodeURIComponent(boundaries.getEast()));
+														bodyArr.push("ty="+encodeURIComponent(boundaries.getNorth()));
+														bodyArr.push("by="+encodeURIComponent(boundaries.getSouth()));
+														const body = bodyArr.join("&");
+														console.log(body);
+														fetch('/survey', {
+																						method: 'POST',
+																						headers: {
+																														'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+																												},
+																						body: body,
+																				})
+																.then(x => x.text())
+																.then(y => drawParcels(y));
+												}
 
+						function drawParcels(rawParcels) {
+														console.log("raw parcels", rawParcels);
+														const parcels = JSON.parse(rawParcels);
+														for (const parcel of parcels) {
+																						console.log(parcel);
+																						if (parcel == null) {
+																														continue
+																												}
+																						for (const poly of parcel.Plot.Polygons) {
+																														const points = [];
+																														for (const point of poly.Points) {
+																																						points.push([point.Latitude, point.Longitude]);
+																																				}
+																														L.polygon([
+																																						points
+																																				]).addTo(map);
+																												}
+																				}
+
+												}
+
+				</script>
+
+		</head>
+
+		<body>
+				<div id="map"></div>
+				<script>
+
+						var map = L.map('map').setView([-41.236511, 174.041485], 6);
+
+						L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+														maxZoom: 19,
+														attribution: '© OpenStreetMap'
+												}).addTo(map);
+
+						var marker = L.marker([-41.236511, 174.041485]).addTo(map);
+
+						var polygon = L.polygon([
+														[-41.2, 174],
+														[-41.2, 174.2],
+														[-41.4, 174.1]
+												]).addTo(map);
+
+						map.on('click', onMapClick);
+
+				</script>
+
+		</body>
 </html>
