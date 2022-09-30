@@ -114,22 +114,30 @@ func (n *node[K]) convertToInternal(store *nodeStore[K]) {
 }
 
 // Calls survey on each child subtree whose view overlaps with vs
-func (n *node[K]) survey(view View, fun func(x, y float64, e K), store *nodeStore[K]) {
+func (n *node[K]) survey(view View, fun func(x, y float64, e K) bool, store *nodeStore[K]) bool {
+	// Survey each point in this leaf
 	if n.isLeaf {
 		for i := range n.ps {
 			p := &n.ps[i]
 			if !p.zeroed() && view.contains(p.x, p.y) {
-				store.survey(p.elemsP, func(data K) { fun(p.x, p.y, data) })
+				if !store.survey(p.elemsP, func(data K) bool { return fun(p.x, p.y, data) }) {
+					return false
+				}
 			}
 		}
-	} else {
-		for _, p := range n.children {
-			st := store.getNode(p)
-			if view.overlaps(st.view) {
-				st.survey(view, fun, store)
+		return true
+	}
+
+	// Survey each subtree
+	for _, p := range n.children {
+		st := store.getNode(p)
+		if view.overlaps(st.view) {
+			if !st.survey(view, fun, store) {
+				return false
 			}
 		}
 	}
+	return true
 }
 
 // Returns the View for this node
@@ -184,7 +192,7 @@ func (r *root[K]) Insert(x, y float64, nval K) error {
 }
 
 // Applies fun to every element occurring within view in this tree
-func (r *root[K]) Survey(view View, fun func(x, y float64, e K)) {
+func (r *root[K]) Survey(view View, fun func(x, y float64, e K) bool) {
 	st := r.store.getNode(r.rootPointer)
 	st.survey(view, fun, r.store)
 }

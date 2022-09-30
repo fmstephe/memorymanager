@@ -5,43 +5,41 @@ import (
 )
 
 // A Simple quadtree collector which will push every element into col
-func SimpleSurvey[K any]() (fun func(x, y float64, e K), col *list.List) {
+func SimpleSurvey[K any]() (fun func(x, y float64, e K) bool, col *list.List) {
 	col = list.New()
-	fun = func(x, y float64, e K) {
+	fun = func(x, y float64, e K) bool {
 		col.PushBack(e)
+		return true
 	}
-	return
+	return fun, col
 }
 
 // A Simple quadtree collector which will push every element into col
-func SliceSurvey[K any]() (fun func(x, y float64, e K), colP *[]K) {
+func LimitSurvey[K any](limit int) (fun func(x, y float64, e K) bool, col *list.List) {
+	col = list.New()
+	count := 0
+	fun = func(x, y float64, e K) bool {
+		if count >= limit {
+			return false
+		}
+		col.PushBack(e)
+		count++
+		return true
+	}
+	return fun, col
+}
+
+// A Simple quadtree collector which will push every element into col
+func SliceSurvey[K any]() (fun func(x, y float64, e K) bool, colP *[]K) {
 	col := []K{}
 	colP = &col
-	fun = func(x, y float64, e K) {
+	fun = func(x, y float64, e K) bool {
 		col = *colP
 		col = append(col, e)
 		colP = &col
-	}
-	return
-}
-
-// A Simple quadtree delete function which indicates that every element given to it should be deleted
-func SimpleDelete[K any]() (pred func(x, y float64, e K) bool) {
-	pred = func(x, y float64, e K) bool {
 		return true
 	}
-	return
-}
-
-// A quadtree delete function which indicates that every element given to it should be deleted.
-// Additionally each element deleted will be pushed into col
-func CollectingDelete[K any]() (pred func(x, y float64, e K) bool, col *list.List) {
-	col = list.New()
-	pred = func(x, y float64, e K) bool {
-		col.PushBack(e)
-		return true
-	}
-	return
+	return fun, colP
 }
 
 // Determines if a point lies inside at least one of a slice of *View

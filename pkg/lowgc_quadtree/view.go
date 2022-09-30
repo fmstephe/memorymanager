@@ -18,7 +18,10 @@ import (
 // (lx,ty),(lx,by),(rx,ty),(rx,by)
 // The zeroed View is a zero area plane at origin (0,0)
 type View struct {
-	lx, rx, ty, by float64
+	lx float64
+	rx float64
+	ty float64
+	by float64
 }
 
 // Returns a new View struct with the four

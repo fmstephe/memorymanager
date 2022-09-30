@@ -1,7 +1,6 @@
 package lowgc_quadtree
 
 import (
-	"container/list"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -173,25 +172,24 @@ func testScatterDup(tree Tree[string], t *testing.T) {
 	}
 }
 
-func testSurvey(tree Tree[string], view View, fun func(x, y float64, e string), collected, expCol *list.List, t *testing.T, errPfx string) {
-	tree.Survey(view, fun)
-	if collected.Len() != expCol.Len() {
-		t.Errorf("%s: Expecting %v collected element(s), found %v", errPfx, expCol.Len(), collected.Len())
-	}
-	/* This code checks that every expected element is present
-		   In practice this is too slow - disabled
-	OUTER_LOOP:
-		for i := 0; i < expCol.Len(); i++ {
-			expVal := expCol.At(i)
-			for j := 0; j < collected.Len(); j++ {
-				colVal := collected.At(j)
-				if expVal == colVal {
-					continue OUTER_LOOP
-				}
-			}
-			t.Errorf("%s: Expecting to find %v in collected vector, was not found", errPfx, expCol.At(i))
+// Demonstrate that we can terminate a Survey by having the survey func return false
+// Here we use this to limit the number of elements returned from a survey
+func TestLimitedSurvey(t *testing.T) {
+	testTrees := buildTestTrees()
+	for _, tree := range testTrees {
+		ps := fillView(tree.View(), 1000)
+		for _, p := range ps {
+			err := tree.Insert(p.x, p.y, "test")
+			assert.NoError(t, err)
 		}
-	*/
+		for i := 0; i < 1000; i++ {
+			fun, results := LimitSurvey[string](i)
+			tree.Survey(tree.View(), fun)
+			if results.Len() != i {
+				t.Errorf("Failed to retrieve %d elements, found %d instead", i, results.Len())
+			}
+		}
+	}
 }
 
 func randomPosition(v View) (x, y float64) {

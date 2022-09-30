@@ -70,15 +70,20 @@ func (s *nodeStore[T]) attachData(targetP, attachP store.ObjectPointer[elem[T]])
 	targetElem.prev = attachTailP
 }
 
-func (s *nodeStore[T]) survey(p store.ObjectPointer[elem[T]], fun func(e T)) {
+func (s *nodeStore[T]) survey(p store.ObjectPointer[elem[T]], fun func(e T) bool) bool {
 	e := s.elems.Get(p)
-	fun(e.data)
+	if !fun(e.data) {
+		return false
+	}
 
 	// Follow through the linked list until we return to head
 	next := e.next
 	for next != p {
 		e := s.elems.Get(next)
-		fun(e.data)
+		if !fun(e.data) {
+			return false
+		}
 		next = e.next
 	}
+	return true
 }
