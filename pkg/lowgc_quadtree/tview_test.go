@@ -9,13 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Struct of four points
-type fourPoints struct {
-	lx, rx, ty, by float64
+type point struct {
+	x, y float64
 }
 
 func TestNewView(t *testing.T) {
-	for _, testValue := range []fourPoints{
+	for _, testValue := range []View{
 		{10.0, 10.0, 10.0, 10.0},
 		{10.0, 10.0, 10.0, 10.0},
 		{5.5, 30.03, 5.96, 3.45},
@@ -45,7 +44,7 @@ func TestNewView(t *testing.T) {
 }
 
 func TestIllegalView(t *testing.T) {
-	for _, testValue := range []fourPoints{
+	for _, testValue := range []View{
 		{5.5, 5.4, 5.96, 3.45},
 		{5.5, 5.6, 3.44, 3.45},
 		{5.5, 5.4, 3.44, 3.45},
@@ -82,6 +81,60 @@ func TestDisjoint(t *testing.T) {
 		if v2.overlaps(v1) {
 			t.Errorf("View %v and %v are reported as overlapping", v2, v1)
 			t.Error("<------------------------------------------------>")
+		}
+	}
+}
+
+func TestContainsPoint(t *testing.T) {
+	for _, testValue := range []struct {
+		view         View
+		contained    []point
+		notContained []point
+	}{
+		{
+			view:         View{10.0, 20.0, 20.0, 10.0},
+			contained:    []point{{10, 20}, {11, 19}, {15, 15}, {18, 12}, {19, 11}, {20, 10}},
+			notContained: []point{{9.9, 20.0}, {10, 20.1}, {20.1, 20}, {20.1, 10}, {20, 9.9}, {9.9, 9.9}},
+		},
+	} {
+		for _, p := range testValue.contained {
+			view := testValue.view
+			if !view.containsPoint(p.x, p.y) {
+				t.Errorf("view %#v should contain point %#v, but does not", view, p)
+			}
+		}
+		for _, p := range testValue.notContained {
+			view := testValue.view
+			if view.containsPoint(p.x, p.y) {
+				t.Errorf("view %#v should not contain point %#v, but does", view, p)
+			}
+		}
+	}
+}
+
+func TestContainsView(t *testing.T) {
+	for _, testValue := range []struct {
+		view         View
+		contained    []View
+		notContained []View
+	}{
+		{
+			view:         View{10.0, 20.0, 20.0, 10.0},
+			contained:    []View{{10, 20, 19, 10}, {15, 16, 18, 12}, {11, 19, 20, 10}},
+			notContained: []View{{9.9, 20.0, 20.1, 10}, {20, 20.1, 10, 20.1}, {9.9, 20, 9.9, 10}},
+		},
+	} {
+		for _, ov := range testValue.contained {
+			view := testValue.view
+			if !view.containsView(ov) {
+				t.Errorf("view %#v should contain view %#v, but does not", view, ov)
+			}
+		}
+		for _, ov := range testValue.notContained {
+			view := testValue.view
+			if view.containsView(ov) {
+				t.Errorf("view %#v should not contain view %#v, but does", view, ov)
+			}
 		}
 	}
 }
@@ -124,7 +177,7 @@ func disjoint() (v1, v2 View) {
 	for true {
 		x1 = negRFLoat64()
 		y1 = negRFLoat64()
-		if !v1.contains(x1, y1) {
+		if !v1.containsPoint(x1, y1) {
 			break
 		}
 	}

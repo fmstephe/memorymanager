@@ -47,6 +47,8 @@ const LEAF_SIZE = 16
 type node[K any] struct {
 	view View
 
+	cachedCount int64
+
 	isLeaf bool
 	// Used if this node is a leaf
 	ps [LEAF_SIZE]vpoint[K]
@@ -66,7 +68,11 @@ func makeNode[K any](view View, store *nodeStore[K]) store.ObjectPointer[node[K]
 }
 
 // Inserts elems into the single child subtree whose view contains (x,y)
+// TODO we almost certainly need to update count here
 func (n *node[K]) insert(x, y float64, elemsP store.ObjectPointer[elem[K]], store *nodeStore[K]) {
+	// We are adding an element to this node or one of its children, increment the count
+	n.cachedCount++
+
 	if n.isLeaf {
 		// Node is a leaf - try to insert data directly into leaf
 		for i := range n.ps {
@@ -90,7 +96,7 @@ func (n *node[K]) insert(x, y float64, elemsP store.ObjectPointer[elem[K]], stor
 
 	for i := range n.children {
 		childNode := store.getNode(n.children[i])
-		if childNode.view.contains(x, y) {
+		if childNode.view.containsPoint(x, y) {
 			childNode.insert(x, y, elemsP, store)
 			return
 		}
@@ -109,7 +115,16 @@ func (n *node[K]) convertToInternal(store *nodeStore[K]) {
 	// re-insert data for the new leaves
 	for i := range n.ps {
 		p := &n.ps[i]
-		n.insert(p.x, p.y, p.elemsP, store)
+		x := p.x
+		y := p.y
+		elemsP := p.elemsP
+		for i := range n.children {
+			childNode := store.getNode(n.children[i])
+			if childNode.view.containsPoint(x, y) {
+				childNode.insert(x, y, elemsP, store)
+				break
+			}
+		}
 	}
 }
 
@@ -119,7 +134,7 @@ func (n *node[K]) survey(view View, fun func(x, y float64, e K) bool, store *nod
 	if n.isLeaf {
 		for i := range n.ps {
 			p := &n.ps[i]
-			if !p.zeroed() && view.contains(p.x, p.y) {
+			if !p.zeroed() && view.containsPoint(p.x, p.y) {
 				if !store.survey(p.elemsP, func(data K) bool { return fun(p.x, p.y, data) }) {
 					return false
 				}
@@ -138,6 +153,37 @@ func (n *node[K]) survey(view View, fun func(x, y float64, e K) bool, store *nod
 		}
 	}
 	return true
+}
+
+func (n *node[K]) count(view View, store *nodeStore[K]) int64 {
+	// In the case that the counting view completely covers this node
+	// Then we can just quickly return the cached count
+	if view.containsView(n.view) {
+		return n.cachedCount
+	}
+
+	// count individual leaf elements
+	if n.isLeaf {
+		counted := int64(0)
+		for i := range n.ps {
+			p := &n.ps[i]
+			if !p.zeroed() && view.containsPoint(p.x, p.y) {
+				// Visit all the elements stored here and count them
+				store.survey(p.elemsP, func(data K) bool { counted++; return true })
+			}
+		}
+		return counted
+	}
+
+	// Collect the count of the subtrees
+	counted := int64(0)
+	for _, p := range n.children {
+		st := store.getNode(p)
+		if view.overlaps(st.view) {
+			counted += st.count(view, store)
+		}
+	}
+	return counted
 }
 
 // Returns the View for this node
@@ -182,7 +228,7 @@ func newRoot[K any](view View) *root[K] {
 
 // Inserts the value nval into this tree
 func (r *root[K]) Insert(x, y float64, nval K) error {
-	if !r.view.contains(x, y) {
+	if !r.view.containsPoint(x, y) {
 		return fmt.Errorf("cannot insert x(%f) y(%f) into view %s", x, y, r.view)
 	}
 	elemsP := r.store.newElem(nval)
@@ -195,6 +241,12 @@ func (r *root[K]) Insert(x, y float64, nval K) error {
 func (r *root[K]) Survey(view View, fun func(x, y float64, e K) bool) {
 	st := r.store.getNode(r.rootPointer)
 	st.survey(view, fun, r.store)
+}
+
+// Applies fun to every element occurring within view in this tree
+func (r *root[K]) Count(view View) int64 {
+	st := r.store.getNode(r.rootPointer)
+	return st.count(view, r.store)
 }
 
 // Returns the View for this tree

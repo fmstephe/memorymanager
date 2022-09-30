@@ -45,7 +45,7 @@ func SliceSurvey[K any]() (fun func(x, y float64, e K) bool, colP *[]K) {
 // Determines if a point lies inside at least one of a slice of *View
 func contains(vs []View, x, y float64) bool {
 	for _, v := range vs {
-		if v.contains(x, y) {
+		if v.containsPoint(x, y) {
 			return true
 		}
 	}

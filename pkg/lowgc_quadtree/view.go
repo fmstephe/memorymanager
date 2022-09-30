@@ -51,9 +51,14 @@ func NewLongLatView() View {
 	}
 }
 
-// Indicates whether this View contains the point (x,y)
-func (v View) contains(x, y float64) bool {
+// Indicates whether this View containsPoint the point (x,y)
+func (v View) containsPoint(x, y float64) bool {
 	return x >= v.lx && x <= v.rx && y >= v.by && y <= v.ty
+}
+
+// Indicates whether this View contains the entirety of another view
+func (v View) containsView(ov View) bool {
+	return ov.lx >= v.lx && ov.rx <= v.rx && ov.ty <= v.ty && ov.by >= v.by
 }
 
 // Indicates whether any of the four edges
@@ -134,6 +139,35 @@ func (v View) quarters() [4]View {
 		NewView(lx, midx, midy, by),
 		NewView(midx, rx, midy, by),
 	}
+}
+
+// TODO I _think_ there is a danger that imperfections in floating point values
+// could mean that the views returned don't perfectly cover the original view.
+// It's likely good enough in practice, but it would be nice for it to
+// obviously be perfect and not to have to worry about it again
+func (v View) Split(divisions int) []View {
+	views := make([]View, 0, divisions*divisions)
+	fDivisions := float64(divisions)
+	subdivisionX := (v.rx - v.lx) / fDivisions
+	subdivisionY := (v.ty - v.by) / fDivisions
+
+	// Loop through all x divisions
+	lx := v.lx
+	for i := 0; i < divisions; i++ {
+		rx := lx + subdivisionX
+
+		// Loop through all y divisions
+		by := v.by
+		for j := 0; j < divisions; j++ {
+			ty := by + subdivisionY
+
+			// Append the constructed view
+			views = append(views, NewView(lx, rx, ty, by))
+			by = ty
+		}
+		lx = rx
+	}
+	return views
 }
 
 // Indicates whether v and ov are equivalent to each other
