@@ -54,27 +54,56 @@ func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	view := lowgc_quadtree.NewView(lx, rx, ty, by)
-	w.Write(startArray)
-	s.tree.Survey(view, surveyFunc(w, s.byteStore))
+
+	// First we check if there are too many parcels to display effectively
+	// If there are too many parcels, then we sample a single parcel from
+	// 100 subdivisions of the view
+	count := s.tree.Count(view)
+	if s.tree.Count(view) > 4096 {
+		w.Write(startIncomplete)
+		w.Write(startArray)
+		fmt.Printf("limited survey splitting view %v - %d\n", view, count)
+		views := view.Split(32)
+		for _, view := range views {
+			count := s.tree.Count(view)
+			fmt.Printf("split view %v - %d\n", view, count)
+			s.tree.Survey(view, surveyFunc(w, s.byteStore, 1))
+		}
+	} else {
+		w.Write(startComplete)
+		w.Write(startArray)
+		fmt.Printf("total survey - %d\n", count)
+		s.tree.Survey(view, surveyFunc(w, s.byteStore, 0))
+	}
+
 	w.Write(endArray)
+	w.Write(end)
 
 	printHeapAllocs("finish")
 	runtime.GC()
 }
 
-var startArray = []byte("[")
-var endArray = []byte("null]")
-var comma = []byte(",\n")
+var startComplete = []byte(`{"complete": true, `)
+var startIncomplete = []byte(`{"complete": false, `)
+var startArray = []byte(`"parcels": [`)
+var endArray = []byte(`null]`)
+var comma = []byte(`,`)
+var end = []byte(`}`)
 
-func surveyFunc(w http.ResponseWriter, byteStore *store.ByteStore) func(_, _ float64, bp store.BytePointer) {
+func surveyFunc(w http.ResponseWriter, byteStore *store.ByteStore, limit int) func(_, _ float64, bp store.BytePointer) bool {
 	pointerSet := map[store.BytePointer]struct{}{}
-	return func(_, _ float64, bp store.BytePointer) {
+	return func(_, _ float64, bp store.BytePointer) bool {
 		if _, ok := pointerSet[bp]; ok {
 			// We've already seen this pointer, don't write it out again
-			return
+			return true
 		}
 
 		pointerSet[bp] = struct{}{}
+
+		// A limit of 0 or less means unlimited
+		if limit > 0 && len(pointerSet) > limit {
+			return false
+		}
 
 		bytes := byteStore.Get(bp)
 
@@ -87,6 +116,8 @@ func surveyFunc(w http.ResponseWriter, byteStore *store.ByteStore) func(_, _ flo
 		if err != nil {
 			// TODO handle error
 		}
+
+		return true
 	}
 }
 
