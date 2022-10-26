@@ -1,4 +1,4 @@
-package lowgc_quadtree
+package quadtree
 
 import "github.com/fmstephe/location-system/pkg/store"
 

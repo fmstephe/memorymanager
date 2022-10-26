@@ -7,13 +7,13 @@ import (
 	"runtime/metrics"
 	"strconv"
 
-	"github.com/fmstephe/location-system/pkg/lowgc_quadtree"
+	"github.com/fmstephe/location-system/pkg/quadtree"
 	"github.com/fmstephe/location-system/pkg/store"
 )
 
 type ParcelHandler struct {
 	byteStore *store.ByteStore
-	tree      lowgc_quadtree.Tree[store.BytePointer]
+	tree      quadtree.Tree[store.BytePointer]
 }
 
 func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +53,7 @@ func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	view := lowgc_quadtree.NewView(lx, rx, ty, by)
+	view := quadtree.NewView(lx, rx, ty, by)
 
 	// First we check if there are too many parcels to display effectively
 	// If there are too many parcels, then we sample a single parcel from

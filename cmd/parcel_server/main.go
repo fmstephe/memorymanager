@@ -10,7 +10,7 @@ import (
 	"runtime"
 
 	"github.com/fmstephe/location-system/pkg/lds/lds_csv"
-	"github.com/fmstephe/location-system/pkg/lowgc_quadtree"
+	"github.com/fmstephe/location-system/pkg/quadtree"
 	"github.com/fmstephe/location-system/pkg/store"
 )
 
@@ -50,9 +50,9 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func fillTree(parcelChan chan lds_csv.CSVParcelData) (lowgc_quadtree.Tree[store.BytePointer], *store.ByteStore) {
+func fillTree(parcelChan chan lds_csv.CSVParcelData) (quadtree.Tree[store.BytePointer], *store.ByteStore) {
 	byteStore := store.NewByteStore(100 * store.MB)
-	tree := lowgc_quadtree.NewQuadTree[store.BytePointer](lowgc_quadtree.NewLongLatView())
+	tree := quadtree.NewQuadTree[store.BytePointer](quadtree.NewLongLatView())
 
 	count := 0
 	errCount := 0

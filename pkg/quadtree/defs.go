@@ -1,4 +1,4 @@
-package lowgc_quadtree
+package quadtree
 
 // Public interface for quadtrees.
 type Tree[K any] interface {
