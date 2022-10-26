@@ -1,1 +1,0 @@
-This is a simple quad tree implementation written in Go. It does not support concurrent access, but may do in the future. It allows for the (2D) location based storage of arbitrary Go types, interface{}.
