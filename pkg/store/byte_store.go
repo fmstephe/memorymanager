@@ -26,7 +26,7 @@ func NewByteStore(_ int32) *ByteStore {
 	for range slabs {
 		allocSize := totalSize - 4
 		idx := indexForSize(allocSize)
-		slabs[idx] = newByteSlab(allocSize, 2<<10)
+		slabs[idx] = newByteSlab(allocSize)
 		totalSize *= 2
 	}
 
@@ -71,10 +71,8 @@ func nextPowerOf2(val uint32) uint32 {
 
 type byteSlab struct {
 	// Immutable fields
-	slotBits  uint32 // Debugging only
 	allocSize uint32
-	slotSize  uint32
-	slotBatch uint32
+	slotSize  uint32 // This is just alloc size + 4 bytes meta
 	chunkSize uint32
 
 	// Mutable fields
@@ -90,21 +88,17 @@ const (
 	GB
 )
 
-func newByteSlab(allocSize, slotBatch uint32) byteSlab {
+func newByteSlab(allocSize uint32) byteSlab {
 	slotSize := allocSize + 4
-	chunkSize := slotSize * slotBatch
-
-	// Initialise bytes with a single empty chunk available
-	bytes := [][]byte{make([]byte, chunkSize)}
+	// We hard code the number of slots per chunk here, this could be configurable
+	chunkSize := slotSize * 1024
 
 	return byteSlab{
-		slotBits:  uint32(bits.Len32(slotSize)),
 		slotSize:  slotSize,
 		allocSize: allocSize,
-		slotBatch: slotBatch,
 		chunkSize: chunkSize,
-		offset:    0,
-		bytes:     bytes,
+		offset:    chunkSize, // By initialising this, we force the creation of a new chunk on first alloc
+		bytes:     [][]byte{},
 	}
 }
 
