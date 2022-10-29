@@ -1,33 +1,42 @@
 package store
 
 import (
-	"encoding/binary"
 	"fmt"
 	"math/bits"
 )
 
+// Convenience constants to make it easier to declare large max object size values
+const (
+	_         = iota // ignore first value by assigning to blank identifier
+	KB uint32 = 1 << (10 * iota)
+	MB
+	GB
+)
+
 type BytePointer struct {
-	chunk  uint32
-	offset uint32
-	size   uint32
+	chunk      uint32
+	slotOffset uint32
+	byteOffset uint32
+	size       uint32
 }
 
 func (p BytePointer) IsNil() bool {
-	return p.chunk == 0 && p.offset == 0
+	return p.chunk == 0 && p.slotOffset == 0
 }
 
 type ByteStore struct {
-	slabs []byteSlab
+	allocs int
+	frees  int
+	slabs  []byteSlab
 }
 
-func NewByteStore(_ int32) *ByteStore {
+func NewByteStore() *ByteStore {
 	slabs := make([]byteSlab, 16)
-	totalSize := uint32(8)
+	allocSize := uint32(8)
 	for range slabs {
-		allocSize := totalSize - 4
 		idx := indexForSize(allocSize)
 		slabs[idx] = newByteSlab(allocSize)
-		totalSize *= 2
+		allocSize *= 2
 	}
 
 	return &ByteStore{
@@ -35,30 +44,62 @@ func NewByteStore(_ int32) *ByteStore {
 	}
 }
 
+// TODO rename this to Alloc
 func (s *ByteStore) New(size uint32) (BytePointer, error) {
+	s.allocs++
+
 	idx := indexForSize(size)
+	// TODO we should explicitly panic if the idx is out of range here
+	// Need a clear and explicit panic message
+	// Eventually we will probably manage large allocations separately
 	return s.slabs[idx].alloc(size)
 }
 
-func (s *ByteStore) Get(obj BytePointer) []byte {
-	idx := indexForSize(obj.size)
-	return s.slabs[idx].get(obj)
+func (s *ByteStore) Get(p BytePointer) []byte {
+	idx := indexForSize(p.size)
+	return s.slabs[idx].get(p)
+}
+
+func (s *ByteStore) Free(p BytePointer) {
+	s.frees++
+
+	idx := indexForSize(p.size)
+	s.slabs[idx].free(p)
+}
+
+func (s *ByteStore) AllocCount() int {
+	return s.allocs
+}
+
+func (s *ByteStore) FreeCount() int {
+	return s.frees
+}
+
+func (s *ByteStore) LiveCount() int {
+	return s.allocs - s.frees
 }
 
 func indexForSize(size uint32) uint32 {
-	size += zeroToOne(size) // Use this to make 0 -> 1
-	slotSize := size + 4
+	size = fourOrLessAddFour(size) // Use this to make 0 -> 1
+	slotSize := size
 	count := uint32(bits.Len32(nextPowerOf2(slotSize)))
 	return count - 4
 }
 
-// This oddity converts zero to 1, other number are unaffected
+func fourOrLessAddFour(size uint32) uint32 {
+	size += zeroToOne(size) // we actually add 5 to 0
+	c := (size - 5) >> 31   // This comes from hacker's delight
+	size += c << 2
+	return size
+}
+
+// This oddity converts zero to 1, other numbers return 0
 func zeroToOne(val uint32) uint32 {
-	val |= val >> 1
-	val = val &^ (1 << 31)
-	val = val - 1
-	val = val >> 31
-	return val
+	magic := val | val>>1
+	magic = magic &^ (1 << 31)
+	magic = magic - 1
+	magic = magic >> 31
+	return magic
 }
 
 func nextPowerOf2(val uint32) uint32 {
@@ -69,85 +110,128 @@ func nextPowerOf2(val uint32) uint32 {
 	return 1 << bits.Len32(val)
 }
 
-type byteSlab struct {
-	// Immutable fields
-	allocSize uint32
-	slotSize  uint32 // This is just alloc size + 4 bytes meta
-	chunkSize uint32
+const slotCountSize = 1024
 
-	// Mutable fields
-	offset uint32
-	bytes  [][]byte
+// If the bytesMeta for a byte slot has a non-nil nextFree pointer then the
+// byte slot is currently free.  Byte slots which have never been allocated are
+// implicitly free, but have a nil nextFree point in their bytesMeta.
+type bytesMeta struct {
+	nextFree BytePointer
 }
 
-// Convenience constants to make it easier to declare large max object size values
-const (
-	_         = iota // ignore first value by assigning to blank identifier
-	KB uint32 = 1 << (10 * iota)
-	MB
-	GB
-)
+type byteSlab struct {
+	// Immutable fields
+	slotSize  uint32 // Max size per allocation
+	slotCount uint32 // Number of slots per chunk
+	chunkSize uint32 // Each chunk is sized slotSize*slotCount
 
-func newByteSlab(allocSize uint32) byteSlab {
-	slotSize := allocSize + 4
+	// Mutable fields
+	byteOffset uint32        // The offset of unallocated bytes in current chunk
+	slotOffset uint32        // The offset of unallocated slots in the current chunk
+	nextFree   BytePointer   // The first freed slot, may be nil
+	meta       [][]bytesMeta // All meta-data
+	bytes      [][]byte      // All actual byte data
+}
+
+func newByteSlab(slotSize uint32) byteSlab {
 	// We hard code the number of slots per chunk here, this could be configurable
-	chunkSize := slotSize * 1024
+	slotCount := uint32(slotCountSize)
 
 	return byteSlab{
+		// Immutable fields
 		slotSize:  slotSize,
-		allocSize: allocSize,
-		chunkSize: chunkSize,
-		offset:    chunkSize, // By initialising this, we force the creation of a new chunk on first alloc
-		bytes:     [][]byte{},
+		slotCount: slotCount,
+		chunkSize: slotSize * slotCount,
+
+		// Mutable fields
+		slotOffset: slotCount, // By initialising this, we force the creation of a new chunk on first alloc
+		byteOffset: slotSize * slotCount,
+		bytes:      [][]byte{},
 	}
 }
 
 func (s *byteSlab) alloc(size uint32) (BytePointer, error) {
-	if size > s.allocSize {
+	if s.nextFree.IsNil() {
+		return s.allocFromOffset(size)
+	}
+	return s.allocFromFree(size)
+}
+
+func (s *byteSlab) allocFromFree(size uint32) (BytePointer, error) {
+	oldFree := s.nextFree
+
+	freeMeta := s.getMeta(oldFree)
+	s.nextFree = freeMeta.nextFree
+	freeMeta.nextFree = BytePointer{}
+
+	oldFree.size = size
+	return oldFree, nil
+}
+
+func (s *byteSlab) allocFromOffset(size uint32) (BytePointer, error) {
+	if size > s.slotSize {
 		panic(fmt.Errorf("Bad alloc size, max allowed %d, %d was requested", s.slotSize-4, size))
 	}
+
 	// If we have used up the last chunk create a new one
-	if s.offset == s.chunkSize {
-		s.offset = 0
+	if s.slotOffset == s.slotCount {
+		s.slotOffset = 0
+		s.byteOffset = 0
+		s.meta = append(s.meta, make([]bytesMeta, s.slotCount))
 		s.bytes = append(s.bytes, make([]byte, s.chunkSize))
 	}
 
-	s.writeSize(uint32(len(s.bytes))-1, s.offset, size)
-
 	// Create BytePointer pointing to the new slice
-	obj := BytePointer{
-		chunk:  uint32(len(s.bytes)),
-		offset: s.offset + 1,
-		size:   size,
+	p := BytePointer{
+		chunk:      uint32(len(s.bytes)),
+		slotOffset: s.slotOffset + 1,
+		byteOffset: s.byteOffset + 1,
+		size:       size,
 	}
 
 	// Update offset
-	s.offset += s.chunkSize
+	s.slotOffset++
+	s.byteOffset += s.slotSize
 
-	return obj, nil
+	return p, nil
 }
 
-func (s *byteSlab) writeSize(chunk, offset, size uint32) {
-	bytes := s.bytes[chunk][offset : offset+s.slotSize]
-	binary.LittleEndian.PutUint32(bytes, uint32(size))
+func (s *byteSlab) get(p BytePointer) []byte {
+	m := s.getMeta(p)
+	if !m.nextFree.IsNil() {
+		panic(fmt.Errorf("Attempted to Get freed bytes %v", p))
+	}
+
+	return s.getBytes(p)
 }
 
-func (s *byteSlab) read(chunk, offset uint32) []byte {
-	bytes := s.bytes[chunk][offset : offset+s.slotSize]
-	size := binary.LittleEndian.Uint32(bytes)
-	return bytes[4 : 4+size]
+func (s *byteSlab) getBytes(p BytePointer) []byte {
+	chunk := p.chunk - 1
+	offset := p.byteOffset - 1
+	size := p.size
+	return s.bytes[chunk][offset : offset+size]
 }
 
-func (s *byteSlab) get(obj BytePointer) []byte {
-	// There are no pre-checks here - if you pass in a malformed BytePointer
-	// this method may return nonsense or just panic
+func (s *byteSlab) getMeta(p BytePointer) *bytesMeta {
+	chunk := p.chunk - 1
+	offset := p.slotOffset - 1
+	return &s.meta[chunk][offset]
+}
 
-	// Note the chunk and offset are always 1 greater than their actual
-	// values so we subtract 1 from them before use.  They are 1 greater to
-	// allow a pointer with zero values to represent 'nil'
-	chunk := obj.chunk - 1
-	offset := obj.offset - 1
+func (s *byteSlab) free(p BytePointer) {
+	meta := s.getMeta(p)
 
-	bytes := s.read(chunk, offset)
-	return bytes
+	if !meta.nextFree.IsNil() {
+		panic(fmt.Errorf("Attempted to Free freed object %v", p))
+	}
+
+	//s.frees++
+
+	if s.nextFree.IsNil() {
+		meta.nextFree = p
+	} else {
+		meta.nextFree = s.nextFree
+	}
+
+	s.nextFree = p
 }
