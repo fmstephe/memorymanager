@@ -47,6 +47,7 @@ func NewObjectStore[O any]() *ObjectStore[O] {
 	}
 }
 
+// Rename this to Alloc
 func (s *ObjectStore[O]) New() (ObjectPointer[O], *O) {
 	s.allocs++
 
@@ -66,18 +67,18 @@ func (s *ObjectStore[O]) Get(p ObjectPointer[O]) *O {
 }
 
 func (s *ObjectStore[O]) Free(p ObjectPointer[O]) {
-	wrapper := s.getMeta(p)
+	meta := s.getMeta(p)
 
-	if !wrapper.nextFree.IsNil() {
+	if !meta.nextFree.IsNil() {
 		panic(fmt.Errorf("Attempted to Free freed object %v", p))
 	}
 
 	s.frees++
 
 	if s.nextFree.IsNil() {
-		wrapper.nextFree = p
+		meta.nextFree = p
 	} else {
-		wrapper.nextFree = s.nextFree
+		meta.nextFree = s.nextFree
 	}
 
 	s.nextFree = p
