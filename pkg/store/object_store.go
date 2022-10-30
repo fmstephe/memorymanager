@@ -61,7 +61,7 @@ func (s *ObjectStore[O]) New() (ObjectPointer[O], *O) {
 func (s *ObjectStore[O]) Get(p ObjectPointer[O]) *O {
 	m := s.getMeta(p)
 	if !m.nextFree.IsNil() {
-		panic(fmt.Errorf("Attempted to Get freed object %v", p))
+		panic(fmt.Errorf("attempted to Get freed object %v", p))
 	}
 	return s.getObject(p)
 }
@@ -70,7 +70,7 @@ func (s *ObjectStore[O]) Free(p ObjectPointer[O]) {
 	meta := s.getMeta(p)
 
 	if !meta.nextFree.IsNil() {
-		panic(fmt.Errorf("Attempted to Free freed object %v", p))
+		panic(fmt.Errorf("attempted to Free freed object %v", p))
 	}
 
 	s.frees++
