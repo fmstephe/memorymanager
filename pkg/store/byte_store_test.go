@@ -2,61 +2,54 @@ package store
 
 import (
 	"encoding/binary"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// Assert we can generate reliable byteSlab indexes for all sizes of
-// allocation Once we have this size->index mapping we can build separate
-// byteSlabs for each allocation size range.
-func TestIndexForSize(t *testing.T) {
-	// Allocations of zero and one sized slices are handled by the one sized slab
-	assert.Equal(t, uint32(0), indexForSize(0))
-	assert.Equal(t, uint32(0), indexForSize(1))
-
-	// Two is a lonely power of two group
-	assert.Equal(t, uint32(1), indexForSize(2))
-
-	// Four is also a small power of two group
-	assert.Equal(t, uint32(2), indexForSize(3))
-	assert.Equal(t, uint32(2), indexForSize(4))
-
-	for i := uint32(5); i <= 8; i++ {
-		assert.Equal(t, uint32(3), indexForSize(i))
+// Demonstrate that we are initialising the slabs with the correct indices i.e.
+// that the indexForSize(slotSize) returns the correct index for that slab
+func TestSlabIndices_CorrectlyOrdered(t *testing.T) {
+	slabs := initialiseSlabs()
+	for i, slab := range slabs {
+		assert.Equal(t, i, indexForSize(slab.slotSize))
 	}
+}
 
-	for i := uint32(9); i <= 16; i++ {
-		assert.Equal(t, uint32(4), indexForSize(i))
+// Demonstrate that allocations which are not the same as the exact slot size
+// of a slab are still indexed to the correct slab.  An allocation is indexed
+// correctly if it is less than or equal to the slot size of the slab it was
+// indexed to, as well as being strictly larger than the slab of a lower index.
+func TestSlabIndices_SmallerAllocations(t *testing.T) {
+	slabs := initialiseSlabs()
+	sizes := generateAllocationSizes()
+	for _, size := range sizes {
+		idx := indexForSize(size)
+		slab := slabs[idx]
+		// The size must be less than or equal to the slot size, or this slab can't allocate it
+		assert.LessOrEqual(t, size, slab.slotSize, "%d, %d, %#v", size, idx, slab)
+		if idx > 0 {
+			smallerSlab := slabs[idx-1]
+			assert.Greater(t, size, smallerSlab.slotSize)
+		}
 	}
+}
 
-	for i := uint32(17); i <= 32; i++ {
-		assert.Equal(t, uint32(5), indexForSize(i))
+// Because evenly distributed random numbers tend to mostly be very large we
+// artificially generate small ones here to test the full range of allocation
+// sizes
+func generateAllocationSizes() []uint32 {
+	sizes := []uint32{}
+	for i := 0; i < 1000; i++ {
+		size := rand.Uint32()
+		sizes = append(sizes, size)
+		for ; size > 0; size = size >> 1 {
+			sizes = append(sizes, size)
+		}
 	}
-
-	for i := uint32(33); i <= 64; i++ {
-		assert.Equal(t, uint32(6), indexForSize(i))
-	}
-
-	for i := uint32(65); i <= 128; i++ {
-		assert.Equal(t, uint32(7), indexForSize(i))
-	}
-
-	for i := uint32(129); i <= 256; i++ {
-		assert.Equal(t, uint32(8), indexForSize(i))
-	}
-
-	for i := uint32(257); i <= 512; i++ {
-		assert.Equal(t, uint32(9), indexForSize(i))
-	}
-
-	for i := uint32(513); i <= 1024; i++ {
-		assert.Equal(t, uint32(10), indexForSize(i))
-	}
-
-	// Hopefully these are enough cases, it's hard to write a generic
-	// test without just writing out the indexForSize method again
+	return sizes
 }
 
 // Demonstrate that we can create bytes, then get those bytes and modify them

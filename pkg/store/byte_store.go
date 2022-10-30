@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"math"
 	"math/bits"
 )
 
@@ -31,17 +32,33 @@ type ByteStore struct {
 }
 
 func NewByteStore() *ByteStore {
-	slabs := make([]byteSlab, 16)
+	return &ByteStore{
+		slabs: initialiseSlabs(),
+	}
+}
+
+func initialiseSlabs() []byteSlab {
+	slabs := make([]byteSlab, 34)
+
 	allocSize := uint32(1)
-	for range slabs {
-		idx := indexForSize(allocSize)
-		slabs[idx] = newByteSlab(allocSize)
+	for i := range slabs {
+		// Special case for 0 size slab allocations
+		if i == 0 {
+			slabs[0] = newByteSlab(0)
+			continue
+		}
+		// Special case for allocations greater than 2^31 In principal
+		// we would want this slab to be sized 2^32, but with 32 bits
+		// that's 0, so we get as close as we can.
+		if i == 33 {
+			slabs[33] = newByteSlab(math.MaxUint32)
+			continue
+		}
+		slabs[i] = newByteSlab(allocSize)
 		allocSize = allocSize << 1
 	}
 
-	return &ByteStore{
-		slabs: slabs,
-	}
+	return slabs
 }
 
 // TODO rename this to Alloc
@@ -79,11 +96,11 @@ func (s *ByteStore) LiveCount() int {
 	return s.allocs - s.frees
 }
 
-func indexForSize(size uint32) uint32 {
+func indexForSize(size uint32) int {
 	if size == 0 {
 		return 0
 	}
-	return uint32(bits.Len32(size - 1))
+	return bits.Len32(size-1) + 1
 }
 
 const slotCountSize = 1024
@@ -146,7 +163,7 @@ func (s *byteSlab) allocFromFree(size uint32) (BytePointer, error) {
 
 func (s *byteSlab) allocFromOffset(size uint32) (BytePointer, error) {
 	if size > s.slotSize {
-		panic(fmt.Errorf("Bad alloc size, max allowed %d, %d was requested", s.slotSize-4, size))
+		panic(fmt.Errorf("bad alloc size, max allowed %d, %d was requested", s.slotSize-4, size))
 	}
 
 	// If we have used up the last chunk create a new one
