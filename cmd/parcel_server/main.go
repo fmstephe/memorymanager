@@ -51,7 +51,7 @@ func main() {
 }
 
 func fillTree(parcelChan chan lds_csv.CSVParcelData) (quadtree.Tree[store.BytePointer], *store.ByteStore) {
-	byteStore := store.NewByteStore(100 * store.MB)
+	byteStore := store.NewByteStore()
 	tree := quadtree.NewQuadTree[store.BytePointer](quadtree.NewLongLatView())
 
 	count := 0
@@ -74,7 +74,7 @@ func fillTree(parcelChan chan lds_csv.CSVParcelData) (quadtree.Tree[store.BytePo
 				errCount++
 				continue
 			}
-			op, err := byteStore.New(int32(len(bytes)))
+			op, err := byteStore.New(uint32(len(bytes)))
 			if err != nil {
 				fmt.Printf("%d: %s\n", line.LineNum, err)
 				errCount++
