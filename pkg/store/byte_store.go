@@ -32,11 +32,11 @@ type ByteStore struct {
 
 func NewByteStore() *ByteStore {
 	slabs := make([]byteSlab, 16)
-	allocSize := uint32(8)
+	allocSize := uint32(1)
 	for range slabs {
 		idx := indexForSize(allocSize)
 		slabs[idx] = newByteSlab(allocSize)
-		allocSize *= 2
+		allocSize = allocSize << 1
 	}
 
 	return &ByteStore{
@@ -80,34 +80,10 @@ func (s *ByteStore) LiveCount() int {
 }
 
 func indexForSize(size uint32) uint32 {
-	size = fourOrLessAddFour(size) // Use this to make 0 -> 1
-	slotSize := size
-	count := uint32(bits.Len32(nextPowerOf2(slotSize)))
-	return count - 4
-}
-
-func fourOrLessAddFour(size uint32) uint32 {
-	size += zeroToOne(size) // we actually add 5 to 0
-	c := (size - 5) >> 31   // This comes from hacker's delight
-	size += c << 2
-	return size
-}
-
-// This oddity converts zero to 1, other numbers return 0
-func zeroToOne(val uint32) uint32 {
-	magic := val | val>>1
-	magic = magic &^ (1 << 31)
-	magic = magic - 1
-	magic = magic >> 31
-	return magic
-}
-
-func nextPowerOf2(val uint32) uint32 {
-	// Check if val _is_ a power of 2
-	if val > 0 && val&(val-1) == 0 {
-		return val
+	if size == 0 {
+		return 0
 	}
-	return 1 << bits.Len32(val)
+	return uint32(bits.Len32(size - 1))
 }
 
 const slotCountSize = 1024

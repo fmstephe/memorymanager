@@ -12,69 +12,51 @@ import (
 // allocation Once we have this size->index mapping we can build separate
 // byteSlabs for each allocation size range.
 func TestIndexForSize(t *testing.T) {
-	// Zero is a special case - we test it specially
+	// Allocations of zero and one sized slices are handled by the one sized slab
 	assert.Equal(t, uint32(0), indexForSize(0))
+	assert.Equal(t, uint32(0), indexForSize(1))
 
-	for i := uint32(1); i <= 8; i++ {
-		assert.Equal(t, uint32(0), indexForSize(i))
-	}
+	// Two is a lonely power of two group
+	assert.Equal(t, uint32(1), indexForSize(2))
 
-	for i := uint32(9); i <= 16; i++ {
-		assert.Equal(t, uint32(1), indexForSize(i))
-	}
+	// Four is also a small power of two group
+	assert.Equal(t, uint32(2), indexForSize(3))
+	assert.Equal(t, uint32(2), indexForSize(4))
 
-	for i := uint32(17); i <= 32; i++ {
-		assert.Equal(t, uint32(2), indexForSize(i))
-	}
-
-	for i := uint32(33); i <= 64; i++ {
+	for i := uint32(5); i <= 8; i++ {
 		assert.Equal(t, uint32(3), indexForSize(i))
 	}
 
-	for i := uint32(65); i <= 128; i++ {
+	for i := uint32(9); i <= 16; i++ {
 		assert.Equal(t, uint32(4), indexForSize(i))
 	}
 
-	for i := uint32(129); i <= 256; i++ {
+	for i := uint32(17); i <= 32; i++ {
 		assert.Equal(t, uint32(5), indexForSize(i))
 	}
 
-	for i := uint32(257); i <= 512; i++ {
+	for i := uint32(33); i <= 64; i++ {
 		assert.Equal(t, uint32(6), indexForSize(i))
 	}
 
-	for i := uint32(513); i <= 1024; i++ {
+	for i := uint32(65); i <= 128; i++ {
 		assert.Equal(t, uint32(7), indexForSize(i))
+	}
+
+	for i := uint32(129); i <= 256; i++ {
+		assert.Equal(t, uint32(8), indexForSize(i))
+	}
+
+	for i := uint32(257); i <= 512; i++ {
+		assert.Equal(t, uint32(9), indexForSize(i))
+	}
+
+	for i := uint32(513); i <= 1024; i++ {
+		assert.Equal(t, uint32(10), indexForSize(i))
 	}
 
 	// Hopefully these are enough cases, it's hard to write a generic
 	// test without just writing out the indexForSize method again
-}
-
-// To make the 0->4 allocations sizes all point to the same byteSlab we had to
-// convert 0 sized allocations to 1 sized allocations when deriving the index.
-// This is a pretty horrific, method as it was implemented without branching.
-// One could argue this was important for performance, but the truth is, it was
-// a fun challenge (and surprisingly hard)
-func TestZeroToOne(t *testing.T) {
-	// Assert that 0 converts to 1
-	assert.Equal(t, uint32(1), zeroToOne(0))
-
-	// Assert that some very low values convert to 0
-	// Assert that some very high values convert to 0
-	for value := uint32(1); value < 32; value++ {
-		assert.Equal(t, uint32(0), zeroToOne(value))
-		assert.Equal(t, uint32(0), zeroToOne(0-value))
-	}
-
-	// Assert that larger values around power of 2 thresholds convert to 0
-	// There's a bit of overlap with the previous loop - but we're ok with that
-	for shift := 1; shift < 32; shift++ {
-		value := uint32(1) << shift
-		assert.Equal(t, uint32(0), zeroToOne(value))
-		assert.Equal(t, uint32(0), zeroToOne(value+1))
-		assert.Equal(t, uint32(0), zeroToOne(value-1))
-	}
 }
 
 // Demonstrate that we can create bytes, then get those bytes and modify them
