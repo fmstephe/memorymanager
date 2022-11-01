@@ -153,10 +153,10 @@ func Test_Bytes_NewFreeFree_Panic(t *testing.T) {
 func Test_Bytes_NewFreeNew_ReusesOldBytes(t *testing.T) {
 	os := NewByteStore()
 
-	sliceAllocations := slotCountSize * 3
+	sliceAllocations := 10_000
 
 	// Create a large number of objects
-	slices := make([]BytePointer, slotCountSize*3)
+	slices := make([]BytePointer, sliceAllocations)
 	for i := range slices {
 		p, _ := os.New(uint32(i))
 		slices[i] = p
