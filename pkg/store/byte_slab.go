@@ -60,15 +60,55 @@ func (s *byteSlab) alloc(size uint32) (BytePointer, error) {
 	return s.allocFromFree(size)
 }
 
-func (s *byteSlab) allocFromFree(size uint32) (BytePointer, error) {
-	oldFree := s.nextFree
+func (s *byteSlab) get(p BytePointer) []byte {
+	m := s.getMeta(p)
+	if !m.nextFree.IsNil() {
+		panic(fmt.Errorf("Attempted to Get freed bytes %v", p))
+	}
 
-	freeMeta := s.getMeta(oldFree)
-	s.nextFree = freeMeta.nextFree
+	return s.getBytes(p)
+}
+
+func (s *byteSlab) free(p BytePointer) {
+	meta := s.getMeta(p)
+
+	if !meta.nextFree.IsNil() {
+		panic(fmt.Errorf("Attempted to Free freed object %v", p))
+	}
+
+	if s.nextFree.IsNil() {
+		meta.nextFree = p
+	} else {
+		meta.nextFree = s.nextFree
+	}
+
+	s.nextFree = p
+}
+
+func (s *byteSlab) chunks() int {
+	return len(s.bytes)
+}
+
+func (s *byteSlab) allocFromFree(size uint32) (BytePointer, error) {
+	// Get pointer to the next available freed slot
+	alloc := s.nextFree
+
+	// Grab the meta-data for the slot and nil out the, now
+	// allocated, slot's nextFree pointer
+	freeMeta := s.getMeta(alloc)
+	nextFree := freeMeta.nextFree
 	freeMeta.nextFree = BytePointer{}
 
-	oldFree.size = size
-	return oldFree, nil
+	// If the nextFree pointer points to the allocated slot, then
+	// there are no more freed slots available
+	s.nextFree = nextFree
+	if nextFree == alloc {
+		s.nextFree = BytePointer{}
+	}
+
+	// Set the size to properly reflect the new allocation
+	alloc.size = size
+	return alloc, nil
 }
 
 func (s *byteSlab) allocFromOffset(size uint32) (BytePointer, error) {
@@ -99,15 +139,6 @@ func (s *byteSlab) allocFromOffset(size uint32) (BytePointer, error) {
 	return p, nil
 }
 
-func (s *byteSlab) get(p BytePointer) []byte {
-	m := s.getMeta(p)
-	if !m.nextFree.IsNil() {
-		panic(fmt.Errorf("Attempted to Get freed bytes %v", p))
-	}
-
-	return s.getBytes(p)
-}
-
 func (s *byteSlab) getBytes(p BytePointer) []byte {
 	chunk := p.chunk - 1
 	offset := p.byteOffset - 1
@@ -119,20 +150,4 @@ func (s *byteSlab) getMeta(p BytePointer) *bytesMeta {
 	chunk := p.chunk - 1
 	offset := p.slotOffset - 1
 	return &s.meta[chunk][offset]
-}
-
-func (s *byteSlab) free(p BytePointer) {
-	meta := s.getMeta(p)
-
-	if !meta.nextFree.IsNil() {
-		panic(fmt.Errorf("Attempted to Free freed object %v", p))
-	}
-
-	if s.nextFree.IsNil() {
-		meta.nextFree = p
-	} else {
-		meta.nextFree = s.nextFree
-	}
-
-	s.nextFree = p
 }

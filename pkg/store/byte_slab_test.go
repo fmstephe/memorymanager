@@ -2,8 +2,10 @@ package store
 
 import (
 	"math"
+	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -91,20 +93,17 @@ func assertFirstAlloc(t *testing.T, slab *byteSlab) {
 	require.Len(t, slab.bytes[0], int(slab.chunkSize))
 }
 
-func TestSlab_FullChunkAlloc(t *testing.T) {
+func TestSlab_FullChunkAllocFreeRealloc(t *testing.T) {
+	// Zero-allocator has 0 sized slots, and 0 sized chunk-size
+	//slab := newByteSlab(0)
+	//assertAllocateChunkFreeRealloc(t, &slab)
+
 	minSlabSize := 0
 	maxSlabSize := 32 // This is a power of two slab size
-
 	// This test is quite slow, so we speed it up, by avoiding running some expensive parts of the test
 	if testing.Short() {
-		minSlabSize = 4  // Avoid testing small allocations - they are slow
-		maxSlabSize = 20 // Avoid testing large allocations - they require a lot of memory
-	}
-
-	{
-		// Zero-allocator has 0 sized slots, and 0 sized chunk-size
-		slab := newByteSlab(0)
-		assertFirstChunkAlloc(t, &slab)
+		minSlabSize = 8  // Avoid testing small allocations - they are slow
+		maxSlabSize = 24 // Avoid testing large allocations - they require a lot of memory
 	}
 
 	for i := minSlabSize; i <= maxSlabSize; i++ {
@@ -114,17 +113,43 @@ func TestSlab_FullChunkAlloc(t *testing.T) {
 		}
 
 		slab := newByteSlab(size)
-		assertFirstChunkAlloc(t, &slab)
+		assertAllocateChunkFreeRealloc(t, &slab)
 	}
 }
 
-func assertFirstChunkAlloc(t *testing.T, slab *byteSlab) {
-	// Alloc more than one chunks worth of slices
-	maxSize := slab.slotSize
-	minSize := maxSize / 2
+func assertAllocateChunkFreeRealloc(t *testing.T, slab *byteSlab) {
+	pointers := doAllocations(t, slab, int(slab.slotCount+1))
 
-	size := minSize
-	for i := 0; i < int(slab.slotCount+1); i++ {
+	// Assert that we have fully allocated an entire chunk and started a second one
+	assertBytesAndMeta(t, 2, slab)
+
+	freeAllocations(t, slab, pointers)
+
+	// Assert that the backing data in the slab hasn't changed after all
+	// allocations have been freed
+	assertBytesAndMeta(t, 2, slab)
+
+	doAllocations(t, slab, int(slab.slotCount+1))
+
+	// Assert that no new backing data is created when we re-allocate all
+	// the objects again
+	assertBytesAndMeta(t, 2, slab)
+
+	doAllocations(t, slab, int(slab.slotCount+1))
+
+	// Allocate a new batch and see that new backing data is created
+	expectedCount := int(((slab.slotCount + 1) * 2) / slab.slotCount)
+	if int(((slab.slotCount+1)*2)%slab.slotCount) != 0 {
+		expectedCount++
+	}
+	assertBytesAndMeta(t, expectedCount, slab)
+}
+
+func doAllocations(t *testing.T, slab *byteSlab, num int) []BytePointer {
+	pointers := []BytePointer{}
+	for i := 0; i < num; i++ {
+		size := getRandomSize(slab.slotSize)
+
 		p, err := slab.alloc(size)
 		require.NoError(t, err)
 
@@ -133,18 +158,39 @@ func assertFirstChunkAlloc(t *testing.T, slab *byteSlab) {
 		// Ensure it's the size we asked for
 		require.Len(t, bytes, int(size))
 
-		// Change the allocation size, demonstrates that we can
-		// allocate different sized slices with the same slab
-		size++
-		if size > maxSize {
-			size = minSize
-		}
+		pointers = append(pointers, p)
 	}
 
-	require.Len(t, slab.meta, 2)
-	require.Len(t, slab.bytes, 2)
-	require.Len(t, slab.meta[0], int(slab.slotCount))
-	require.Len(t, slab.bytes[0], int(slab.chunkSize))
-	require.Len(t, slab.meta[1], int(slab.slotCount))
-	require.Len(t, slab.bytes[1], int(slab.chunkSize))
+	return pointers
+}
+
+func assertBytesAndMeta(t *testing.T, count int, slab *byteSlab) {
+	assert.Len(t, slab.meta, count, "expected %d, found %d instead", count, len(slab.meta))
+	for i := range slab.meta {
+		require.Len(t, slab.meta[i], int(slab.slotCount))
+	}
+
+	require.Len(t, slab.bytes, count)
+	for i := range slab.bytes {
+		require.Len(t, slab.bytes[i], int(slab.chunkSize))
+	}
+}
+
+// Get a random allocation size which is valid for this slotSize
+func getRandomSize(slotSize uint32) uint32 {
+	if slotSize == 0 {
+		return 0
+	}
+
+	maxSize := slotSize
+	minSize := maxSize / 2
+	diff := int64(maxSize - minSize)
+	val := uint32(rand.Int63n(diff))
+	return val + minSize
+}
+
+func freeAllocations(t *testing.T, slab *byteSlab, pointers []BytePointer) {
+	for i := range pointers {
+		slab.free(pointers[i])
+	}
 }

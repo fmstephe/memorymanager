@@ -87,6 +87,14 @@ func (s *ByteStore) LiveCount() int {
 	return s.allocs - s.frees
 }
 
+func (s *ByteStore) Chunks() int {
+	chunks := 0
+	for i := range s.slabs {
+		chunks += s.slabs[i].chunks()
+	}
+	return chunks
+}
+
 func indexForSize(size uint32) int {
 	if size == 0 {
 		return 0

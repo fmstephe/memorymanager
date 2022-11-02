@@ -63,24 +63,93 @@ func Test_Bytes_GetModifyGet(t *testing.T) {
 	// Create all the byte slices
 	pointers := make([]BytePointer, chunkSize*3)
 	for i := range pointers {
+		// Allocate the slice
 		p, err := bs.New(8)
 		require.NoError(t, err)
-		pointers[i] = p
-	}
 
-	// Get the bytes from the store and write data into it
-	for i, p := range pointers {
+		// Get the slice and write some data into it
 		bytes := bs.Get(p)
-		intBytes := intToBytes(i)
-		copy(bytes, intBytes)
+		binary.LittleEndian.PutUint64(bytes, uint64(i))
+
+		// Collect the pointer
+		pointers[i] = p
 	}
 
 	// Assert that all of the modifications are visible
 	for i, p := range pointers {
+		// Get the slice
 		bytes := bs.Get(p)
-		value := bytesToInt(bytes)
+		// Read its data
+		value := int(binary.LittleEndian.Uint64(bytes))
 		assert.Equal(t, i, value)
 	}
+
+	// Free all the allocated slices
+	for _, p := range pointers {
+		bs.Free(p)
+	}
+
+	// Get the bytes from the store and write data into it
+	for i := range pointers {
+		// Allocate the slice
+		p, err := bs.New(8)
+		require.NoError(t, err)
+
+		// Get the slice and write some data into it, make sure the
+		// data is different from anything written earlier
+		bytes := bs.Get(p)
+		binary.LittleEndian.PutUint64(bytes, uint64(i<<10))
+
+		// Collect the pointer
+		pointers[i] = p
+	}
+
+	// Assert that all of the modifications are visible
+	for i, p := range pointers {
+		// Get the slice
+		bytes := bs.Get(p)
+		// Read its data
+		value := int(binary.LittleEndian.Uint64(bytes))
+		assert.Equal(t, i<<10, value)
+	}
+}
+
+// This small test is in response to a bug found in the free implementation The
+// bug was that there is a loop in the `nextFree` of the last freed slot in
+// each byteSlab.  This is because a freed slot must always have a non-nil
+// `nextFree` pointer in its meta-data.  However because we weren't checking
+// for this exact case the last freed slot would re-add itself to the root
+// `nextFree` pointer in the byteSlab.  This means that in this case calls to
+// `New()` would allocate the same slot over and over, meaning multiple
+// independently allocated pointers would all point to the same slot.
+func TestFreeThenAllocTwice(t *testing.T) {
+	bs := NewByteStore()
+
+	// allocate and immediately free a slice
+	p, err := bs.New(8)
+	require.NoError(t, err)
+	bs.Free(p)
+
+	// Allocate two new slices
+	p1, err := bs.New(8)
+	require.NoError(t, err)
+	p2, err := bs.New(8)
+	require.NoError(t, err)
+
+	// assert that the pointers are independent
+	assert.NotEqual(t, p1, p2)
+
+	// Write different values to the two newly allocated slices
+	bytes1 := bs.Get(p1)
+	binary.LittleEndian.PutUint64(bytes1, uint64(1))
+	bytes2 := bs.Get(p2)
+	binary.LittleEndian.PutUint64(bytes2, uint64(2))
+
+	// assert that the writes are in the two, separate, slices
+	value1 := int(binary.LittleEndian.Uint64(bytes1))
+	value2 := int(binary.LittleEndian.Uint64(bytes2))
+	assert.Equal(t, 1, value1)
+	assert.Equal(t, 2, value2)
 }
 
 // Demonstrate that we can create bytes, then get those bytes and modify them
@@ -151,52 +220,61 @@ func Test_Bytes_NewFreeFree_Panic(t *testing.T) {
 // Demonstrate that if we create a large number of objects, then free them,
 // then allocate that same number again, we re-use the freed objects
 func Test_Bytes_NewFreeNew_ReusesOldBytes(t *testing.T) {
-	os := NewByteStore()
+	s := NewByteStore()
 
 	sliceAllocations := 10_000
 
 	// Create a large number of objects
 	slices := make([]BytePointer, sliceAllocations)
 	for i := range slices {
-		p, _ := os.New(uint32(i))
+		p, _ := s.New(uint32(i))
 		slices[i] = p
 	}
 
 	// We have allocate one batch of objects
-	assert.Equal(t, sliceAllocations, os.AllocCount())
+	assert.Equal(t, sliceAllocations, s.AllocCount())
 	// They are all live
-	assert.Equal(t, sliceAllocations, os.LiveCount())
+	assert.Equal(t, sliceAllocations, s.LiveCount())
 	// Nothing has been freed
-	assert.Equal(t, 0, os.FreeCount())
+	assert.Equal(t, 0, s.FreeCount())
+
+	chunks := s.Chunks()
+	// Assert that there are _some_ chunks which have been used to
+	// serve the allocations
+	assert.Greater(t, chunks, 0)
 
 	// Free all of those slices
 	for _, p := range slices {
-		os.Free(p)
+		s.Free(p)
 	}
 
 	// We have allocate one batch of slices
-	assert.Equal(t, sliceAllocations, os.AllocCount())
+	assert.Equal(t, sliceAllocations, s.AllocCount())
 	// None are live
-	assert.Equal(t, 0, os.LiveCount())
+	assert.Equal(t, 0, s.LiveCount())
 	// We have freed one batch of slices
-	assert.Equal(t, sliceAllocations, os.FreeCount())
+	assert.Equal(t, sliceAllocations, s.FreeCount())
+	// The number of chunks hasn't changed, since the first set of
+	// allocations
+	assert.Equal(t, chunks, s.Chunks())
 
 	// Allocate the same number of slices again
 	for i := range slices {
-		os.New(uint32(i))
+		s.New(uint32(i))
 	}
 
 	// We have allocated 2 batches of slices
-	assert.Equal(t, 2*sliceAllocations, os.AllocCount())
+	assert.Equal(t, 2*sliceAllocations, s.AllocCount())
 	// We have freed one batch
-	assert.Equal(t, sliceAllocations, os.LiveCount())
+	assert.Equal(t, sliceAllocations, s.LiveCount())
 	// One batch is live
-	assert.Equal(t, sliceAllocations, os.FreeCount())
+	assert.Equal(t, sliceAllocations, s.FreeCount())
+	// The number of chunks hasn't changed, since the first set of
+	// allocations
+	assert.Equal(t, chunks, s.Chunks())
 }
 
-func intToBytes(value int) []byte {
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, uint64(value))
+func intToBytes(value int, bytes []byte) []byte {
 	return bytes
 }
 
