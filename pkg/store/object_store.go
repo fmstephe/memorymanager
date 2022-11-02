@@ -47,8 +47,7 @@ func NewObjectStore[O any]() *ObjectStore[O] {
 	}
 }
 
-// Rename this to Alloc
-func (s *ObjectStore[O]) New() (ObjectPointer[O], *O) {
+func (s *ObjectStore[O]) Alloc() (ObjectPointer[O], *O) {
 	s.allocs++
 
 	if s.nextFree.IsNil() {

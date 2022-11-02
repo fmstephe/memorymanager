@@ -64,7 +64,7 @@ func Test_Bytes_GetModifyGet(t *testing.T) {
 	pointers := make([]BytePointer, chunkSize*3)
 	for i := range pointers {
 		// Allocate the slice
-		p, err := bs.New(8)
+		p, err := bs.Alloc(8)
 		require.NoError(t, err)
 
 		// Get the slice and write some data into it
@@ -92,7 +92,7 @@ func Test_Bytes_GetModifyGet(t *testing.T) {
 	// Get the bytes from the store and write data into it
 	for i := range pointers {
 		// Allocate the slice
-		p, err := bs.New(8)
+		p, err := bs.Alloc(8)
 		require.NoError(t, err)
 
 		// Get the slice and write some data into it, make sure the
@@ -120,20 +120,20 @@ func Test_Bytes_GetModifyGet(t *testing.T) {
 // `nextFree` pointer in its meta-data.  However because we weren't checking
 // for this exact case the last freed slot would re-add itself to the root
 // `nextFree` pointer in the byteSlab.  This means that in this case calls to
-// `New()` would allocate the same slot over and over, meaning multiple
+// `Alloc()` would allocate the same slot over and over, meaning multiple
 // independently allocated pointers would all point to the same slot.
 func TestFreeThenAllocTwice(t *testing.T) {
 	bs := NewByteStore()
 
 	// allocate and immediately free a slice
-	p, err := bs.New(8)
+	p, err := bs.Alloc(8)
 	require.NoError(t, err)
 	bs.Free(p)
 
 	// Allocate two new slices
-	p1, err := bs.New(8)
+	p1, err := bs.Alloc(8)
 	require.NoError(t, err)
-	p2, err := bs.New(8)
+	p2, err := bs.Alloc(8)
 	require.NoError(t, err)
 
 	// assert that the pointers are independent
@@ -164,7 +164,7 @@ func Test_Bytes_GetModifyGet_OddSizing(t *testing.T) {
 	pointers := make([]BytePointer, chunkSize*3)
 	size := uint32(0)
 	for i := range pointers {
-		p, err := bs.New(size)
+		p, err := bs.Alloc(size)
 		size++
 		if size > chunkSize {
 			size = 0
@@ -201,7 +201,7 @@ func Test_Bytes_GetModifyGet_OddSizing(t *testing.T) {
 // the freed object BytesStore panics
 func Test_Bytes_NewFreeGet_Panic(t *testing.T) {
 	os := NewByteStore()
-	p, _ := os.New(8)
+	p, _ := os.Alloc(8)
 	os.Free(p)
 
 	assert.Panics(t, func() { os.Get(p) })
@@ -211,7 +211,7 @@ func Test_Bytes_NewFreeGet_Panic(t *testing.T) {
 // the freed object BytesStore panics
 func Test_Bytes_NewFreeFree_Panic(t *testing.T) {
 	os := NewByteStore()
-	p, _ := os.New(8)
+	p, _ := os.Alloc(8)
 	os.Free(p)
 
 	assert.Panics(t, func() { os.Free(p) })
@@ -227,7 +227,7 @@ func Test_Bytes_NewFreeNew_ReusesOldBytes(t *testing.T) {
 	// Create a large number of objects
 	slices := make([]BytePointer, sliceAllocations)
 	for i := range slices {
-		p, _ := s.New(uint32(i))
+		p, _ := s.Alloc(uint32(i))
 		slices[i] = p
 	}
 
@@ -260,7 +260,7 @@ func Test_Bytes_NewFreeNew_ReusesOldBytes(t *testing.T) {
 
 	// Allocate the same number of slices again
 	for i := range slices {
-		s.New(uint32(i))
+		s.Alloc(uint32(i))
 	}
 
 	// We have allocated 2 batches of slices

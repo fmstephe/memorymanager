@@ -20,7 +20,7 @@ func Test_Object_NewModifyGet(t *testing.T) {
 	// Create all the objects and modify field
 	pointers := make([]ObjectPointer[MutableStruct], objectChunkSize*3)
 	for i := range pointers {
-		p, s := os.New()
+		p, s := os.Alloc()
 		s.Field = i
 		pointers[i] = p
 	}
@@ -46,7 +46,7 @@ func Test_Object_GetModifyGet(t *testing.T) {
 	// Create all the objects
 	pointers := make([]ObjectPointer[MutableStruct], objectChunkSize*3)
 	for i := range pointers {
-		p, _ := os.New()
+		p, _ := os.Alloc()
 		pointers[i] = p
 	}
 
@@ -71,7 +71,7 @@ func Test_Object_GetModifyGet(t *testing.T) {
 // the freed object ObjectStore panics
 func Test_Object_NewFreeGet_Panic(t *testing.T) {
 	os := NewObjectStore[MutableStruct]()
-	p, _ := os.New()
+	p, _ := os.Alloc()
 	os.Free(p)
 
 	assert.Panics(t, func() { os.Get(p) })
@@ -81,7 +81,7 @@ func Test_Object_NewFreeGet_Panic(t *testing.T) {
 // the freed object ObjectStore panics
 func Test_Object_NewFreeFree_Panic(t *testing.T) {
 	os := NewObjectStore[MutableStruct]()
-	p, _ := os.New()
+	p, _ := os.Alloc()
 	os.Free(p)
 
 	assert.Panics(t, func() { os.Free(p) })
@@ -97,7 +97,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	// Create a large number of objects
 	pointers := make([]ObjectPointer[MutableStruct], objectChunkSize*3)
 	for i := range pointers {
-		p, _ := os.New()
+		p, _ := os.Alloc()
 		pointers[i] = p
 	}
 
@@ -126,7 +126,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 
 	// Allocate the same number of objects again
 	for range pointers {
-		os.New()
+		os.Alloc()
 	}
 
 	// We have allocated 2 batches of objects

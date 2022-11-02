@@ -15,14 +15,14 @@ func newTreeStore[T any]() *nodeStore[T] {
 }
 
 func (s *nodeStore[T]) newNode(view View) (store.ObjectPointer[node[T]], *node[T]) {
-	p, newNode := s.nodes.New()
+	p, newNode := s.nodes.Alloc()
 	newNode.view = view
 	newNode.isLeaf = false
 	return p, newNode
 }
 
 func (s *nodeStore[T]) newLeaf(view View) store.ObjectPointer[node[T]] {
-	p, newLeaf := s.nodes.New()
+	p, newLeaf := s.nodes.Alloc()
 	newLeaf.view = view
 	newLeaf.isLeaf = true
 	return p
@@ -42,7 +42,7 @@ type elem[T any] struct {
 }
 
 func (s *nodeStore[T]) newElem(data T) store.ObjectPointer[elem[T]] {
-	p, newE := s.elems.New()
+	p, newE := s.elems.Alloc()
 	// new element points to itself in a cycle
 	newE.next = p
 	newE.prev = p

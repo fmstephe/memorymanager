@@ -52,8 +52,7 @@ func initialiseSlabs() []byteSlab {
 	return slabs
 }
 
-// TODO rename this to Alloc
-func (s *ByteStore) New(size uint32) (BytePointer, error) {
+func (s *ByteStore) Alloc(size uint32) (BytePointer, error) {
 	s.allocs++
 
 	idx := indexForSize(size)
