@@ -4,6 +4,15 @@ import "fmt"
 
 const objectChunkSize = 1024
 
+type ObjectStoreStats struct {
+	Allocs    int
+	Frees     int
+	RawAllocs int
+	Live      int
+	Reused    int
+	Chunks    int
+}
+
 type ObjectStore[O any] struct {
 	// Immutable fields
 	chunkSize int32
@@ -11,6 +20,7 @@ type ObjectStore[O any] struct {
 	// Accounting fields
 	allocs int
 	frees  int
+	reused int
 
 	offset   int32
 	nextFree ObjectPointer[O]
@@ -54,6 +64,7 @@ func (s *ObjectStore[O]) Alloc() (ObjectPointer[O], *O) {
 		return s.newFromOffset()
 	}
 
+	s.reused++
 	return s.newFromFree()
 }
 
@@ -83,20 +94,15 @@ func (s *ObjectStore[O]) Free(p ObjectPointer[O]) {
 	s.nextFree = p
 }
 
-func (s *ObjectStore[O]) AllocCount() int {
-	return s.allocs
-}
-
-func (s *ObjectStore[O]) FreeCount() int {
-	return s.frees
-}
-
-func (s *ObjectStore[O]) LiveCount() int {
-	return s.allocs - s.frees
-}
-
-func (s *ObjectStore[O]) Chunks() int {
-	return len(s.objects)
+func (s *ObjectStore[O]) GetStats() ObjectStoreStats {
+	return ObjectStoreStats{
+		Allocs:    s.allocs,
+		Frees:     s.frees,
+		RawAllocs: s.allocs - s.reused,
+		Live:      s.allocs - s.frees,
+		Reused:    s.reused,
+		Chunks:    len(s.objects),
+	}
 }
 
 func (s *ObjectStore[O]) newFromFree() (ObjectPointer[O], *O) {

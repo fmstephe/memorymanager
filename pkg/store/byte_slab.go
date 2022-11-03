@@ -4,6 +4,16 @@ import (
 	"fmt"
 )
 
+type ByteSlabStats struct {
+	SlotSize  int
+	Allocs    int
+	Frees     int
+	RawAllocs int
+	Live      int
+	Reused    int
+	Chunks    int
+}
+
 // If the bytesMeta for a byte slot has a non-nil nextFree pointer then the
 // byte slot is currently free.  Byte slots which have never been allocated are
 // implicitly free, but have a nil nextFree point in their bytesMeta.
@@ -18,6 +28,13 @@ type byteSlab struct {
 	chunkSize uint32 // Each chunk is sized slotSize*slotCount
 
 	// Mutable fields
+
+	// counting stat fields
+	allocs int
+	frees  int
+	reused int
+
+	// operational fields
 	byteOffset uint32        // The offset of unallocated bytes in current chunk
 	slotOffset uint32        // The offset of unallocated slots in the current chunk
 	nextFree   BytePointer   // The first freed slot, may be nil
@@ -54,9 +71,13 @@ func newByteSlab(slotSize uint32) byteSlab {
 }
 
 func (s *byteSlab) alloc(size uint32) (BytePointer, error) {
+	s.allocs++
+
 	if s.nextFree.IsNil() {
 		return s.allocFromOffset(size)
 	}
+
+	s.reused++
 	return s.allocFromFree(size)
 }
 
@@ -70,6 +91,7 @@ func (s *byteSlab) get(p BytePointer) []byte {
 }
 
 func (s *byteSlab) free(p BytePointer) {
+	s.frees++
 	meta := s.getMeta(p)
 
 	if !meta.nextFree.IsNil() {
@@ -85,8 +107,16 @@ func (s *byteSlab) free(p BytePointer) {
 	s.nextFree = p
 }
 
-func (s *byteSlab) chunks() int {
-	return len(s.bytes)
+func (s *byteSlab) GetStats() ByteSlabStats {
+	return ByteSlabStats{
+		SlotSize:  int(s.slotSize),
+		Allocs:    s.allocs,
+		Frees:     s.frees,
+		RawAllocs: s.allocs - s.reused,
+		Live:      s.allocs - s.frees,
+		Reused:    s.reused,
+		Chunks:    len(s.bytes),
+	}
 }
 
 func (s *byteSlab) allocFromFree(size uint32) (BytePointer, error) {

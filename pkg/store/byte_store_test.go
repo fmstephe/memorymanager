@@ -232,13 +232,14 @@ func Test_Bytes_NewFreeNew_ReusesOldBytes(t *testing.T) {
 	}
 
 	// We have allocate one batch of objects
-	assert.Equal(t, sliceAllocations, s.AllocCount())
+	stats := s.GetStats()
+	assert.Equal(t, sliceAllocations, stats.TotalAllocs)
 	// They are all live
-	assert.Equal(t, sliceAllocations, s.LiveCount())
+	assert.Equal(t, sliceAllocations, stats.TotalLive)
 	// Nothing has been freed
-	assert.Equal(t, 0, s.FreeCount())
+	assert.Equal(t, 0, stats.TotalFrees)
 
-	chunks := s.Chunks()
+	chunks := stats.TotalChunks
 	// Assert that there are _some_ chunks which have been used to
 	// serve the allocations
 	assert.Greater(t, chunks, 0)
@@ -249,14 +250,15 @@ func Test_Bytes_NewFreeNew_ReusesOldBytes(t *testing.T) {
 	}
 
 	// We have allocate one batch of slices
-	assert.Equal(t, sliceAllocations, s.AllocCount())
+	stats = s.GetStats()
+	assert.Equal(t, sliceAllocations, stats.TotalAllocs)
 	// None are live
-	assert.Equal(t, 0, s.LiveCount())
+	assert.Equal(t, 0, stats.TotalLive)
 	// We have freed one batch of slices
-	assert.Equal(t, sliceAllocations, s.FreeCount())
+	assert.Equal(t, sliceAllocations, stats.TotalFrees)
 	// The number of chunks hasn't changed, since the first set of
 	// allocations
-	assert.Equal(t, chunks, s.Chunks())
+	assert.Equal(t, chunks, stats.TotalChunks)
 
 	// Allocate the same number of slices again
 	for i := range slices {
@@ -264,14 +266,15 @@ func Test_Bytes_NewFreeNew_ReusesOldBytes(t *testing.T) {
 	}
 
 	// We have allocated 2 batches of slices
-	assert.Equal(t, 2*sliceAllocations, s.AllocCount())
+	stats = s.GetStats()
+	assert.Equal(t, 2*sliceAllocations, stats.TotalAllocs)
 	// We have freed one batch
-	assert.Equal(t, sliceAllocations, s.LiveCount())
+	assert.Equal(t, sliceAllocations, stats.TotalLive)
 	// One batch is live
-	assert.Equal(t, sliceAllocations, s.FreeCount())
+	assert.Equal(t, sliceAllocations, stats.TotalFrees)
 	// The number of chunks hasn't changed, since the first set of
 	// allocations
-	assert.Equal(t, chunks, s.Chunks())
+	assert.Equal(t, chunks, stats.TotalChunks)
 }
 
 func intToBytes(value int, bytes []byte) []byte {

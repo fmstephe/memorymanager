@@ -25,9 +25,10 @@ func Test_Object_NewModifyGet(t *testing.T) {
 		pointers[i] = p
 	}
 
-	assert.Equal(t, len(pointers), os.AllocCount())
-	assert.Equal(t, len(pointers), os.LiveCount())
-	assert.Equal(t, 0, os.FreeCount())
+	stats := os.GetStats()
+	assert.Equal(t, len(pointers), stats.Allocs)
+	assert.Equal(t, len(pointers), stats.Live)
+	assert.Equal(t, 0, stats.Frees)
 
 	// Assert that all of the modifications are visible
 	for i, p := range pointers {
@@ -50,9 +51,10 @@ func Test_Object_GetModifyGet(t *testing.T) {
 		pointers[i] = p
 	}
 
-	assert.Equal(t, len(pointers), os.AllocCount())
-	assert.Equal(t, len(pointers), os.LiveCount())
-	assert.Equal(t, 0, os.FreeCount())
+	stats := os.GetStats()
+	assert.Equal(t, len(pointers), stats.Allocs)
+	assert.Equal(t, len(pointers), stats.Live)
+	assert.Equal(t, 0, stats.Frees)
 
 	// Get each object and modify field
 	for i, p := range pointers {
@@ -101,40 +103,43 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 		pointers[i] = p
 	}
 
+	stats := os.GetStats()
 	// We have allocate one batch of objects
-	assert.Equal(t, objectAllocations, os.AllocCount())
+	assert.Equal(t, objectAllocations, stats.Allocs)
 	// They are all live
-	assert.Equal(t, objectAllocations, os.LiveCount())
+	assert.Equal(t, objectAllocations, stats.Live)
 	// Nothing has been freed
-	assert.Equal(t, 0, os.FreeCount())
+	assert.Equal(t, 0, stats.Frees)
 	// Internally 4 chunks have been created
-	assert.Equal(t, 4, os.Chunks())
+	assert.Equal(t, 4, stats.Chunks)
 
 	// Free all of those objects
 	for _, p := range pointers {
 		os.Free(p)
 	}
 
+	stats = os.GetStats()
 	// We have allocate one batch of objects
-	assert.Equal(t, objectAllocations, os.AllocCount())
+	assert.Equal(t, objectAllocations, stats.Allocs)
 	// None are live
-	assert.Equal(t, 0, os.LiveCount())
+	assert.Equal(t, 0, stats.Live)
 	// We have freed one batch of objects
-	assert.Equal(t, objectAllocations, os.FreeCount())
+	assert.Equal(t, objectAllocations, stats.Frees)
 	// Internally 4 chunks have been created
-	assert.Equal(t, 4, os.Chunks())
+	assert.Equal(t, 4, stats.Chunks)
 
 	// Allocate the same number of objects again
 	for range pointers {
 		os.Alloc()
 	}
 
+	stats = os.GetStats()
 	// We have allocated 2 batches of objects
-	assert.Equal(t, 2*objectAllocations, os.AllocCount())
+	assert.Equal(t, 2*objectAllocations, stats.Allocs)
 	// We have freed one batch
-	assert.Equal(t, objectAllocations, os.LiveCount())
+	assert.Equal(t, objectAllocations, stats.Live)
 	// One batch is live
-	assert.Equal(t, objectAllocations, os.FreeCount())
+	assert.Equal(t, objectAllocations, stats.Frees)
 	// Internally 4 chunks have been created
-	assert.Equal(t, 4, os.Chunks())
+	assert.Equal(t, 4, stats.Chunks)
 }
