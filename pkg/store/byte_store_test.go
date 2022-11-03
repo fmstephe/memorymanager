@@ -238,6 +238,8 @@ func Test_Bytes_NewFreeNew_ReusesOldBytes(t *testing.T) {
 	assert.Equal(t, sliceAllocations, stats.TotalLive)
 	// Nothing has been freed
 	assert.Equal(t, 0, stats.TotalFrees)
+	// Nothing has been reused
+	assert.Equal(t, 0, stats.TotalReused)
 
 	chunks := stats.TotalChunks
 	// Assert that there are _some_ chunks which have been used to
@@ -256,8 +258,9 @@ func Test_Bytes_NewFreeNew_ReusesOldBytes(t *testing.T) {
 	assert.Equal(t, 0, stats.TotalLive)
 	// We have freed one batch of slices
 	assert.Equal(t, sliceAllocations, stats.TotalFrees)
-	// The number of chunks hasn't changed, since the first set of
-	// allocations
+	// Nothing has been reused
+	assert.Equal(t, 0, stats.TotalReused)
+	// The number of chunks hasn't changed
 	assert.Equal(t, chunks, stats.TotalChunks)
 
 	// Allocate the same number of slices again
@@ -272,9 +275,28 @@ func Test_Bytes_NewFreeNew_ReusesOldBytes(t *testing.T) {
 	assert.Equal(t, sliceAllocations, stats.TotalLive)
 	// One batch is live
 	assert.Equal(t, sliceAllocations, stats.TotalFrees)
+	// All the freed slots have been reused
+	assert.Equal(t, sliceAllocations, stats.TotalReused)
 	// The number of chunks hasn't changed, since the first set of
 	// allocations
 	assert.Equal(t, chunks, stats.TotalChunks)
+
+	// Allocate the same number of slices again
+	for i := range slices {
+		s.Alloc(uint32(i))
+	}
+
+	// We have allocated 3 batches of slices
+	stats = s.GetStats()
+	assert.Equal(t, 3*sliceAllocations, stats.TotalAllocs)
+	// Two batches are live
+	assert.Equal(t, 2*sliceAllocations, stats.TotalLive)
+	// We have freed one batch
+	assert.Equal(t, sliceAllocations, stats.TotalFrees)
+	// All the freed slots (one batch) have been reused
+	assert.Equal(t, sliceAllocations, stats.TotalReused)
+	// Some number of chunks will be allocated for the new allocations
+	assert.Greater(t, stats.TotalChunks, chunks)
 }
 
 func intToBytes(value int, bytes []byte) []byte {
