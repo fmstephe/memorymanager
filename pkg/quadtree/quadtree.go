@@ -68,7 +68,6 @@ func makeNode[K any](view View, store *nodeStore[K]) store.ObjectPointer[node[K]
 }
 
 // Inserts elems into the single child subtree whose view contains (x,y)
-// TODO we almost certainly need to update count here
 func (n *node[K]) insert(x, y float64, elemsP store.ObjectPointer[elem[K]], store *nodeStore[K]) {
 	// We are adding an element to this node or one of its children, increment the count
 	n.cachedCount++
