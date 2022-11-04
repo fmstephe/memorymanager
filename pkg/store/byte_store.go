@@ -102,5 +102,6 @@ func indexForSize(size uint32) int {
 	if size == 0 {
 		return 0
 	}
-	return bits.Len32(size-1) + 1
+	idx := bits.Len32(size-1) + 1
+	return idx
 }

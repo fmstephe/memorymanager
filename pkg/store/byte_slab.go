@@ -71,6 +71,12 @@ func newByteSlab(slotSize uint32) byteSlab {
 }
 
 func (s *byteSlab) alloc(size uint32) (BytePointer, error) {
+	if size > s.slotSize {
+		panic(fmt.Errorf("allocation %d by is too large for slab with slot size %d", size, s.slotSize))
+	}
+	if size < (s.slotSize >> 1) {
+		panic(fmt.Errorf("allocation %d by is too small for slab with slot size %d", size, s.slotSize))
+	}
 	s.allocs++
 
 	if s.nextFree.IsNil() {
@@ -129,7 +135,7 @@ func (s *byteSlab) allocFromFree(size uint32) (BytePointer, error) {
 	nextFree := freeMeta.nextFree
 	freeMeta.nextFree = BytePointer{}
 
-	// If the nextFree pointer points to the allocated slot, then
+	// If the nextFree pointer points to the just allocated slot, then
 	// there are no more freed slots available
 	s.nextFree = nextFree
 	if nextFree == alloc {
