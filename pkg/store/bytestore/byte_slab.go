@@ -37,7 +37,7 @@ type byteSlab struct {
 	// operational fields
 	byteOffset uint32        // The offset of unallocated bytes in current chunk
 	slotOffset uint32        // The offset of unallocated slots in the current chunk
-	nextFree   Pointer       // The first freed slot, may be nil
+	rootFree   Pointer       // The first freed slot, may be nil
 	meta       [][]bytesMeta // All meta-data
 	bytes      [][]byte      // All actual byte data
 }
@@ -79,7 +79,7 @@ func (s *byteSlab) alloc(size uint32) (Pointer, error) {
 	}
 	s.allocs++
 
-	if s.nextFree.IsNil() {
+	if s.rootFree.IsNil() {
 		return s.allocFromOffset(size)
 	}
 
@@ -104,13 +104,13 @@ func (s *byteSlab) free(p Pointer) {
 		panic(fmt.Errorf("Attempted to Free freed object %v", p))
 	}
 
-	if s.nextFree.IsNil() {
+	if s.rootFree.IsNil() {
 		meta.nextFree = p
 	} else {
-		meta.nextFree = s.nextFree
+		meta.nextFree = s.rootFree
 	}
 
-	s.nextFree = p
+	s.rootFree = p
 }
 
 func (s *byteSlab) GetStats() ByteSlabStats {
@@ -127,7 +127,7 @@ func (s *byteSlab) GetStats() ByteSlabStats {
 
 func (s *byteSlab) allocFromFree(size uint32) (Pointer, error) {
 	// Get pointer to the next available freed slot
-	alloc := s.nextFree
+	alloc := s.rootFree
 
 	// Grab the meta-data for the slot and nil out the, now
 	// allocated, slot's nextFree pointer
@@ -137,9 +137,9 @@ func (s *byteSlab) allocFromFree(size uint32) (Pointer, error) {
 
 	// If the nextFree pointer points to the just allocated slot, then
 	// there are no more freed slots available
-	s.nextFree = nextFree
+	s.rootFree = nextFree
 	if nextFree == alloc {
-		s.nextFree = Pointer{}
+		s.rootFree = Pointer{}
 	}
 
 	// Set the size to properly reflect the new allocation

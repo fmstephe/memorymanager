@@ -23,7 +23,7 @@ type Store[O any] struct {
 	reused int
 
 	offset   int32
-	nextFree Pointer[O]
+	rootFree Pointer[O]
 	meta     [][]meta[O]
 	objects  [][]O
 }
@@ -60,7 +60,7 @@ func New[O any]() *Store[O] {
 func (s *Store[O]) Alloc() (Pointer[O], *O) {
 	s.allocs++
 
-	if s.nextFree.IsNil() {
+	if s.rootFree.IsNil() {
 		return s.newFromOffset()
 	}
 
@@ -85,13 +85,13 @@ func (s *Store[O]) Free(p Pointer[O]) {
 
 	s.frees++
 
-	if s.nextFree.IsNil() {
+	if s.rootFree.IsNil() {
 		meta.nextFree = p
 	} else {
-		meta.nextFree = s.nextFree
+		meta.nextFree = s.rootFree
 	}
 
-	s.nextFree = p
+	s.rootFree = p
 }
 
 func (s *Store[O]) GetStats() Stats {
@@ -106,10 +106,10 @@ func (s *Store[O]) GetStats() Stats {
 }
 
 func (s *Store[O]) newFromFree() (Pointer[O], *O) {
-	oldFree := s.nextFree
+	oldFree := s.rootFree
 
 	freeMeta := s.getMeta(oldFree)
-	s.nextFree = freeMeta.nextFree
+	s.rootFree = freeMeta.nextFree
 	freeMeta.nextFree = Pointer[O]{}
 	return oldFree, s.getObject(oldFree)
 }
