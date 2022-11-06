@@ -5,7 +5,7 @@ import (
 	"math/bits"
 )
 
-type ByteStoreStats struct {
+type Stats struct {
 	TotalAllocs    int
 	TotalFrees     int
 	TotalRawAllocs int
@@ -15,23 +15,23 @@ type ByteStoreStats struct {
 	SlabStats      []ByteSlabStats
 }
 
-type BytePointer struct {
+type Pointer struct {
 	chunk      uint32
 	slotOffset uint32
 	byteOffset uint32
 	size       uint32
 }
 
-func (p BytePointer) IsNil() bool {
+func (p Pointer) IsNil() bool {
 	return p.chunk == 0 && p.slotOffset == 0
 }
 
-type ByteStore struct {
+type Store struct {
 	slabs []byteSlab
 }
 
-func NewByteStore() *ByteStore {
-	return &ByteStore{
+func New() *Store {
+	return &Store{
 		slabs: initialiseSlabs(),
 	}
 }
@@ -60,7 +60,7 @@ func initialiseSlabs() []byteSlab {
 	return slabs
 }
 
-func (s *ByteStore) Alloc(size uint32) (BytePointer, error) {
+func (s *Store) Alloc(size uint32) (Pointer, error) {
 	idx := indexForSize(size)
 	// TODO we should explicitly panic if the idx is out of range here
 	// Need a clear and explicit panic message
@@ -68,18 +68,18 @@ func (s *ByteStore) Alloc(size uint32) (BytePointer, error) {
 	return s.slabs[idx].alloc(size)
 }
 
-func (s *ByteStore) Get(p BytePointer) []byte {
+func (s *Store) Get(p Pointer) []byte {
 	idx := indexForSize(p.size)
 	return s.slabs[idx].get(p)
 }
 
-func (s *ByteStore) Free(p BytePointer) {
+func (s *Store) Free(p Pointer) {
 	idx := indexForSize(p.size)
 	s.slabs[idx].free(p)
 }
 
-func (s *ByteStore) GetStats() ByteStoreStats {
-	stats := ByteStoreStats{
+func (s *Store) GetStats() Stats {
+	stats := Stats{
 		SlabStats: make([]ByteSlabStats, len(s.slabs)),
 	}
 	for i := range s.slabs {

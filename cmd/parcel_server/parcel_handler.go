@@ -12,8 +12,8 @@ import (
 )
 
 type ParcelHandler struct {
-	byteStore *bytestore.ByteStore
-	tree      quadtree.Tree[bytestore.BytePointer]
+	byteStore *bytestore.Store
+	tree      quadtree.Tree[bytestore.Pointer]
 }
 
 func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {
@@ -90,9 +90,9 @@ var endArray = []byte(`null]`)
 var comma = []byte(`,`)
 var end = []byte(`}`)
 
-func surveyFunc(w http.ResponseWriter, byteStore *bytestore.ByteStore, limit int) func(_, _ float64, bp bytestore.BytePointer) bool {
-	pointerSet := map[bytestore.BytePointer]struct{}{}
-	return func(_, _ float64, bp bytestore.BytePointer) bool {
+func surveyFunc(w http.ResponseWriter, byteStore *bytestore.Store, limit int) func(_, _ float64, bp bytestore.Pointer) bool {
+	pointerSet := map[bytestore.Pointer]struct{}{}
+	return func(_, _ float64, bp bytestore.Pointer) bool {
 		if _, ok := pointerSet[bp]; ok {
 			// We've already seen this pointer, don't write it out again
 			return true

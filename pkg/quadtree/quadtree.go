@@ -18,7 +18,7 @@ func NewQuadTree[K any](view View) Tree[K] {
 // A point with a slice of stored elements
 type vpoint[K any] struct {
 	x, y   float64
-	elemsP objectstore.ObjectPointer[elem[K]]
+	elemsP objectstore.Pointer[elem[K]]
 }
 
 // Indicates whether a vpoint is zeroed, i.e. uninitialised
@@ -54,10 +54,10 @@ type node[K any] struct {
 	ps [LEAF_SIZE]vpoint[K]
 
 	// Used if this node is not a leaf
-	children [4]objectstore.ObjectPointer[node[K]]
+	children [4]objectstore.Pointer[node[K]]
 }
 
-func makeNode[K any](view View, store *nodeStore[K]) objectstore.ObjectPointer[node[K]] {
+func makeNode[K any](view View, store *nodeStore[K]) objectstore.Pointer[node[K]] {
 	nodePointer, newNode := store.newNode(view)
 	views := view.quarters()
 	for i, view := range views {
@@ -68,7 +68,7 @@ func makeNode[K any](view View, store *nodeStore[K]) objectstore.ObjectPointer[n
 }
 
 // Inserts elems into the single child subtree whose view contains (x,y)
-func (n *node[K]) insert(x, y float64, elemsP objectstore.ObjectPointer[elem[K]], store *nodeStore[K]) {
+func (n *node[K]) insert(x, y float64, elemsP objectstore.Pointer[elem[K]], store *nodeStore[K]) {
 	// We are adding an element to this node or one of its children, increment the count
 	n.cachedCount++
 
@@ -208,7 +208,7 @@ func (n *node[K]) String() string {
 //   - Allocating and recycling leaf and node elements
 type root[K any] struct {
 	store       *nodeStore[K]
-	rootPointer objectstore.ObjectPointer[node[K]]
+	rootPointer objectstore.Pointer[node[K]]
 	view        View
 }
 

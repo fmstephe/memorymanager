@@ -15,10 +15,10 @@ type MutableStruct struct {
 // We ensure that we allocate so many objects that we will need more than one chunk
 // to store all objects.
 func Test_Object_NewModifyGet(t *testing.T) {
-	os := NewObjectStore[MutableStruct]()
+	os := New[MutableStruct]()
 
 	// Create all the objects and modify field
-	pointers := make([]ObjectPointer[MutableStruct], objectChunkSize*3)
+	pointers := make([]Pointer[MutableStruct], objectChunkSize*3)
 	for i := range pointers {
 		p, s := os.Alloc()
 		s.Field = i
@@ -42,10 +42,10 @@ func Test_Object_NewModifyGet(t *testing.T) {
 // We ensure that we allocate so many objects that we will need more than one chunk
 // to store all objects.
 func Test_Object_GetModifyGet(t *testing.T) {
-	os := NewObjectStore[MutableStruct]()
+	os := New[MutableStruct]()
 
 	// Create all the objects
-	pointers := make([]ObjectPointer[MutableStruct], objectChunkSize*3)
+	pointers := make([]Pointer[MutableStruct], objectChunkSize*3)
 	for i := range pointers {
 		p, _ := os.Alloc()
 		pointers[i] = p
@@ -72,7 +72,7 @@ func Test_Object_GetModifyGet(t *testing.T) {
 // Demonstrate that we can create an object, then free it. If we try to Get()
 // the freed object ObjectStore panics
 func Test_Object_NewFreeGet_Panic(t *testing.T) {
-	os := NewObjectStore[MutableStruct]()
+	os := New[MutableStruct]()
 	p, _ := os.Alloc()
 	os.Free(p)
 
@@ -82,7 +82,7 @@ func Test_Object_NewFreeGet_Panic(t *testing.T) {
 // Demonstrate that we can create an object, then free it. If we try to Free()
 // the freed object ObjectStore panics
 func Test_Object_NewFreeFree_Panic(t *testing.T) {
-	os := NewObjectStore[MutableStruct]()
+	os := New[MutableStruct]()
 	p, _ := os.Alloc()
 	os.Free(p)
 
@@ -92,12 +92,12 @@ func Test_Object_NewFreeFree_Panic(t *testing.T) {
 // Demonstrate that if we create a large number of objects, then free them,
 // then allocate that same number again, we re-use the freed objects
 func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
-	os := NewObjectStore[MutableStruct]()
+	os := New[MutableStruct]()
 
 	objectAllocations := objectChunkSize * 3
 
 	// Create a large number of objects
-	pointers := make([]ObjectPointer[MutableStruct], objectChunkSize*3)
+	pointers := make([]Pointer[MutableStruct], objectChunkSize*3)
 	for i := range pointers {
 		p, _ := os.Alloc()
 		pointers[i] = p

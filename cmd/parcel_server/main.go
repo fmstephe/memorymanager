@@ -50,9 +50,9 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func fillTree(parcelChan chan lds_csv.CSVParcelData) (quadtree.Tree[bytestore.BytePointer], *bytestore.ByteStore) {
-	byteStore := bytestore.NewByteStore()
-	tree := quadtree.NewQuadTree[bytestore.BytePointer](quadtree.NewLongLatView())
+func fillTree(parcelChan chan lds_csv.CSVParcelData) (quadtree.Tree[bytestore.Pointer], *bytestore.Store) {
+	byteStore := bytestore.New()
+	tree := quadtree.NewQuadTree[bytestore.Pointer](quadtree.NewLongLatView())
 
 	count := 0
 	errCount := 0

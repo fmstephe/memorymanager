@@ -18,7 +18,7 @@ type ByteSlabStats struct {
 // byte slot is currently free.  Byte slots which have never been allocated are
 // implicitly free, but have a nil nextFree point in their bytesMeta.
 type bytesMeta struct {
-	nextFree BytePointer
+	nextFree Pointer
 }
 
 type byteSlab struct {
@@ -37,7 +37,7 @@ type byteSlab struct {
 	// operational fields
 	byteOffset uint32        // The offset of unallocated bytes in current chunk
 	slotOffset uint32        // The offset of unallocated slots in the current chunk
-	nextFree   BytePointer   // The first freed slot, may be nil
+	nextFree   Pointer       // The first freed slot, may be nil
 	meta       [][]bytesMeta // All meta-data
 	bytes      [][]byte      // All actual byte data
 }
@@ -70,7 +70,7 @@ func newByteSlab(slotSize uint32) byteSlab {
 	}
 }
 
-func (s *byteSlab) alloc(size uint32) (BytePointer, error) {
+func (s *byteSlab) alloc(size uint32) (Pointer, error) {
 	if size > s.slotSize {
 		panic(fmt.Errorf("allocation %d by is too large for slab with slot size %d", size, s.slotSize))
 	}
@@ -87,7 +87,7 @@ func (s *byteSlab) alloc(size uint32) (BytePointer, error) {
 	return s.allocFromFree(size)
 }
 
-func (s *byteSlab) get(p BytePointer) []byte {
+func (s *byteSlab) get(p Pointer) []byte {
 	m := s.getMeta(p)
 	if !m.nextFree.IsNil() {
 		panic(fmt.Errorf("Attempted to Get freed bytes %v", p))
@@ -96,7 +96,7 @@ func (s *byteSlab) get(p BytePointer) []byte {
 	return s.getBytes(p)
 }
 
-func (s *byteSlab) free(p BytePointer) {
+func (s *byteSlab) free(p Pointer) {
 	s.frees++
 	meta := s.getMeta(p)
 
@@ -125,7 +125,7 @@ func (s *byteSlab) GetStats() ByteSlabStats {
 	}
 }
 
-func (s *byteSlab) allocFromFree(size uint32) (BytePointer, error) {
+func (s *byteSlab) allocFromFree(size uint32) (Pointer, error) {
 	// Get pointer to the next available freed slot
 	alloc := s.nextFree
 
@@ -133,13 +133,13 @@ func (s *byteSlab) allocFromFree(size uint32) (BytePointer, error) {
 	// allocated, slot's nextFree pointer
 	freeMeta := s.getMeta(alloc)
 	nextFree := freeMeta.nextFree
-	freeMeta.nextFree = BytePointer{}
+	freeMeta.nextFree = Pointer{}
 
 	// If the nextFree pointer points to the just allocated slot, then
 	// there are no more freed slots available
 	s.nextFree = nextFree
 	if nextFree == alloc {
-		s.nextFree = BytePointer{}
+		s.nextFree = Pointer{}
 	}
 
 	// Set the size to properly reflect the new allocation
@@ -147,7 +147,7 @@ func (s *byteSlab) allocFromFree(size uint32) (BytePointer, error) {
 	return alloc, nil
 }
 
-func (s *byteSlab) allocFromOffset(size uint32) (BytePointer, error) {
+func (s *byteSlab) allocFromOffset(size uint32) (Pointer, error) {
 	if size > s.slotSize {
 		panic(fmt.Errorf("bad alloc size, max allowed %d, %d was requested", s.slotSize-4, size))
 	}
@@ -161,7 +161,7 @@ func (s *byteSlab) allocFromOffset(size uint32) (BytePointer, error) {
 	}
 
 	// Create BytePointer pointing to the new slice
-	p := BytePointer{
+	p := Pointer{
 		chunk:      uint32(len(s.bytes)),
 		slotOffset: s.slotOffset + 1,
 		byteOffset: s.byteOffset + 1,
@@ -175,14 +175,14 @@ func (s *byteSlab) allocFromOffset(size uint32) (BytePointer, error) {
 	return p, nil
 }
 
-func (s *byteSlab) getBytes(p BytePointer) []byte {
+func (s *byteSlab) getBytes(p Pointer) []byte {
 	chunk := p.chunk - 1
 	offset := p.byteOffset - 1
 	size := p.size
 	return s.bytes[chunk][offset : offset+size]
 }
 
-func (s *byteSlab) getMeta(p BytePointer) *bytesMeta {
+func (s *byteSlab) getMeta(p Pointer) *bytesMeta {
 	chunk := p.chunk - 1
 	offset := p.slotOffset - 1
 	return &s.meta[chunk][offset]

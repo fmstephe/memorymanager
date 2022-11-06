@@ -58,10 +58,10 @@ func generateAllocationSizes() []uint32 {
 // store all bytes.
 func Test_Bytes_GetModifyGet(t *testing.T) {
 	const chunkSize = 1024
-	bs := NewByteStore()
+	bs := New()
 
 	// Create all the byte slices
-	pointers := make([]BytePointer, chunkSize*3)
+	pointers := make([]Pointer, chunkSize*3)
 	for i := range pointers {
 		// Allocate the slice
 		p, err := bs.Alloc(8)
@@ -123,7 +123,7 @@ func Test_Bytes_GetModifyGet(t *testing.T) {
 // `Alloc()` would allocate the same slot over and over, meaning multiple
 // independently allocated pointers would all point to the same slot.
 func TestFreeThenAllocTwice(t *testing.T) {
-	bs := NewByteStore()
+	bs := New()
 
 	// allocate and immediately free a slice
 	p, err := bs.Alloc(8)
@@ -158,10 +158,10 @@ func TestFreeThenAllocTwice(t *testing.T) {
 // store all bytes.
 func Test_Bytes_GetModifyGet_OddSizing(t *testing.T) {
 	const chunkSize = 1024
-	bs := NewByteStore()
+	bs := New()
 
 	// Create all the byte slices
-	pointers := make([]BytePointer, chunkSize*3)
+	pointers := make([]Pointer, chunkSize*3)
 	size := uint32(0)
 	for i := range pointers {
 		p, err := bs.Alloc(size)
@@ -200,7 +200,7 @@ func Test_Bytes_GetModifyGet_OddSizing(t *testing.T) {
 // Demonstrate that we can create an object, then free it. If we try to Get()
 // the freed object BytesStore panics
 func Test_Bytes_NewFreeGet_Panic(t *testing.T) {
-	os := NewByteStore()
+	os := New()
 	p, _ := os.Alloc(8)
 	os.Free(p)
 
@@ -210,7 +210,7 @@ func Test_Bytes_NewFreeGet_Panic(t *testing.T) {
 // Demonstrate that we can create an object, then free it. If we try to Free()
 // the freed object BytesStore panics
 func Test_Bytes_NewFreeFree_Panic(t *testing.T) {
-	os := NewByteStore()
+	os := New()
 	p, _ := os.Alloc(8)
 	os.Free(p)
 
@@ -220,12 +220,12 @@ func Test_Bytes_NewFreeFree_Panic(t *testing.T) {
 // Demonstrate that if we create a large number of objects, then free them,
 // then allocate that same number again, we re-use the freed objects
 func Test_Bytes_NewFreeNew_ReusesOldBytes(t *testing.T) {
-	s := NewByteStore()
+	s := New()
 
 	sliceAllocations := 10_000
 
 	// Create a large number of objects
-	slices := make([]BytePointer, sliceAllocations)
+	slices := make([]Pointer, sliceAllocations)
 	for i := range slices {
 		p, _ := s.Alloc(uint32(i))
 		slices[i] = p
