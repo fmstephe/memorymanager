@@ -8,12 +8,12 @@ import (
 	"strconv"
 
 	"github.com/fmstephe/location-system/pkg/quadtree"
-	"github.com/fmstephe/location-system/pkg/store"
+	"github.com/fmstephe/location-system/pkg/store/bytestore"
 )
 
 type ParcelHandler struct {
-	byteStore *store.ByteStore
-	tree      quadtree.Tree[store.BytePointer]
+	byteStore *bytestore.ByteStore
+	tree      quadtree.Tree[bytestore.BytePointer]
 }
 
 func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {
@@ -90,9 +90,9 @@ var endArray = []byte(`null]`)
 var comma = []byte(`,`)
 var end = []byte(`}`)
 
-func surveyFunc(w http.ResponseWriter, byteStore *store.ByteStore, limit int) func(_, _ float64, bp store.BytePointer) bool {
-	pointerSet := map[store.BytePointer]struct{}{}
-	return func(_, _ float64, bp store.BytePointer) bool {
+func surveyFunc(w http.ResponseWriter, byteStore *bytestore.ByteStore, limit int) func(_, _ float64, bp bytestore.BytePointer) bool {
+	pointerSet := map[bytestore.BytePointer]struct{}{}
+	return func(_, _ float64, bp bytestore.BytePointer) bool {
 		if _, ok := pointerSet[bp]; ok {
 			// We've already seen this pointer, don't write it out again
 			return true
