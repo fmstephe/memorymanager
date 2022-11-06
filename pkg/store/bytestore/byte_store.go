@@ -60,12 +60,13 @@ func initialiseSlabs() []byteSlab {
 	return slabs
 }
 
-func (s *Store) Alloc(size uint32) (Pointer, error) {
+func (s *Store) Alloc(size uint32) (Pointer, []byte) {
 	idx := indexForSize(size)
 	// TODO we should explicitly panic if the idx is out of range here
 	// Need a clear and explicit panic message
 	// Eventually we will probably manage large allocations separately
-	return s.slabs[idx].alloc(size)
+	p := s.slabs[idx].alloc(size)
+	return p, s.Get(p)
 }
 
 func (s *Store) Get(p Pointer) []byte {

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // Demonstrate that we are initialising the slabs with the correct indices i.e.
@@ -64,11 +63,8 @@ func Test_Bytes_GetModifyGet(t *testing.T) {
 	pointers := make([]Pointer, chunkSize*3)
 	for i := range pointers {
 		// Allocate the slice
-		p, err := bs.Alloc(8)
-		require.NoError(t, err)
-
-		// Get the slice and write some data into it
-		bytes := bs.Get(p)
+		p, bytes := bs.Alloc(8)
+		// write some data into the byte slice
 		binary.LittleEndian.PutUint64(bytes, uint64(i))
 
 		// Collect the pointer
@@ -92,12 +88,10 @@ func Test_Bytes_GetModifyGet(t *testing.T) {
 	// Get the bytes from the store and write data into it
 	for i := range pointers {
 		// Allocate the slice
-		p, err := bs.Alloc(8)
-		require.NoError(t, err)
+		p, bytes := bs.Alloc(8)
 
-		// Get the slice and write some data into it, make sure the
+		// Write some data into the byte slice, make sure the
 		// data is different from anything written earlier
-		bytes := bs.Get(p)
 		binary.LittleEndian.PutUint64(bytes, uint64(i<<10))
 
 		// Collect the pointer
@@ -126,15 +120,12 @@ func TestFreeThenAllocTwice(t *testing.T) {
 	bs := New()
 
 	// allocate and immediately free a slice
-	p, err := bs.Alloc(8)
-	require.NoError(t, err)
+	p, _ := bs.Alloc(8)
 	bs.Free(p)
 
 	// Allocate two new slices
-	p1, err := bs.Alloc(8)
-	require.NoError(t, err)
-	p2, err := bs.Alloc(8)
-	require.NoError(t, err)
+	p1, _ := bs.Alloc(8)
+	p2, _ := bs.Alloc(8)
 
 	// assert that the pointers are independent
 	assert.NotEqual(t, p1, p2)
@@ -164,12 +155,11 @@ func Test_Bytes_GetModifyGet_OddSizing(t *testing.T) {
 	pointers := make([]Pointer, chunkSize*3)
 	size := uint32(0)
 	for i := range pointers {
-		p, err := bs.Alloc(size)
+		p, _ := bs.Alloc(size)
 		size++
 		if size > chunkSize {
 			size = 0
 		}
-		require.NoError(t, err)
 		pointers[i] = p
 	}
 

@@ -70,7 +70,7 @@ func newByteSlab(slotSize uint32) byteSlab {
 	}
 }
 
-func (s *byteSlab) alloc(size uint32) (Pointer, error) {
+func (s *byteSlab) alloc(size uint32) Pointer {
 	if size > s.slotSize {
 		panic(fmt.Errorf("allocation %d by is too large for slab with slot size %d", size, s.slotSize))
 	}
@@ -125,7 +125,7 @@ func (s *byteSlab) GetStats() ByteSlabStats {
 	}
 }
 
-func (s *byteSlab) allocFromFree(size uint32) (Pointer, error) {
+func (s *byteSlab) allocFromFree(size uint32) Pointer {
 	// Get pointer to the next available freed slot
 	alloc := s.rootFree
 
@@ -144,10 +144,10 @@ func (s *byteSlab) allocFromFree(size uint32) (Pointer, error) {
 
 	// Set the size to properly reflect the new allocation
 	alloc.size = size
-	return alloc, nil
+	return alloc
 }
 
-func (s *byteSlab) allocFromOffset(size uint32) (Pointer, error) {
+func (s *byteSlab) allocFromOffset(size uint32) Pointer {
 	if size > s.slotSize {
 		panic(fmt.Errorf("bad alloc size, max allowed %d, %d was requested", s.slotSize-4, size))
 	}
@@ -172,7 +172,7 @@ func (s *byteSlab) allocFromOffset(size uint32) (Pointer, error) {
 	s.slotOffset++
 	s.byteOffset += s.slotSize
 
-	return p, nil
+	return p
 }
 
 func (s *byteSlab) getBytes(p Pointer) []byte {

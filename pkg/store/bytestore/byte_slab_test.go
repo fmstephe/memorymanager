@@ -83,8 +83,7 @@ func TestSlab_FirstAlloc(t *testing.T) {
 }
 
 func assertFirstAlloc(t *testing.T, slab *byteSlab) {
-	p, err := slab.alloc(slab.slotSize)
-	require.NoError(t, err)
+	p := slab.alloc(slab.slotSize)
 	bytes := slab.get(p)
 	require.Len(t, bytes, int(slab.slotSize))
 	require.Len(t, slab.meta, 1)
@@ -150,8 +149,7 @@ func doAllocations(t *testing.T, slab *byteSlab, num int) []Pointer {
 	for i := 0; i < num; i++ {
 		size := getRandomSize(slab.slotSize)
 
-		p, err := slab.alloc(size)
-		require.NoError(t, err)
+		p := slab.alloc(size)
 
 		// Use that pointer to get the slice we just allocated
 		bytes := slab.get(p)
