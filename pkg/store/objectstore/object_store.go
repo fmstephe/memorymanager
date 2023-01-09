@@ -1,6 +1,8 @@
 package objectstore
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const objectChunkSize = 1024
 
@@ -15,14 +17,15 @@ type Stats struct {
 
 type Store[O any] struct {
 	// Immutable fields
-	chunkSize int32
+	chunkSize uint32
 
 	// Accounting fields
 	allocs int
 	frees  int
 	reused int
 
-	offset   int32
+	// Data fields
+	offset   uint32
 	rootFree Pointer[O]
 	meta     [][]meta[O]
 	objects  [][]O
@@ -35,17 +38,8 @@ type meta[O any] struct {
 	nextFree Pointer[O]
 }
 
-type Pointer[O any] struct {
-	chunk  int32
-	offset int32
-}
-
-func (p Pointer[O]) IsNil() bool {
-	return p.chunk == 0 && p.offset == 0
-}
-
 func New[O any]() *Store[O] {
-	chunkSize := int32(objectChunkSize)
+	chunkSize := uint32(objectChunkSize)
 	// Initialise the first chunk
 	meta := [][]meta[O]{make([]meta[O], chunkSize)}
 	objects := [][]O{make([]O, chunkSize)}
@@ -115,7 +109,7 @@ func (s *Store[O]) newFromFree() (Pointer[O], *O) {
 }
 
 func (s *Store[O]) newFromOffset() (Pointer[O], *O) {
-	chunk := int32(len(s.objects))
+	chunk := uint32(len(s.objects))
 	s.offset++
 	offset := s.offset
 	if s.offset == s.chunkSize {
