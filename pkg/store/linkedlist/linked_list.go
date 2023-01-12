@@ -32,6 +32,8 @@ func New[O any]() *Store[O] {
 	}
 }
 
+// Creates a new empty list
+// l.getPointer().IsNil() will return true
 func (s *Store[O]) NewList() *List[O] {
 	return &List[O]{}
 }
@@ -74,7 +76,7 @@ func (l *List[O]) Insert(store *Store[O]) *O {
 	return newNode.getData()
 }
 
-// TODO write a test for surveying an empty list
+// TODO add tests which terminate the survey early. Do we actually need this behaviour?
 func (l *List[O]) Survey(store *Store[O], fun func(o *O) bool) bool {
 	// Follow through the linked list until we return to head
 	origin := l.getPointer()
@@ -96,7 +98,7 @@ func (l *List[O]) Survey(store *Store[O], fun func(o *O) bool) bool {
 	}
 }
 
-// TODO write a test for filtering an empty list
+// TODO add a suite of tests on lists of size 2 and 3. These two cases are specifically interesting because the sized 2 list has first and last element directly connected to each other, and the 3 sized list has an intermediate node. We will assume that lists larger than 3 will behave the same as we sized 3 lists - so we don't have to test an infinite number of lists. These tests should specifically track the values of individual elements added and removed.
 func (l *List[O]) Filter(store *Store[O], pred func(o *O) bool) {
 	// Follow through the linked list until we return to origin
 	origin := l.getPointer()
@@ -159,6 +161,7 @@ func (l *List[O]) Filter(store *Store[O], pred func(o *O) bool) {
 	}
 }
 
+// Consider a way to do this which doesn't need to iterate over the whole list
 func (l *List[O]) Len(store *Store[O]) int {
 	count := 0
 
