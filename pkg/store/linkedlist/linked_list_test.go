@@ -15,19 +15,19 @@ type TestListData struct {
 
 func TestLinkedList_New(t *testing.T) {
 	store := New[TestListData]()
-	h, n := store.NewList()
-	assert.NotNil(t, h)
-	assert.NotNil(t, n)
+	l := store.NewList()
+	assert.NotNil(t, l)
 }
 
 func TestLinkedList_SetData(t *testing.T) {
 	store := New[TestListData]()
-	h, n := store.NewList()
+	l := store.NewList()
+	n := l.Insert(store)
 	n.intField = 1
 	n.boolField = true
 	n.floatField = 1.234
 
-	r := h.Survey(store, func(d *TestListData) bool {
+	r := l.Survey(store, func(d *TestListData) bool {
 		assert.Equal(t, 1, d.intField)
 		assert.Equal(t, true, d.boolField)
 		assert.Equal(t, 1.234, d.floatField)
@@ -38,96 +38,137 @@ func TestLinkedList_SetData(t *testing.T) {
 
 func TestLinkedList_SetData_Multiple(t *testing.T) {
 	store := New[TestListData]()
-	h, _ := store.NewList()
-	inserted := map[TestListData]struct{}{}
-	for i := 1; i < 11; i++ {
-		d := h.Insert(store)
+	l := store.NewList()
+	inserted := []TestListData{}
+	for i := 0; i < 10; i++ {
+		d := l.Insert(store)
 		d.intField = i
 		d.floatField = float64(i) / 10
 		d.boolField = i%2 == 0
-		inserted[*d] = struct{}{}
+		inserted = append(inserted, *d)
 	}
-	surveyed := map[TestListData]struct{}{}
-	r := h.Survey(store, func(d *TestListData) bool {
-		surveyed[*d] = struct{}{}
+	surveyed := []TestListData{}
+	r := l.Survey(store, func(d *TestListData) bool {
+		surveyed = append(surveyed, *d)
 		return true
 	})
 	assert.True(t, r)
-	assert.Subset(t, inserted, surveyed)
-	assert.Subset(t, surveyed, inserted)
+	assert.ElementsMatch(t, inserted, surveyed)
+}
+
+func TestLinkedList_SetData_ModifyAfterInsert(t *testing.T) {
+	store := New[TestListData]()
+	l := store.NewList()
+	for i := 0; i < 10; i++ {
+		d := l.Insert(store)
+		d.intField = i
+		d.floatField = float64(i) / 10
+		d.boolField = i%2 == 0
+	}
+	updated := []TestListData{}
+	r := l.Survey(store, func(d *TestListData) bool {
+		// modify d
+		d.intField *= 2
+		d.boolField = !d.boolField
+		d.floatField *= 2
+		// Store the updated version
+		updated = append(updated, *d)
+		return true
+	})
+	assert.True(t, r)
+	surveyed := []TestListData{}
+	r = l.Survey(store, func(d *TestListData) bool {
+		surveyed = append(surveyed, *d)
+		return true
+	})
+	assert.True(t, r)
+	assert.ElementsMatch(t, updated, surveyed)
 }
 
 func TestLinkedList_AddOneRemoveIt(t *testing.T) {
 	store := New[TestListData]()
-	h, _ := store.NewList()
+	l := store.NewList()
 
-	h.Filter(store, func(_ *TestListData) bool {
+	l.Filter(store, func(_ *TestListData) bool {
 		return false
 	})
 
-	p := h.pointer()
+	p := l.getPointer()
 	assert.True(t, p.IsNil())
-	assert.Equal(t, 0, h.Len(store))
+	assert.Equal(t, 0, l.Len(store))
 }
 
 func TestLinkedList_AddManyRemoveAll(t *testing.T) {
 	store := New[TestListData]()
-	h, _ := store.NewList()
+	l := store.NewList()
 
-	for i := 1; i < 11; i++ {
-		h.Insert(store)
+	for i := 0; i < 10; i++ {
+		l.Insert(store)
 	}
-	h.Filter(store, func(_ *TestListData) bool {
+	l.Filter(store, func(_ *TestListData) bool {
 		return false
 	})
 
-	p := h.pointer()
+	p := l.getPointer()
 	assert.True(t, p.IsNil())
-	assert.Equal(t, 0, h.Len(store))
+	assert.Equal(t, 0, l.Len(store))
+}
+
+func TestLinkedList_AddManyRemoveAll_AddOne(t *testing.T) {
+	store := New[TestListData]()
+	l := store.NewList()
+
+	for i := 0; i < 10; i++ {
+		l.Insert(store)
+	}
+	l.Filter(store, func(_ *TestListData) bool {
+		return false
+	})
+
+	p := l.getPointer()
+	assert.True(t, p.IsNil())
+	assert.Equal(t, 0, l.Len(store))
+
+	l.Insert(store)
+
+	p = l.getPointer()
+	assert.False(t, p.IsNil())
+	assert.Equal(t, 1, l.Len(store))
 }
 
 func TestLinkedList_AddManyRemoveNone(t *testing.T) {
 	store := New[TestListData]()
-	h, _ := store.NewList()
+	l := store.NewList()
 
-	for i := 1; i < 11; i++ {
-		h.Insert(store)
+	for i := 0; i < 10; i++ {
+		l.Insert(store)
 	}
-	h.Filter(store, func(_ *TestListData) bool {
+	l.Filter(store, func(_ *TestListData) bool {
 		return true
 	})
 
-	p := h.pointer()
+	p := l.getPointer()
 	assert.False(t, p.IsNil())
-	assert.Equal(t, 11, h.Len(store))
+	assert.Equal(t, 10, l.Len(store))
 }
 
 func TestLinkedList_AddMany_RemoveOne(t *testing.T) {
-	for i := 0; i < 11; i++ {
+	for i := 0; i < 10; i++ {
 		t.Run(fmt.Sprintf("Deleting the %dth node", i), func(t *testing.T) {
 			store := New[TestListData]()
-			h, _ := store.NewList()
+			l := store.NewList()
 
-			for j := 1; j < 11; j++ {
-				d := h.Insert(store)
+			for j := 0; j < 10; j++ {
+				d := l.Insert(store)
 				d.intField = j
 			}
-			h.Filter(store, func(d *TestListData) bool {
+			l.Filter(store, func(d *TestListData) bool {
 				return d.intField != i
 			})
 
-			p := h.pointer()
+			p := l.getPointer()
 			assert.False(t, p.IsNil())
-			assert.Equal(t, 10, h.Len(store))
+			assert.Equal(t, 9, l.Len(store))
 		})
 	}
-}
-
-func TestLinkedList_Len(t *testing.T) {
-	store := New[TestListData]()
-	h, _ := store.NewList()
-	for i := 1; i < 11; i++ {
-		h.Insert(store)
-	}
-	assert.Equal(t, 11, h.Len(store))
 }
