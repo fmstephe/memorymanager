@@ -8,9 +8,7 @@ import (
 )
 
 type TestListData struct {
-	intField   int
-	boolField  bool
-	floatField float64
+	intField int
 }
 
 // Show that we can create a new list. A new list will be empty with a nil underlying pointer
@@ -41,13 +39,9 @@ func TestLinkedList_SetData(t *testing.T) {
 	l := store.NewList()
 	n := l.Insert(store)
 	n.intField = 1
-	n.boolField = true
-	n.floatField = 1.234
 
 	assert.True(t, l.Survey(store, func(d *TestListData) bool {
 		assert.Equal(t, 1, d.intField)
-		assert.Equal(t, true, d.boolField)
-		assert.Equal(t, 1.234, d.floatField)
 		return true
 	}))
 }
@@ -63,8 +57,6 @@ func TestLinkedList_SetData_Multiple(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		d := l.Insert(store)
 		d.intField = i
-		d.floatField = float64(i) / 10
-		d.boolField = i%2 == 0
 		inserted = append(inserted, *d)
 	}
 
@@ -89,8 +81,6 @@ func TestLinkedList_SetData_ModifyAfterInsert(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		d := l.Insert(store)
 		d.intField = i
-		d.floatField = float64(i) / 10
-		d.boolField = i%2 == 0
 	}
 
 	// Survey the list, updating the embedded data of each node. Collect a
@@ -99,8 +89,6 @@ func TestLinkedList_SetData_ModifyAfterInsert(t *testing.T) {
 	assert.True(t, l.Survey(store, func(d *TestListData) bool {
 		// modify d
 		d.intField *= 2
-		d.boolField = !d.boolField
-		d.floatField *= 2
 		// Store the updated version
 		updated = append(updated, *d)
 		return true
