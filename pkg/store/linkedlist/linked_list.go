@@ -152,10 +152,10 @@ func (l *List[O]) Filter(store *Store[O], pred func(o *O) bool) {
 		prevE.next = n.next
 		nextE.prev = n.prev
 
-		// If we just filtered out origin - set origin to prev (or we can
+		// If we just filtered out origin - set origin to next (or we can
 		// never exit this loop)
 		if current == origin {
-			origin = n.prev
+			origin = n.next
 		}
 		current = n.next
 	}

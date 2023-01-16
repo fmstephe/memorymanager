@@ -53,22 +53,14 @@ func TestLinkedList_SetData_Multiple(t *testing.T) {
 	l := store.NewList()
 
 	// Insert new nodes, collect copy of the inserted data
-	inserted := []TestListData{}
+	inserted := []int{}
 	for i := 0; i < 10; i++ {
 		d := l.Insert(store)
 		d.intField = i
-		inserted = append(inserted, *d)
+		inserted = append(inserted, d.intField)
 	}
 
-	// Survey the list and collect copy of surveyed data
-	surveyed := []TestListData{}
-	assert.True(t, l.Survey(store, func(d *TestListData) bool {
-		surveyed = append(surveyed, *d)
-		return true
-	}))
-
-	// Inserted and surveyed data must match
-	assert.ElementsMatch(t, inserted, surveyed)
+	assertContains(t, l, store, inserted)
 }
 
 // Show that we can insert nodes into a linked list, and then modify the
@@ -85,44 +77,16 @@ func TestLinkedList_SetData_ModifyAfterInsert(t *testing.T) {
 
 	// Survey the list, updating the embedded data of each node. Collect a
 	// copy of the updated data value
-	updated := []TestListData{}
+	updated := []int{}
 	assert.True(t, l.Survey(store, func(d *TestListData) bool {
 		// modify d
 		d.intField *= 2
 		// Store the updated version
-		updated = append(updated, *d)
+		updated = append(updated, d.intField)
 		return true
 	}))
 
-	// Survey the list, collecting a copy of the embedded data values
-	surveyed := []TestListData{}
-	assert.True(t, l.Survey(store, func(d *TestListData) bool {
-		surveyed = append(surveyed, *d)
-		return true
-	}))
-
-	// The updated and surveyed data values must match
-	assert.ElementsMatch(t, updated, surveyed)
-}
-
-// Show that we can add an element to the list and then remove it using Filter
-func TestLinkedList_AddOneRemoveIt(t *testing.T) {
-	store := New[TestListData]()
-	l := store.NewList()
-
-	// Insert a single element into the list
-	l.Insert(store)
-	p := l.getPointer()
-	assert.False(t, p.IsNil())
-	assert.Equal(t, 1, l.Len(store))
-
-	// Delete the element from the list
-	l.Filter(store, func(_ *TestListData) bool {
-		return false
-	})
-	p = l.getPointer()
-	assert.True(t, p.IsNil())
-	assert.Equal(t, 0, l.Len(store))
+	assertContains(t, l, store, updated)
 }
 
 // Show that we can add many nodes to the list and then remove them all using
@@ -218,4 +182,81 @@ func TestLinkedList_AddMany_RemoveOne(t *testing.T) {
 			assert.Equal(t, 9, l.Len(store))
 		})
 	}
+}
+
+// Show that we can add multiple elements to a list, and then remove some using filter.
+func TestLinkedList_AddSomeRemoveSome(t *testing.T) {
+	for _, testData := range []struct {
+		name      string
+		inserts   []int
+		remove    []int
+		remaining []int
+	}{
+		{"insert nothing, remove nothing, nothing remains", []int{}, []int{}, []int{}},
+		{"insert one thing, remove nothing, the inserted data remains", []int{1}, []int{}, []int{1}},
+		{"insert one thing, remove it, nothing remains", []int{1}, []int{1}, []int{}},
+		{"insert two things, remove nothing, two items remain", []int{1, 2}, []int{}, []int{1, 2}},
+		{"insert two things, remove the first, the second remains", []int{1, 2}, []int{1}, []int{2}},
+		{"insert two things, remove the second, the first remains", []int{1, 2}, []int{2}, []int{1}},
+		{"insert two things, remove them both, nothing remains", []int{1, 2}, []int{1, 2}, []int{}},
+		{"insert three things, remove nothing, three items remain", []int{1, 2, 3}, []int{}, []int{1, 2, 3}},
+		{"insert three things, remove the first, the last two remain", []int{1, 2, 3}, []int{1}, []int{2, 3}},
+		{"insert three things, remove the second, the first and third remain", []int{1, 2, 3}, []int{2}, []int{1, 3}},
+		{"insert three things, remove the third, the first and second remain", []int{1, 2, 3}, []int{3}, []int{1, 2}},
+		{"insert three things, remove the first and second, the third remains", []int{1, 2, 3}, []int{1, 2}, []int{3}},
+		{"insert three things, remove the first and third, the second remains", []int{1, 2, 3}, []int{1, 3}, []int{2}},
+		{"insert three things, remove the second and third, the first remains", []int{1, 2, 3}, []int{2, 3}, []int{1}},
+		{"insert three things, remove all of them, nothing remains", []int{1, 2, 3}, []int{1, 2, 3}, []int{}},
+		{"insert four things, remove nothing, four items remain", []int{1, 2, 3, 4}, []int{}, []int{1, 2, 3, 4}},
+		{"insert four things, remove the first, the second, third and fourth items remain", []int{1, 2, 3, 4}, []int{1}, []int{2, 3, 4}},
+		{"insert four things, remove the second, the first, third and fourth items remain", []int{1, 2, 3, 4}, []int{2}, []int{1, 3, 4}},
+		{"insert four things, remove the third, the first, second and fourth items remain", []int{1, 2, 3, 4}, []int{3}, []int{1, 2, 4}},
+		{"insert four things, remove the fourth, the first, second and third items remain", []int{1, 2, 3, 4}, []int{4}, []int{1, 2, 3}},
+		{"insert four things, remove the first and second, the third and fourth items remain", []int{1, 2, 3, 4}, []int{1, 2}, []int{3, 4}},
+		{"insert four things, remove the first and third, the second and fourth items remain", []int{1, 2, 3, 4}, []int{1, 3}, []int{2, 4}},
+		{"insert four things, remove the first and fourth, the second and third items remain", []int{1, 2, 3, 4}, []int{1, 4}, []int{2, 3}},
+		{"insert four things, remove the second and third, the first and fourth items remain", []int{1, 2, 3, 4}, []int{2, 3}, []int{1, 4}},
+		{"insert four things, remove the second and fourth, the first and third items remain", []int{1, 2, 3, 4}, []int{2, 4}, []int{1, 3}},
+		{"insert four things, remove the third and fourth, the first and second items remain", []int{1, 2, 3, 4}, []int{3, 4}, []int{1, 2}},
+		{"insert four things, remove the first, second and third, the fourth item remains", []int{1, 2, 3, 4}, []int{1, 2, 3}, []int{4}},
+		{"insert four things, remove the first, second and fourth, the third item remains", []int{1, 2, 3, 4}, []int{1, 2, 4}, []int{3}},
+		{"insert four things, remove the first, third and fourth, the second item remains", []int{1, 2, 3, 4}, []int{1, 3, 4}, []int{2}},
+		{"insert four things, remove the second, third and fourth, the second item remains", []int{1, 2, 3, 4}, []int{2, 3, 4}, []int{1}},
+	} {
+		t.Run(testData.name, func(t *testing.T) {
+			store := New[TestListData]()
+			l := store.NewList()
+
+			// Add the items to the list
+			for _, val := range testData.inserts {
+				d := l.Insert(store)
+				d.intField = val
+			}
+
+			// Delete the element from the list
+			l.Filter(store, func(d *TestListData) bool {
+				for _, delVal := range testData.remove {
+					if d.intField == delVal {
+						return false
+					}
+				}
+				return true
+			})
+			assertContains(t, l, store, testData.remaining)
+		})
+	}
+}
+
+func assertContains(t *testing.T, l *List[TestListData], store *Store[TestListData], expected []int) {
+	t.Helper()
+
+	// Survey the list, collecting a copy of the embedded data values
+	surveyed := []int{}
+	assert.True(t, l.Survey(store, func(d *TestListData) bool {
+		surveyed = append(surveyed, d.intField)
+		return true
+	}))
+
+	assert.ElementsMatch(t, expected, surveyed)
+	assert.Equal(t, len(expected), l.Len(store))
 }
