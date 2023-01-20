@@ -11,17 +11,33 @@ type TestListData struct {
 	intField int
 }
 
-// Show that we can create a new list. A new list will be empty with a nil underlying pointer
+// Show that the zero value of a value of type List[T] is an empty list
+func TestLinkedList_ZeroValue(t *testing.T) {
+	store := New[TestListData]()
+	var l List[TestListData]
+
+	// The zero value list should be empty
+	assert.True(t, l.IsEmpty())
+	assert.Equal(t, 0, l.Len(store))
+
+	// Show we can survey/filter a zero value list, it won't do anything much,
+	// we just prove it won't panic
+	assert.True(t, l.Survey(store, func(d *TestListData) bool {
+		return true
+	}))
+	l.Filter(store, func(d *TestListData) bool {
+		return false
+	})
+}
+
+// Show that we can create a new list. A new list will be empty
 func TestLinkedList_New(t *testing.T) {
 	store := New[TestListData]()
 	l := store.NewList()
 
 	// The new list should be empty
+	assert.True(t, l.IsEmpty())
 	assert.Equal(t, 0, l.Len(store))
-
-	// The underlying pointer of an empty list should be nil
-	p := l.getPointer()
-	assert.True(t, p.IsNil())
 
 	// Show we can survey/filter an empty list, it won't do anything much,
 	// we just prove it won't panic
@@ -102,8 +118,7 @@ func TestLinkedList_AddManyRemoveAll(t *testing.T) {
 		return false
 	})
 
-	p := l.getPointer()
-	assert.True(t, p.IsNil())
+	assert.True(t, l.IsEmpty())
 	assert.Equal(t, 0, l.Len(store))
 }
 
@@ -125,8 +140,7 @@ func TestLinkedList_AddManyRemoveAll_AddOne(t *testing.T) {
 
 	// Insert a single node into the list, and check that it's there
 	l.Insert(store)
-	p := l.getPointer()
-	assert.False(t, p.IsNil())
+	assert.False(t, l.IsEmpty())
 	assert.Equal(t, 1, l.Len(store))
 }
 
@@ -142,8 +156,7 @@ func TestLinkedList_AddManyRemoveNone(t *testing.T) {
 		l.Insert(store)
 	}
 	// All elements are in the list
-	p := l.getPointer()
-	assert.False(t, p.IsNil())
+	assert.False(t, l.IsEmpty())
 	assert.Equal(t, 10, l.Len(store))
 
 	// Remove none
@@ -151,8 +164,7 @@ func TestLinkedList_AddManyRemoveNone(t *testing.T) {
 		return true
 	})
 	// All elements are still in the list
-	p = l.getPointer()
-	assert.False(t, p.IsNil())
+	assert.False(t, l.IsEmpty())
 	assert.Equal(t, 10, l.Len(store))
 }
 
@@ -177,8 +189,7 @@ func TestLinkedList_AddMany_RemoveOne(t *testing.T) {
 			})
 
 			// Show that we removed one of the elements of the list
-			p := l.getPointer()
-			assert.False(t, p.IsNil())
+			assert.False(t, l.IsEmpty())
 			assert.Equal(t, 9, l.Len(store))
 		})
 	}
@@ -225,13 +236,7 @@ func TestLinkedList_AddSomeRemoveSome(t *testing.T) {
 	} {
 		t.Run(testData.name, func(t *testing.T) {
 			store := New[TestListData]()
-			l := store.NewList()
-
-			// Add the items to the list
-			for _, val := range testData.inserts {
-				d := l.Insert(store)
-				d.intField = val
-			}
+			l := makeList(store, testData.inserts)
 
 			// Delete the element from the list
 			l.Filter(store, func(d *TestListData) bool {
@@ -247,7 +252,67 @@ func TestLinkedList_AddSomeRemoveSome(t *testing.T) {
 	}
 }
 
-func assertContains(t *testing.T, l *List[TestListData], store *Store[TestListData], expected []int) {
+// Show that we can append a list to another list.
+func TestAppend(t *testing.T) {
+	for _, testData := range []struct {
+		name       string
+		firstList  []int
+		secondList []int
+		combined   []int
+	}{
+		// Empty lists
+		{"Start with an empty list, combine with an empty list", []int{}, []int{}, []int{}},
+
+		// First list is empty
+		{"Start with an empty list, combine with a one node list", []int{}, []int{10}, []int{10}},
+		{"Start with an empty list, combine with a two node list", []int{}, []int{10, 20}, []int{10, 20}},
+		{"Start with an empty list, combine with a three node list", []int{}, []int{10, 20, 30}, []int{10, 20, 30}},
+
+		// Second list is empty
+		{"Start with a one node list, combine with an empty list", []int{1}, []int{}, []int{1}},
+		{"Start with a two node list, combine with an empty list", []int{1, 2}, []int{}, []int{1, 2}},
+		{"Start with a three node list, combine with an empty list", []int{1, 2, 3}, []int{}, []int{1, 2, 3}},
+
+		// First list varies, second list has one node
+		{"Start with a one node list, combine with a one node list", []int{1}, []int{10}, []int{1, 10}},
+		{"Start with a two node list, combine with a one node list", []int{1, 2}, []int{10}, []int{1, 2, 10}},
+		{"Start with a three node list, combine with a one node list", []int{1, 2, 3}, []int{10}, []int{1, 2, 3, 10}},
+
+		// First list has one node, second list varies
+		{"Start with a one node list, combine with a two node list", []int{1}, []int{10, 20}, []int{1, 10, 20}},
+		{"Start with a one node list, combine with a three node list", []int{1}, []int{10, 20, 30}, []int{1, 10, 20, 30}},
+
+		// First list has two nodes, second list varies
+		{"Start with a two node list, combine with a two node list", []int{1, 2}, []int{10, 20}, []int{1, 2, 10, 20}},
+		{"Start with a two node list, combine with a three node list", []int{1, 2}, []int{10, 20, 30}, []int{1, 2, 10, 20, 30}},
+
+		// First list has three nodes, second list varies
+		{"Start with a three node list, combine with a two node list", []int{1, 2, 3}, []int{10, 20}, []int{1, 2, 3, 10, 20}},
+		{"Start with a three node list, combine with a three node list", []int{1, 2, 3}, []int{10, 20, 30}, []int{1, 2, 3, 10, 20, 30}},
+	} {
+		t.Run(testData.name, func(t *testing.T) {
+			store := New[TestListData]()
+			l1 := makeList(store, testData.firstList)
+			l2 := makeList(store, testData.secondList)
+			l1.Append(store, l2)
+			assertContains(t, l1, store, testData.combined)
+		})
+	}
+}
+
+func makeList(store *Store[TestListData], datas []int) List[TestListData] {
+	l := store.NewList()
+
+	// Add the items to the list
+	for _, val := range datas {
+		d := l.Insert(store)
+		d.intField = val
+	}
+
+	return l
+}
+
+func assertContains(t *testing.T, l List[TestListData], store *Store[TestListData], expected []int) {
 	t.Helper()
 
 	// Survey the list, collecting a copy of the embedded data values
