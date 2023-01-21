@@ -90,22 +90,22 @@ var endArray = []byte(`null]`)
 var comma = []byte(`,`)
 var end = []byte(`}`)
 
-func surveyFunc(w http.ResponseWriter, byteStore *bytestore.Store, limit int) func(_, _ float64, bp bytestore.Pointer) bool {
+func surveyFunc(w http.ResponseWriter, byteStore *bytestore.Store, limit int) func(_, _ float64, bp *bytestore.Pointer) bool {
 	pointerSet := map[bytestore.Pointer]struct{}{}
-	return func(_, _ float64, bp bytestore.Pointer) bool {
-		if _, ok := pointerSet[bp]; ok {
+	return func(_, _ float64, bp *bytestore.Pointer) bool {
+		if _, ok := pointerSet[*bp]; ok {
 			// We've already seen this pointer, don't write it out again
 			return true
 		}
 
-		pointerSet[bp] = struct{}{}
+		pointerSet[*bp] = struct{}{}
 
 		// A limit of 0 or less means unlimited
 		if limit > 0 && len(pointerSet) > limit {
 			return false
 		}
 
-		bytes := byteStore.Get(bp)
+		bytes := byteStore.Get(*bp)
 
 		_, err := w.Write(bytes)
 		if err != nil {

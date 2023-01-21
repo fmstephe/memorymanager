@@ -5,24 +5,24 @@ import (
 )
 
 // A Simple quadtree collector which will push every element into col
-func SimpleSurvey[K any]() (fun func(x, y float64, e K) bool, col *list.List) {
+func SimpleSurvey[K any]() (fun func(x, y float64, e *K) bool, col *list.List) {
 	col = list.New()
-	fun = func(x, y float64, e K) bool {
-		col.PushBack(e)
+	fun = func(x, y float64, e *K) bool {
+		col.PushBack(*e)
 		return true
 	}
 	return fun, col
 }
 
 // A Simple quadtree collector which will push every element into col
-func LimitSurvey[K any](limit int) (fun func(x, y float64, e K) bool, col *list.List) {
+func LimitSurvey[K any](limit int) (fun func(x, y float64, e *K) bool, col *list.List) {
 	col = list.New()
 	count := 0
-	fun = func(x, y float64, e K) bool {
+	fun = func(x, y float64, e *K) bool {
 		if count >= limit {
 			return false
 		}
-		col.PushBack(e)
+		col.PushBack(*e)
 		count++
 		return true
 	}

@@ -3,6 +3,7 @@ package quadtree
 import (
 	"fmt"
 
+	"github.com/fmstephe/location-system/pkg/store/linkedlist"
 	"github.com/fmstephe/location-system/pkg/store/objectstore"
 )
 
@@ -17,13 +18,13 @@ func NewQuadTree[K any](view View) Tree[K] {
 
 // A point with a slice of stored elements
 type vpoint[K any] struct {
-	x, y   float64
-	elemsP objectstore.Pointer[elem[K]]
+	x, y  float64
+	elems linkedlist.List[K]
 }
 
 // Indicates whether a vpoint is zeroed, i.e. uninitialised
 func (np *vpoint[K]) zeroed() bool {
-	return np.elemsP.IsNil()
+	return np.elems.IsEmpty()
 }
 
 // Indicates whether a vpoint has the same x,y coords as those passed in
@@ -32,7 +33,7 @@ func (np *vpoint[K]) sameLoc(x, y float64) bool {
 }
 
 func (np *vpoint[K]) String() string {
-	return fmt.Sprintf("(%v,%.3f,%.3f)", np.elemsP, np.x, np.y)
+	return fmt.Sprintf("(%v,%.3f,%.3f)", np.elems, np.x, np.y)
 }
 
 const LEAF_SIZE = 16
@@ -68,7 +69,7 @@ func makeNode[K any](view View, store *nodeStore[K]) objectstore.Pointer[node[K]
 }
 
 // Inserts elems into the single child subtree whose view contains (x,y)
-func (n *node[K]) insert(x, y float64, elemsP objectstore.Pointer[elem[K]], store *nodeStore[K]) {
+func (n *node[K]) insert(x, y float64, elems linkedlist.List[K], store *nodeStore[K]) {
 	// We are adding an element to this node or one of its children, increment the count
 	n.cachedCount++
 
@@ -78,11 +79,11 @@ func (n *node[K]) insert(x, y float64, elemsP objectstore.Pointer[elem[K]], stor
 			if n.ps[i].zeroed() {
 				n.ps[i].x = x
 				n.ps[i].y = y
-				n.ps[i].elemsP = elemsP
+				n.ps[i].elems = elems
 				return
 			}
 			if n.ps[i].sameLoc(x, y) {
-				store.attachData(n.ps[i].elemsP, elemsP)
+				n.ps[i].elems.Append(store.listStore, elems)
 				return
 			}
 		}
@@ -96,7 +97,7 @@ func (n *node[K]) insert(x, y float64, elemsP objectstore.Pointer[elem[K]], stor
 	for i := range n.children {
 		childNode := store.getNode(n.children[i])
 		if childNode.view.containsPoint(x, y) {
-			childNode.insert(x, y, elemsP, store)
+			childNode.insert(x, y, elems, store)
 			return
 		}
 	}
@@ -116,11 +117,11 @@ func (n *node[K]) convertToInternal(store *nodeStore[K]) {
 		p := &n.ps[i]
 		x := p.x
 		y := p.y
-		elemsP := p.elemsP
+		elems := p.elems
 		for i := range n.children {
 			childNode := store.getNode(n.children[i])
 			if childNode.view.containsPoint(x, y) {
-				childNode.insert(x, y, elemsP, store)
+				childNode.insert(x, y, elems, store)
 				break
 			}
 		}
@@ -128,13 +129,13 @@ func (n *node[K]) convertToInternal(store *nodeStore[K]) {
 }
 
 // Calls survey on each child subtree whose view overlaps with vs
-func (n *node[K]) survey(view View, fun func(x, y float64, e K) bool, store *nodeStore[K]) bool {
+func (n *node[K]) survey(view View, fun func(x, y float64, e *K) bool, store *nodeStore[K]) bool {
 	// Survey each point in this leaf
 	if n.isLeaf {
 		for i := range n.ps {
 			p := &n.ps[i]
 			if !p.zeroed() && view.containsPoint(p.x, p.y) {
-				if !store.survey(p.elemsP, func(data K) bool { return fun(p.x, p.y, data) }) {
+				if !p.elems.Survey(store.listStore, func(data *K) bool { return fun(p.x, p.y, data) }) {
 					return false
 				}
 			}
@@ -168,7 +169,7 @@ func (n *node[K]) count(view View, store *nodeStore[K]) int64 {
 			p := &n.ps[i]
 			if !p.zeroed() && view.containsPoint(p.x, p.y) {
 				// Visit all the elements stored here and count them
-				store.survey(p.elemsP, func(data K) bool { counted++; return true })
+				p.elems.Survey(store.listStore, func(_ *K) bool { counted++; return true })
 			}
 		}
 		return counted
@@ -230,14 +231,14 @@ func (r *root[K]) Insert(x, y float64, nval K) error {
 	if !r.view.containsPoint(x, y) {
 		return fmt.Errorf("cannot insert x(%f) y(%f) into view %s", x, y, r.view)
 	}
-	elemsP := r.store.newElem(nval)
+	elems := r.store.newElem(nval)
 	st := r.store.getNode(r.rootPointer)
-	st.insert(x, y, elemsP, r.store)
+	st.insert(x, y, elems, r.store)
 	return nil
 }
 
 // Applies fun to every element occurring within view in this tree
-func (r *root[K]) Survey(view View, fun func(x, y float64, e K) bool) {
+func (r *root[K]) Survey(view View, fun func(x, y float64, e *K) bool) {
 	st := r.store.getNode(r.rootPointer)
 	st.survey(view, fun, r.store)
 }
