@@ -143,3 +143,33 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	// Internally 4 chunks have been created
 	assert.Equal(t, 4, stats.Chunks)
 }
+
+// This small test is in response to a bug found in the free implementation.
+// The bug was that there is a loop in the `nextFree` of the last freed slot in
+// the OjbectStore.  This is because a freed slot must always have a non-nil
+// `nextFree` pointer in its meta-data.  However because we weren't checking
+// for this exact case the last freed slot would re-add itself to the root
+// `nextFree` pointer in the ObjectStore.  This means that in this case calls
+// to `Alloc()` would allocate the same slot over and over, meaning multiple
+// independently allocated pointers would all point to the same slot.
+func TestFreeThenAllocTwice(t *testing.T) {
+	os := New[MutableStruct]()
+
+	// Allocate an object
+	p1, o1 := os.Alloc()
+	o1.Field = 1
+	// Free it
+	os.Free(p1)
+
+	// Allocate another - this should reuse o1
+	_, o2 := os.Alloc()
+	o2.Field = 2
+
+	// Allocate a third, this should be a non-recycled allocation
+	_, o3 := os.Alloc()
+	o3.Field = 3
+
+	// Assert that our allocations are independent of each other
+	assert.Equal(t, 2, o2.Field)
+	assert.Equal(t, 3, o3.Field)
+}

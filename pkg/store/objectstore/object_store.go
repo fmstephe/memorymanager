@@ -55,11 +55,11 @@ func (s *Store[O]) Alloc() (Pointer[O], *O) {
 	s.allocs++
 
 	if s.rootFree.IsNil() {
-		return s.newFromOffset()
+		return s.allocFromOffset()
 	}
 
 	s.reused++
-	return s.newFromFree()
+	return s.allocFromFree()
 }
 
 func (s *Store[O]) Get(p Pointer[O]) *O {
@@ -99,16 +99,27 @@ func (s *Store[O]) GetStats() Stats {
 	}
 }
 
-func (s *Store[O]) newFromFree() (Pointer[O], *O) {
-	oldFree := s.rootFree
+func (s *Store[O]) allocFromFree() (Pointer[O], *O) {
+	// Get pointer to the next available freed slot
+	alloc := s.rootFree
 
-	freeMeta := s.getMeta(oldFree)
-	s.rootFree = freeMeta.nextFree
+	// Grab the meta-data for the slot and nil out the, now
+	// allocated, slot's nextFree pointer
+	freeMeta := s.getMeta(alloc)
+	nextFree := freeMeta.nextFree
 	freeMeta.nextFree = Pointer[O]{}
-	return oldFree, s.getObject(oldFree)
+
+	// If the nextFree pointer points to the just allocated slot, then
+	// there are no more freed slots available
+	s.rootFree = nextFree
+	if nextFree == alloc {
+		s.rootFree = Pointer[O]{}
+	}
+
+	return alloc, s.getObject(alloc)
 }
 
-func (s *Store[O]) newFromOffset() (Pointer[O], *O) {
+func (s *Store[O]) allocFromOffset() (Pointer[O], *O) {
 	chunk := uint32(len(s.objects))
 	s.offset++
 	offset := s.offset
