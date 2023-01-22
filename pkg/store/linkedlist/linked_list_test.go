@@ -53,7 +53,7 @@ func TestLinkedList_New(t *testing.T) {
 func TestLinkedList_SetData(t *testing.T) {
 	store := New[TestListData]()
 	l := store.NewList()
-	n := l.Insert(store)
+	n := l.PushTail(store)
 	n.intField = 1
 
 	assert.True(t, l.Survey(store, func(d *TestListData) bool {
@@ -68,10 +68,10 @@ func TestLinkedList_SetData_Multiple(t *testing.T) {
 	store := New[TestListData]()
 	l := store.NewList()
 
-	// Insert new nodes, collect copy of the inserted data
+	// PushTail new nodes, collect copy of the inserted data
 	inserted := []int{}
 	for i := 0; i < 10; i++ {
-		d := l.Insert(store)
+		d := l.PushTail(store)
 		d.intField = i
 		inserted = append(inserted, d.intField)
 	}
@@ -81,13 +81,13 @@ func TestLinkedList_SetData_Multiple(t *testing.T) {
 
 // Show that we can insert nodes into a linked list, and then modify the
 // embedded data of the existing nodes
-func TestLinkedList_SetData_ModifyAfterInsert(t *testing.T) {
+func TestLinkedList_SetData_ModifyAfterPushTail(t *testing.T) {
 	store := New[TestListData]()
 	l := store.NewList()
 
-	// Insert new nodes, give each one unique data values
+	// PushTail new nodes, give each one unique data values
 	for i := 0; i < 10; i++ {
-		d := l.Insert(store)
+		d := l.PushTail(store)
 		d.intField = i
 	}
 
@@ -112,7 +112,7 @@ func TestLinkedList_AddManyRemoveAll(t *testing.T) {
 	l := store.NewList()
 
 	for i := 0; i < 10; i++ {
-		l.Insert(store)
+		l.PushTail(store)
 	}
 	l.Filter(store, func(_ *TestListData) bool {
 		return false
@@ -131,15 +131,15 @@ func TestLinkedList_AddManyRemoveAll_AddOne(t *testing.T) {
 
 	// Add many nodes to the list
 	for i := 0; i < 10; i++ {
-		l.Insert(store)
+		l.PushTail(store)
 	}
 	// Delete them all
 	l.Filter(store, func(_ *TestListData) bool {
 		return false
 	})
 
-	// Insert a single node into the list, and check that it's there
-	l.Insert(store)
+	// PushTail a single node into the list, and check that it's there
+	l.PushTail(store)
 	assert.False(t, l.IsEmpty())
 	assert.Equal(t, 1, l.Len(store))
 }
@@ -153,7 +153,7 @@ func TestLinkedList_AddManyRemoveNone(t *testing.T) {
 
 	// Add many nodes
 	for i := 0; i < 10; i++ {
-		l.Insert(store)
+		l.PushTail(store)
 	}
 	// All elements are in the list
 	assert.False(t, l.IsEmpty())
@@ -178,9 +178,9 @@ func TestLinkedList_AddMany_RemoveOne(t *testing.T) {
 			store := New[TestListData]()
 			l := store.NewList()
 
-			// Insert many nodes
+			// PushTail many nodes
 			for j := 0; j < 10; j++ {
-				d := l.Insert(store)
+				d := l.PushTail(store)
 				d.intField = j
 			}
 			// Filter the i'th one
@@ -305,7 +305,7 @@ func makeList(store *Store[TestListData], datas []int) List[TestListData] {
 
 	// Add the items to the list
 	for _, val := range datas {
-		d := l.Insert(store)
+		d := l.PushTail(store)
 		d.intField = val
 	}
 

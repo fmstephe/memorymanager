@@ -38,7 +38,7 @@ func (s *nodeStore[T]) getNode(p objectstore.Pointer[node[T]]) *node[T] {
 
 func (s *nodeStore[T]) newElem(data T) linkedlist.List[T] {
 	list := s.listStore.NewList()
-	dataP := list.Insert(s.listStore)
+	dataP := list.PushTail(s.listStore)
 	*dataP = data
 	return list
 }

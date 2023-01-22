@@ -5,7 +5,7 @@ import (
 )
 
 // A node contains the list data as well as the forward and previous getPointers
-// to next nodes in the list.  The next and prev getPointers are never nil. If the
+// to next nodes in the list. The next and prev getPointers are never nil. If the
 // list contains only one node then the next and prev getPointers point back to
 // themselves.
 type node[O any] struct {
@@ -54,12 +54,29 @@ func (l *List[O]) setPointer(p objectstore.Pointer[node[O]]) {
 	*l = List[O](p)
 }
 
-// Inserts a single new node into an existing list. The list may be empty.
-// The list node is allocated internally and a pointer to the embedded data
-// is returned.  The embedded data can then be mutated via this pointer.
-func (l *List[O]) Insert(store *Store[O]) *O {
-	firstP := l.getPointer()
+// Pushes a single new node into the first position of an existing list. The
+// list may be empty. The list node is allocated internally and a pointer to
+// the embedded data is returned. The embedded data can then be mutated via
+// this pointer.
+func (l *List[O]) PushHead(store *Store[O]) *O {
 	newP, newNode := store.nodeStore.Alloc()
+	l.pushTail(store, newP, newNode)
+	l.setPointer(newP)
+	return newNode.getData()
+}
+
+// Pushes a single new node into the last position of an existing list. The
+// list may be empty. The list node is allocated internally and a pointer to
+// the embedded data is returned. The embedded data can then be mutated via
+// this pointer.
+func (l *List[O]) PushTail(store *Store[O]) *O {
+	newP, newNode := store.nodeStore.Alloc()
+	l.pushTail(store, newP, newNode)
+	return newNode.getData()
+}
+
+func (l *List[O]) pushTail(store *Store[O], newP objectstore.Pointer[node[O]], newNode *node[O]) {
+	firstP := l.getPointer()
 
 	// If we are inserting into an empty list, then make it point to itself
 	// and directly update l
@@ -67,7 +84,7 @@ func (l *List[O]) Insert(store *Store[O]) *O {
 		newNode.next = newP
 		newNode.prev = newP
 		l.setPointer(newP)
-		return newNode.getData()
+		return
 	}
 
 	// Get the first and last nodes in the linked list
@@ -81,8 +98,56 @@ func (l *List[O]) Insert(store *Store[O]) *O {
 	// Make the new node point to the first node
 	newNode.next = firstP
 	firstNode.prev = newP
+}
 
-	return newNode.getData()
+func (l *List[O]) PeakHead(store *Store[O]) *O {
+	firstP := l.getPointer()
+
+	firstNode := store.nodeStore.Get(firstP)
+	return firstNode.getData()
+}
+
+func (l *List[O]) PeakTail(store *Store[O]) *O {
+	firstP := l.getPointer()
+
+	firstNode := store.nodeStore.Get(firstP)
+	lastNode := store.nodeStore.Get(firstNode.prev)
+	return lastNode.getData()
+}
+
+func (l *List[O]) RemoveHead(store *Store[O]) {
+	l.remove(store, l.getPointer())
+}
+
+func (l *List[O]) RemoveTail(store *Store[O]) {
+	origin := store.nodeStore.Get(l.getPointer())
+	l.remove(store, origin.prev)
+}
+
+func (l *List[O]) remove(store *Store[O], p objectstore.Pointer[node[O]]) {
+	n := store.nodeStore.Get(p)
+	if n.prev == p && n.next == p {
+		// There is only one element in this list, now we empty it
+		*l = List[O]{}
+
+		// Free the removed node
+		store.nodeStore.Free(p)
+		return
+	}
+
+	// Connect the previous and next nodes to each other
+	prev := store.nodeStore.Get(n.prev)
+	next := store.nodeStore.Get(n.next)
+	prev.next = n.next
+	next.prev = n.prev
+
+	// If the removed node is the head of this list, point the list to next
+	if p == l.getPointer() {
+		*l = List[O](n.next)
+	}
+
+	// Free the removed node
+	store.nodeStore.Free(p)
 }
 
 // Adds the nodes in attach to l. After this method is called attach should
@@ -169,9 +234,9 @@ func (l *List[O]) Filter(store *Store[O], pred func(o *O) bool) {
 	}
 	defer func() {
 		// The final act is to update the header to point to a valid
-		// node in the list.  If we filtered out the node pointed to by
+		// node in the list. If we filtered out the node pointed to by
 		// h, we will have to modify it to point a node which is still
-		// in the list.  If we filtered all nodes from the list origin will
+		// in the list. If we filtered all nodes from the list origin will
 		// be a nil getPointer.
 		*l = List[O](origin)
 	}()
