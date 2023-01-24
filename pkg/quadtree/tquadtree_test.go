@@ -15,24 +15,24 @@ const dups = 10
 // This is done to make the benchmarks consistent between runs
 var testRand = rand.New(rand.NewSource(1))
 
-func buildTestTrees() []Tree[string] {
-	return []Tree[string]{
-		NewQuadTree[string](NewView(0, 10, 10, 0)),
-		NewQuadTree[string](NewView(0, 1, 2, 0)),
-		NewQuadTree[string](NewView(0, 100, 300, 0)),
-		NewQuadTree[string](NewView(0, 20.4, 35.6, 0)),
-		NewQuadTree[string](NewView(0, 1e10, 500.00000001, 0)),
+func buildTestTrees() []*Tree[string] {
+	return []*Tree[string]{
+		NewTree[string](NewView(0, 10, 10, 0)),
+		NewTree[string](NewView(0, 1, 2, 0)),
+		NewTree[string](NewView(0, 100, 300, 0)),
+		NewTree[string](NewView(0, 20.4, 35.6, 0)),
+		NewTree[string](NewView(0, 1e10, 500.00000001, 0)),
 		// Negative regions
-		NewQuadTree[string](NewView(-10, 10, 10, -10)),
-		NewQuadTree[string](NewView(-1, 1, 2, -2)),
-		NewQuadTree[string](NewView(-100, 100, 300, -300)),
-		NewQuadTree[string](NewView(-20.4, 20.4, 35.6, -35.6)),
-		NewQuadTree[string](NewView(-1e10, 1e10, 500.00000001, -500.00000001)),
+		NewTree[string](NewView(-10, 10, 10, -10)),
+		NewTree[string](NewView(-1, 1, 2, -2)),
+		NewTree[string](NewView(-100, 100, 300, -300)),
+		NewTree[string](NewView(-20.4, 20.4, 35.6, -35.6)),
+		NewTree[string](NewView(-1e10, 1e10, 500.00000001, -500.00000001)),
 	}
 }
 
 func TestOverflowLeaf(t *testing.T) {
-	tree := NewQuadTree[string](NewView(0, 1, 1, 0))
+	tree := NewTree[string](NewView(0, 1, 1, 0))
 	ps := fillView(tree.View(), 70)
 	for i, p := range ps {
 		err := tree.Insert(p.x, p.y, fmt.Sprintf("test-%d", i))
@@ -53,7 +53,7 @@ func TestOneElement(t *testing.T) {
 	}
 }
 
-func testOneElement(tree Tree[string], t *testing.T) {
+func testOneElement(tree *Tree[string], t *testing.T) {
 	x, y := randomPosition(tree.View())
 	err := tree.Insert(x, y, "test")
 	assert.NoError(t, err)
@@ -78,7 +78,7 @@ func TestFullLeaf(t *testing.T) {
 	}
 }
 
-func testFullLeaf(tree Tree[string], v View, msg string, t *testing.T) {
+func testFullLeaf(tree *Tree[string], v View, msg string, t *testing.T) {
 	inserts := LEAF_SIZE * 2
 	for i := 0; i < inserts; i++ {
 		x, y := randomPosition(v)
@@ -97,7 +97,7 @@ func testFullLeaf(tree Tree[string], v View, msg string, t *testing.T) {
 // returns and error
 func TestBadInsert(t *testing.T) {
 	v1, v2 := disjoint()
-	tree := NewQuadTree[string](v1)
+	tree := NewTree[string](v1)
 	ps := fillView(v2, 100)
 	for _, p := range ps {
 		err := tree.Insert(p.x, p.y, "test")
@@ -112,15 +112,13 @@ func TestScatter(t *testing.T) {
 	for _, tree := range testTrees {
 		testScatter(tree, t)
 	}
-	/*
-		testTrees = buildTestTrees()
-		for _, tree := range testTrees {
-			testScatterDup(tree, t)
-		}
-	*/
+	testTrees = buildTestTrees()
+	for _, tree := range testTrees {
+		testScatterDup(tree, t)
+	}
 }
 
-func testScatter(tree Tree[string], t *testing.T) {
+func testScatter(tree *Tree[string], t *testing.T) {
 	ps := fillView(tree.View(), 10000)
 	for i, p := range ps {
 		err := tree.Insert(p.x, p.y, "test")
@@ -156,7 +154,7 @@ func testScatter(tree Tree[string], t *testing.T) {
 // Tests that we can add multiple elements to the same location
 // and still retrieve all elements, including duplicates, using
 // randomly generated views.
-func testScatterDup(tree Tree[string], t *testing.T) {
+func testScatterDup(tree *Tree[string], t *testing.T) {
 	return
 	ps := fillView(tree.View(), 1000)
 	for _, p := range ps {
