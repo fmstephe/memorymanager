@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type point struct {
+type tpoint struct {
 	x, y float64
 }
 
@@ -88,13 +88,13 @@ func TestDisjoint(t *testing.T) {
 func TestContainsPoint(t *testing.T) {
 	for _, testValue := range []struct {
 		view         View
-		contained    []point
-		notContained []point
+		contained    []tpoint
+		notContained []tpoint
 	}{
 		{
 			view:         View{10.0, 20.0, 20.0, 10.0},
-			contained:    []point{{10, 20}, {11, 19}, {15, 15}, {18, 12}, {19, 11}, {20, 10}},
-			notContained: []point{{9.9, 20.0}, {10, 20.1}, {20.1, 20}, {20.1, 10}, {20, 9.9}, {9.9, 9.9}},
+			contained:    []tpoint{{10, 20}, {11, 19}, {15, 15}, {18, 12}, {19, 11}, {20, 10}},
+			notContained: []tpoint{{9.9, 20.0}, {10, 20.1}, {20.1, 20}, {20.1, 10}, {20, 9.9}, {9.9, 9.9}},
 		},
 	} {
 		for _, p := range testValue.contained {

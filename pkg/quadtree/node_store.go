@@ -18,14 +18,14 @@ func newTreeStore[T any]() *nodeStore[T] {
 	}
 }
 
-func (s *nodeStore[T]) newNode(view View) (objectstore.Pointer[node[T]], *node[T]) {
+func (s *nodeStore[T]) allocNode(view View) (objectstore.Pointer[node[T]], *node[T]) {
 	p, newNode := s.nodes.Alloc()
 	newNode.view = view
 	newNode.isLeaf = false
 	return p, newNode
 }
 
-func (s *nodeStore[T]) newLeaf(view View) objectstore.Pointer[node[T]] {
+func (s *nodeStore[T]) allocLeaf(view View) objectstore.Pointer[node[T]] {
 	p, newLeaf := s.nodes.Alloc()
 	newLeaf.view = view
 	newLeaf.isLeaf = true
@@ -36,7 +36,7 @@ func (s *nodeStore[T]) getNode(p objectstore.Pointer[node[T]]) *node[T] {
 	return s.nodes.Get(p)
 }
 
-func (s *nodeStore[T]) newElem(data T) linkedlist.List[T] {
+func (s *nodeStore[T]) newList(data T) linkedlist.List[T] {
 	list := s.listStore.NewList()
 	dataP := list.PushTail(s.listStore)
 	*dataP = data

@@ -7,83 +7,94 @@ import (
 	"github.com/fmstephe/location-system/pkg/store/objectstore"
 )
 
-// Returns a new empty QuadTree whose View extends from
+// Returns a new empty quadtree.Tree whose View extends from
 // leftX to rightX across the x axis and
 // topY down to bottomY along the y axis
 // leftX < rightX
 // topY < bottomY
-func NewQuadTree[K any](view View) Tree[K] {
-	return newRoot[K](view)
+func NewQuadTree[T any](view View) Tree[T] {
+	return newRoot[T](view)
 }
 
-// A point with a slice of stored elements
-type vpoint[K any] struct {
-	x, y  float64
-	elems linkedlist.List[K]
+// A point with a list of stored elements
+type point[T any] struct {
+	x, y float64
+	list linkedlist.List[T]
 }
 
-// Indicates whether a vpoint is zeroed, i.e. uninitialised
-func (np *vpoint[K]) zeroed() bool {
-	return np.elems.IsEmpty()
+// Indicates whether a point is isEmpty, i.e. uninitialised.  Because we never
+// remove data from this quadtree, a point is only ever initialised when we add
+// data to it.  This invariant will stop holding if this quadtree ever supports
+// data deletion.
+func (np *point[T]) isEmpty() bool {
+	return np.list.IsEmpty()
 }
 
-// Indicates whether a vpoint has the same x,y coords as those passed in
-func (np *vpoint[K]) sameLoc(x, y float64) bool {
+// Indicates whether a point has the same x,y coords as those passed in
+func (np *point[T]) sameLoc(x, y float64) bool {
 	return np.x == x && np.y == y
 }
 
-func (np *vpoint[K]) String() string {
-	return fmt.Sprintf("(%v,%.3f,%.3f)", np.elems, np.x, np.y)
+func (np *point[T]) String() string {
+	return fmt.Sprintf("(%v,%.3f,%.3f)", np.list, np.x, np.y)
 }
 
 const LEAF_SIZE = 16
 
-// A node struct implements the subtree interface.
-// A node is the intermediate, non-leaf, storage structure for a
-// quadtree.
-// It contains a View, indicating the rectangular area this node covers.
-// Each subtree will have a view containing one of four quarters of
-// this node's view. Every subtree is guaranteed to be non-nil and
-// may be either a node or a leaf struct.
-type node[K any] struct {
+// node structs make up the body of a quadtree.
+// A node is either a leaf node, which contains actual data points.
+// For a leaf all of the data points lie inside the bounds of this node's view.
+//
+// Or an internal node, internal nodes contain 4 children nodes.
+// For an internal node all children nodes lie within the bounds of this node's view.
+// The combined views of all the children nodes is the same as this node's view.
+type node[T any] struct {
 	view View
 
+	// This is a count of the number of elements stored under this node. We
+	// cache it to avoid needing to traverse the tree to answer this
+	// question.
 	cachedCount int64
 
+	// A node is either a leaf, containing actual data, or an internal node
+	// containing subtrees.
 	isLeaf bool
+
 	// Used if this node is a leaf
-	ps [LEAF_SIZE]vpoint[K]
+	ps [LEAF_SIZE]point[T]
 
 	// Used if this node is not a leaf
-	children [4]objectstore.Pointer[node[K]]
+	children [4]objectstore.Pointer[node[T]]
 }
 
-func makeNode[K any](view View, store *nodeStore[K]) objectstore.Pointer[node[K]] {
-	nodePointer, newNode := store.newNode(view)
+// Build an internal node, including allocating all of the children of this node.
+// All of the child nodes are leaf nodes.
+func makeNode[T any](view View, store *nodeStore[T]) objectstore.Pointer[node[T]] {
+	nodePointer, newNode := store.allocNode(view)
 	views := view.quarters()
 	for i, view := range views {
-		leafPointer := store.newLeaf(view)
+		leafPointer := store.allocLeaf(view)
 		newNode.children[i] = leafPointer
 	}
 	return nodePointer
 }
 
-// Inserts elems into the single child subtree whose view contains (x,y)
-func (n *node[K]) insert(x, y float64, elems linkedlist.List[K], store *nodeStore[K]) {
+// Inserts list into the single child subtree whose view contains (x,y)
+func (n *node[T]) insert(x, y float64, list linkedlist.List[T], store *nodeStore[T]) {
 	// We are adding an element to this node or one of its children, increment the count
 	n.cachedCount++
 
 	if n.isLeaf {
 		// Node is a leaf - try to insert data directly into leaf
 		for i := range n.ps {
-			if n.ps[i].zeroed() {
+			if n.ps[i].isEmpty() {
 				n.ps[i].x = x
 				n.ps[i].y = y
-				n.ps[i].elems = elems
+				n.ps[i].list = list
 				return
 			}
 			if n.ps[i].sameLoc(x, y) {
-				n.ps[i].elems.Append(store.listStore, elems)
+				n.ps[i].list.Append(store.listStore, list)
 				return
 			}
 		}
@@ -92,23 +103,25 @@ func (n *node[K]) insert(x, y float64, elems linkedlist.List[K], store *nodeStor
 		n.convertToInternal(store)
 		// After converting to internal node we fall down and execute internal node flow below
 	}
-	// Node is internal - find correct subtree to insert into
 
+	// Node is internal - find correct subtree to insert into
 	for i := range n.children {
 		childNode := store.getNode(n.children[i])
 		if childNode.view.containsPoint(x, y) {
-			childNode.insert(x, y, elems, store)
+			childNode.insert(x, y, list, store)
 			return
 		}
 	}
 	panic("unreachable")
 }
 
-func (n *node[K]) convertToInternal(store *nodeStore[K]) {
+// Converts an existing leaf node to an internal node.  To do this we allocate
+// a new set of leaf nodes and reinsert all of the data into these leaves.
+func (n *node[T]) convertToInternal(store *nodeStore[T]) {
 	n.isLeaf = false
 	views := n.view.quarters()
 	for i, view := range views {
-		leafPointer := store.newLeaf(view)
+		leafPointer := store.allocLeaf(view)
 		n.children[i] = leafPointer
 	}
 
@@ -117,25 +130,25 @@ func (n *node[K]) convertToInternal(store *nodeStore[K]) {
 		p := &n.ps[i]
 		x := p.x
 		y := p.y
-		elems := p.elems
+		list := p.list
 		for i := range n.children {
 			childNode := store.getNode(n.children[i])
 			if childNode.view.containsPoint(x, y) {
-				childNode.insert(x, y, elems, store)
+				childNode.insert(x, y, list, store)
 				break
 			}
 		}
 	}
 }
 
-// Calls survey on each child subtree whose view overlaps with vs
-func (n *node[K]) survey(view View, fun func(x, y float64, e *K) bool, store *nodeStore[K]) bool {
+// Calls survey on each child subtree whose view overlaps with view
+func (n *node[T]) survey(view View, fun func(x, y float64, data *T) bool, store *nodeStore[T]) bool {
 	// Survey each point in this leaf
 	if n.isLeaf {
 		for i := range n.ps {
 			p := &n.ps[i]
-			if !p.zeroed() && view.containsPoint(p.x, p.y) {
-				if !p.elems.Survey(store.listStore, func(data *K) bool { return fun(p.x, p.y, data) }) {
+			if !p.isEmpty() && view.containsPoint(p.x, p.y) {
+				if !p.list.Survey(store.listStore, func(data *T) bool { return fun(p.x, p.y, data) }) {
 					return false
 				}
 			}
@@ -155,7 +168,7 @@ func (n *node[K]) survey(view View, fun func(x, y float64, e *K) bool, store *no
 	return true
 }
 
-func (n *node[K]) count(view View, store *nodeStore[K]) int64 {
+func (n *node[T]) count(view View, store *nodeStore[T]) int64 {
 	// In the case that the counting view completely covers this node
 	// Then we can just quickly return the cached count
 	if view.containsView(n.view) {
@@ -167,9 +180,9 @@ func (n *node[K]) count(view View, store *nodeStore[K]) int64 {
 		counted := int64(0)
 		for i := range n.ps {
 			p := &n.ps[i]
-			if !p.zeroed() && view.containsPoint(p.x, p.y) {
+			if !p.isEmpty() && view.containsPoint(p.x, p.y) {
 				// Visit all the elements stored here and count them
-				p.elems.Survey(store.listStore, func(_ *K) bool { counted++; return true })
+				p.list.Survey(store.listStore, func(_ *T) bool { counted++; return true })
 			}
 		}
 		return counted
@@ -186,18 +199,8 @@ func (n *node[K]) count(view View, store *nodeStore[K]) int64 {
 	return counted
 }
 
-// Returns the View for this node
-func (n *node[K]) View() View {
-	return n.view
-}
-
-// Sets the view for this node
-func (n *node[K]) setView(view *View) {
-	n.view = *view
-}
-
 // Returns a human friendly string representing this node, including its children.
-func (n *node[K]) String() string {
+func (n *node[T]) String() string {
 	// TODO
 	return "TODO"
 	//return "<" + n.view.String() + "-\n" + n.children[0].String() + ", \n" + n.children[1].String() + ", \n" + n.children[2].String() + ", \n" + n.children[3].String() + ">"
@@ -206,55 +209,55 @@ func (n *node[K]) String() string {
 // Each tree has a single root.
 // The root is responsible for:
 //   - Implementing the quadtree public interface T.
-//   - Allocating and recycling leaf and node elements
-type root[K any] struct {
-	store       *nodeStore[K]
-	rootPointer objectstore.Pointer[node[K]]
+//   - Allocating and recycling leaf and node elements.
+type root[T any] struct {
+	store       *nodeStore[T]
+	rootPointer objectstore.Pointer[node[T]]
 	view        View
 }
 
 // Returns a new root ready for use as an empty quadtree
 //
 // A root node is initialised and the tree is ready for service.
-func newRoot[K any](view View) *root[K] {
-	store := newTreeStore[K]()
-	st := makeNode[K](view, store)
-	return &root[K]{
+func newRoot[T any](view View) *root[T] {
+	store := newTreeStore[T]()
+	st := makeNode[T](view, store)
+	return &root[T]{
 		store:       store,
 		rootPointer: st,
 		view:        view,
 	}
 }
 
-// Inserts the value nval into this tree
-func (r *root[K]) Insert(x, y float64, nval K) error {
+// Inserts data into this tree
+func (r *root[T]) Insert(x, y float64, data T) error {
 	if !r.view.containsPoint(x, y) {
 		return fmt.Errorf("cannot insert x(%f) y(%f) into view %s", x, y, r.view)
 	}
-	elems := r.store.newElem(nval)
+	list := r.store.newList(data)
 	st := r.store.getNode(r.rootPointer)
-	st.insert(x, y, elems, r.store)
+	st.insert(x, y, list, r.store)
 	return nil
 }
 
 // Applies fun to every element occurring within view in this tree
-func (r *root[K]) Survey(view View, fun func(x, y float64, e *K) bool) {
+func (r *root[T]) Survey(view View, fun func(x, y float64, data *T) bool) {
 	st := r.store.getNode(r.rootPointer)
 	st.survey(view, fun, r.store)
 }
 
 // Applies fun to every element occurring within view in this tree
-func (r *root[K]) Count(view View) int64 {
+func (r *root[T]) Count(view View) int64 {
 	st := r.store.getNode(r.rootPointer)
 	return st.count(view, r.store)
 }
 
 // Returns the View for this tree
-func (r *root[K]) View() View {
+func (r *root[T]) View() View {
 	return r.view
 }
 
-func (r *root[K]) String() string {
+func (r *root[T]) String() string {
 	st := r.store.getNode(r.rootPointer)
 	return st.String()
 }

@@ -213,11 +213,11 @@ func randomPosition(v View) (x, y float64) {
 	return
 }
 
-func fillView(v View, c int) []point {
-	ps := make([]point, c)
+func fillView(v View, c int) []tpoint {
+	ps := make([]tpoint, c)
 	for i := 0; i < c; i++ {
 		x, y := randomPosition(v)
-		ps[i] = point{x: x, y: y}
+		ps[i] = tpoint{x: x, y: y}
 	}
 	return ps
 }
