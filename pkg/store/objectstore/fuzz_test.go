@@ -1,60 +1,47 @@
-package fuzz
+package objectstore
 
 import (
-	"encoding/binary"
 	"fmt"
 	"reflect"
+	"testing"
 
-	"github.com/fmstephe/location-system/pkg/store/objectstore"
+	"github.com/fmstephe/location-system/pkg/store/fuzzutil"
 )
 
-type TestRun struct {
-	objects *Objects
-	steps   []Step
+// The single fuzzer test for objectstore
+func FuzzObjectStore(f *testing.F) {
+	testCases := fuzzutil.MakeRandomTestCases()
+	for _, tc := range testCases {
+		f.Add(tc)
+	}
+	f.Fuzz(func(t *testing.T, bytes []byte) {
+		tr := NewTestRun(bytes)
+		tr.Run()
+	})
 }
 
-func NewTestRun(bytes []byte) *TestRun {
+func NewTestRun(byteConsumer []byte) *fuzzutil.TestRun {
 	objects := NewObjects()
-	tr := &TestRun{
-		objects: objects,
-		steps:   make([]Step, 0),
-	}
 
-	chooser := byte(0)
-	step := Step(nil)
-	for len(bytes) > 0 {
-		consumeByte(&chooser, &bytes)
+	stepMaker := func(byteConsumer *fuzzutil.ByteConsumer) fuzzutil.Step {
+		chooser := byteConsumer.ConsumeByte()
 		switch chooser % 3 {
 		case 0:
-			step = NewAllocStep(objects, &bytes)
+			return NewAllocStep(objects, byteConsumer)
 		case 1:
-			step = NewFreeStep(objects, &bytes)
+			return NewFreeStep(objects, byteConsumer)
 		case 2:
-			step = NewMutateStep(objects, &bytes)
+			return NewMutateStep(objects, byteConsumer)
 		}
-		tr.AddStep(step)
+		panic("Unreachable")
 	}
-	return tr
-}
 
-func (t *TestRun) Run() {
-	for _, step := range t.steps {
-		step.DoStep()
-		t.objects.CheckAll()
-	}
-}
-
-func (t *TestRun) AddStep(step Step) {
-	t.steps = append(t.steps, step)
-}
-
-type Step interface {
-	DoStep()
+	return fuzzutil.NewTestRun(byteConsumer, stepMaker)
 }
 
 type Objects struct {
-	store    *objectstore.Store[[16]byte]
-	pointers []objectstore.Pointer[[16]byte]
+	store    *Store[[16]byte]
+	pointers []Pointer[[16]byte]
 	expected []*[16]byte
 	// Indicates whether a pointer/object is still live (has not been freed)
 	live []bool
@@ -62,8 +49,8 @@ type Objects struct {
 
 func NewObjects() *Objects {
 	return &Objects{
-		store:    objectstore.New[[16]byte](),
-		pointers: make([]objectstore.Pointer[[16]byte], 0),
+		store:    New[[16]byte](),
+		pointers: make([]Pointer[[16]byte], 0),
 		expected: make([]*[16]byte, 0),
 		live:     make([]bool, 0),
 	}
@@ -172,16 +159,17 @@ type AllocStep struct {
 	value   [16]byte
 }
 
-func NewAllocStep(objects *Objects, bytes *[]byte) *AllocStep {
+func NewAllocStep(objects *Objects, byteConsumer *fuzzutil.ByteConsumer) *AllocStep {
 	step := &AllocStep{
 		objects: objects,
 	}
-	consumeBytes(step.value[:], bytes)
+	copy(step.value[:], byteConsumer.ConsumeBytes(len(step.value)))
 	return step
 }
 
 func (s *AllocStep) DoStep() {
 	s.objects.Alloc(s.value)
+	s.objects.CheckAll()
 }
 
 // Free an object
@@ -190,16 +178,17 @@ type FreeStep struct {
 	index   uint32
 }
 
-func NewFreeStep(objects *Objects, bytes *[]byte) *FreeStep {
+func NewFreeStep(objects *Objects, byteConsumer *fuzzutil.ByteConsumer) *FreeStep {
 	step := &FreeStep{
 		objects: objects,
 	}
-	consumeUint32(&step.index, bytes)
+	step.index = byteConsumer.ConsumeUint32()
 	return step
 }
 
 func (s *FreeStep) DoStep() {
 	s.objects.Free(s.index)
+	s.objects.CheckAll()
 }
 
 type MutateStep struct {
@@ -208,36 +197,16 @@ type MutateStep struct {
 	newValue [16]byte
 }
 
-func NewMutateStep(objects *Objects, bytes *[]byte) *MutateStep {
+func NewMutateStep(objects *Objects, byteConsumer *fuzzutil.ByteConsumer) *MutateStep {
 	step := &MutateStep{
 		objects: objects,
 	}
-	consumeUint32(&step.index, bytes)
-	consumeBytes(step.newValue[:], bytes)
+	step.index = byteConsumer.ConsumeUint32()
+	copy(step.newValue[:], byteConsumer.ConsumeBytes(len(step.newValue)))
 	return step
 }
 
 func (s *MutateStep) DoStep() {
 	s.objects.Mutate(s.index, s.newValue)
-}
-
-func consumeBytes(dest []byte, bytes *[]byte) {
-	copy(dest, *bytes)
-	if len(*bytes) <= len(dest) {
-		*bytes = (*bytes)[:0]
-		return
-	}
-	*bytes = (*bytes)[len(dest):]
-}
-
-func consumeUint32(value *uint32, bytes *[]byte) {
-	dest := make([]byte, 4)
-	consumeBytes(dest, bytes)
-	*value = binary.LittleEndian.Uint32(dest)
-}
-
-func consumeByte(value *byte, bytes *[]byte) {
-	dest := make([]byte, 1)
-	consumeBytes(dest, bytes)
-	*value = dest[0]
+	s.objects.CheckAll()
 }
