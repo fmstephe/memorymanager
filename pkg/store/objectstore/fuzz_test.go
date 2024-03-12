@@ -24,7 +24,7 @@ func NewTestRun(byteConsumer []byte) *fuzzutil.TestRun {
 	objects := NewObjects()
 
 	stepMaker := func(byteConsumer *fuzzutil.ByteConsumer) fuzzutil.Step {
-		chooser := byteConsumer.ConsumeByte()
+		chooser := byteConsumer.Byte()
 		switch chooser % 3 {
 		case 0:
 			return NewAllocStep(objects, byteConsumer)
@@ -163,7 +163,7 @@ func NewAllocStep(objects *Objects, byteConsumer *fuzzutil.ByteConsumer) *AllocS
 	step := &AllocStep{
 		objects: objects,
 	}
-	copy(step.value[:], byteConsumer.ConsumeBytes(len(step.value)))
+	copy(step.value[:], byteConsumer.Bytes(len(step.value)))
 	return step
 }
 
@@ -182,7 +182,7 @@ func NewFreeStep(objects *Objects, byteConsumer *fuzzutil.ByteConsumer) *FreeSte
 	step := &FreeStep{
 		objects: objects,
 	}
-	step.index = byteConsumer.ConsumeUint32()
+	step.index = byteConsumer.Uint32()
 	return step
 }
 
@@ -201,8 +201,8 @@ func NewMutateStep(objects *Objects, byteConsumer *fuzzutil.ByteConsumer) *Mutat
 	step := &MutateStep{
 		objects: objects,
 	}
-	step.index = byteConsumer.ConsumeUint32()
-	copy(step.newValue[:], byteConsumer.ConsumeBytes(len(step.newValue)))
+	step.index = byteConsumer.Uint32()
+	copy(step.newValue[:], byteConsumer.Bytes(len(step.newValue)))
 	return step
 }
 

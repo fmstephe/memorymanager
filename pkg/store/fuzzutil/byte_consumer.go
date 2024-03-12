@@ -18,7 +18,7 @@ func (c *ByteConsumer) Len() int {
 	return len(c.bytes)
 }
 
-func (c *ByteConsumer) ConsumeBytes(size int) []byte {
+func (c *ByteConsumer) Bytes(size int) []byte {
 	consumed := make([]byte, size)
 	copy(consumed, c.bytes)
 
@@ -30,17 +30,17 @@ func (c *ByteConsumer) ConsumeBytes(size int) []byte {
 	return consumed
 }
 
-func (c *ByteConsumer) ConsumeByte() byte {
-	dest := c.ConsumeBytes(1)
+func (c *ByteConsumer) Byte() byte {
+	dest := c.Bytes(1)
 	return dest[0]
 }
 
-func (c *ByteConsumer) ConsumeUint16() uint16 {
-	dest := c.ConsumeBytes(2)
+func (c *ByteConsumer) Uint16() uint16 {
+	dest := c.Bytes(2)
 	return binary.LittleEndian.Uint16(dest)
 }
 
-func (c *ByteConsumer) ConsumeUint32() uint32 {
-	dest := c.ConsumeBytes(4)
+func (c *ByteConsumer) Uint32() uint32 {
+	dest := c.Bytes(4)
 	return binary.LittleEndian.Uint32(dest)
 }
