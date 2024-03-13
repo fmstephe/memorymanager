@@ -10,8 +10,8 @@ import (
 // themselves.
 type node[O any] struct {
 	data O
-	next objectstore.Pointer[node[O]]
-	prev objectstore.Pointer[node[O]]
+	next objectstore.Reference[node[O]]
+	prev objectstore.Reference[node[O]]
 }
 
 // Convenience method to get a getPointer to the embedded data.
@@ -42,16 +42,16 @@ func (s *Store[O]) NewList() List[O] {
 }
 
 // A List is simply a pointer to a node
-type List[O any] objectstore.Pointer[node[O]]
+type List[O any] objectstore.Reference[node[O]]
 
 // converts a List into the raw pointer value
-func (l *List[O]) getPointer() objectstore.Pointer[node[O]] {
-	return objectstore.Pointer[node[O]](*l)
+func (l *List[O]) getPointer() objectstore.Reference[node[O]] {
+	return objectstore.Reference[node[O]](*l)
 }
 
 // sets the value of a List using a raw pointer value
-func (l *List[O]) setPointer(p objectstore.Pointer[node[O]]) {
-	*l = List[O](p)
+func (l *List[O]) setPointer(r objectstore.Reference[node[O]]) {
+	*l = List[O](r)
 }
 
 // Pushes a single new node into the first position of an existing list. The
@@ -59,9 +59,9 @@ func (l *List[O]) setPointer(p objectstore.Pointer[node[O]]) {
 // the embedded data is returned. The embedded data can then be mutated via
 // this pointer.
 func (l *List[O]) PushHead(store *Store[O]) *O {
-	newP, newNode := store.nodeStore.Alloc()
-	l.pushTail(store, newP, newNode)
-	l.setPointer(newP)
+	newR, newNode := store.nodeStore.Alloc()
+	l.pushTail(store, newR, newNode)
+	l.setPointer(newR)
 	return newNode.getData()
 }
 
@@ -70,47 +70,47 @@ func (l *List[O]) PushHead(store *Store[O]) *O {
 // the embedded data is returned. The embedded data can then be mutated via
 // this pointer.
 func (l *List[O]) PushTail(store *Store[O]) *O {
-	newP, newNode := store.nodeStore.Alloc()
-	l.pushTail(store, newP, newNode)
+	newR, newNode := store.nodeStore.Alloc()
+	l.pushTail(store, newR, newNode)
 	return newNode.getData()
 }
 
-func (l *List[O]) pushTail(store *Store[O], newP objectstore.Pointer[node[O]], newNode *node[O]) {
-	firstP := l.getPointer()
+func (l *List[O]) pushTail(store *Store[O], newR objectstore.Reference[node[O]], newNode *node[O]) {
+	firstR := l.getPointer()
 
 	// If we are inserting into an empty list, then make it point to itself
 	// and directly update l
-	if firstP.IsNil() {
-		newNode.next = newP
-		newNode.prev = newP
-		l.setPointer(newP)
+	if firstR.IsNil() {
+		newNode.next = newR
+		newNode.prev = newR
+		l.setPointer(newR)
 		return
 	}
 
 	// Get the first and last nodes in the linked list
-	firstNode := store.nodeStore.Get(firstP)
+	firstNode := store.nodeStore.Get(firstR)
 	lastNode := store.nodeStore.Get(firstNode.prev)
 
 	// Make the last node point to the new node
-	lastNode.next = newP
+	lastNode.next = newR
 	newNode.prev = firstNode.prev
 
 	// Make the new node point to the first node
-	newNode.next = firstP
-	firstNode.prev = newP
+	newNode.next = firstR
+	firstNode.prev = newR
 }
 
 func (l *List[O]) PeakHead(store *Store[O]) *O {
-	firstP := l.getPointer()
+	firstR := l.getPointer()
 
-	firstNode := store.nodeStore.Get(firstP)
+	firstNode := store.nodeStore.Get(firstR)
 	return firstNode.getData()
 }
 
 func (l *List[O]) PeakTail(store *Store[O]) *O {
-	firstP := l.getPointer()
+	firstR := l.getPointer()
 
-	firstNode := store.nodeStore.Get(firstP)
+	firstNode := store.nodeStore.Get(firstR)
 	lastNode := store.nodeStore.Get(firstNode.prev)
 	return lastNode.getData()
 }
@@ -124,14 +124,14 @@ func (l *List[O]) RemoveTail(store *Store[O]) {
 	l.remove(store, origin.prev)
 }
 
-func (l *List[O]) remove(store *Store[O], p objectstore.Pointer[node[O]]) {
-	n := store.nodeStore.Get(p)
-	if n.prev == p && n.next == p {
+func (l *List[O]) remove(store *Store[O], r objectstore.Reference[node[O]]) {
+	n := store.nodeStore.Get(r)
+	if n.prev == r && n.next == r {
 		// There is only one element in this list, now we empty it
 		*l = List[O]{}
 
 		// Free the removed node
-		store.nodeStore.Free(p)
+		store.nodeStore.Free(r)
 		return
 	}
 
@@ -142,12 +142,12 @@ func (l *List[O]) remove(store *Store[O], p objectstore.Pointer[node[O]]) {
 	next.prev = n.prev
 
 	// If the removed node is the head of this list, point the list to next
-	if p == l.getPointer() {
+	if r == l.getPointer() {
 		*l = List[O](n.next)
 	}
 
 	// Free the removed node
-	store.nodeStore.Free(p)
+	store.nodeStore.Free(r)
 }
 
 // Adds the nodes in attach to l. After this method is called attach should
@@ -162,25 +162,26 @@ func (l *List[O]) Append(store *Store[O], attach List[O]) {
 		*l = attach
 		return
 	}
+
 	// Get nodes in this linked list
-	lP := l.getPointer()
-	hElem := store.nodeStore.Get(lP)
-	hPrev := hElem.prev
-	hPrevElem := store.nodeStore.Get(hPrev)
+	lR := l.getPointer()
+	lElem := store.nodeStore.Get(lR)
+	lPrev := lElem.prev
+	lPrevElem := store.nodeStore.Get(lPrev)
 
 	// Get nodes in the attaching linked list
-	attachP := attach.getPointer()
-	attachElem := store.nodeStore.Get(attachP)
+	attachR := attach.getPointer()
+	attachElem := store.nodeStore.Get(attachR)
 	attachPrev := attachElem.prev
 	attachPrevElem := store.nodeStore.Get(attachPrev)
 
 	// Connect end of h linked list to the start of attach linked list
-	hPrevElem.next = attachP
-	attachElem.prev = hPrev
+	lPrevElem.next = attachR
+	attachElem.prev = lPrev
 
 	// Connect start of h linked list to the end of attach linked list
-	attachPrevElem.next = lP
-	hElem.prev = attachPrev
+	attachPrevElem.next = lR
+	lElem.prev = attachPrev
 }
 
 // This method iterates over every node in the list. For each node the function
@@ -267,7 +268,7 @@ func (l *List[O]) Filter(store *Store[O], pred func(o *O) bool) {
 				panic("We assumed that this case could only be hit when origin == current")
 			}
 			// Make origin a nil getPointer
-			origin = objectstore.Pointer[node[O]]{}
+			origin = objectstore.Reference[node[O]]{}
 			return
 		}
 
@@ -302,6 +303,6 @@ func (l *List[O]) Len(store *Store[O]) int {
 // 1: Because it does not actually look at any list data, no *Store argument is needed.
 // 2: It is fast, because it doesn't need to iterate over the list
 func (l *List[O]) IsEmpty() bool {
-	p := l.getPointer()
-	return p.IsNil()
+	r := l.getPointer()
+	return r.IsNil()
 }

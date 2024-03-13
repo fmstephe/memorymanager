@@ -55,19 +55,19 @@ type node[T any] struct {
 	ps [LEAF_SIZE]point[T]
 
 	// Used if this node is not a leaf
-	children [4]objectstore.Pointer[node[T]]
+	children [4]objectstore.Reference[node[T]]
 }
 
 // Build an internal node, including allocating all of the children of this node.
 // All of the child nodes are leaf nodes.
-func makeNode[T any](view View, store *nodeStore[T]) objectstore.Pointer[node[T]] {
-	nodePointer, newNode := store.allocNode(view)
+func makeNode[T any](view View, store *nodeStore[T]) objectstore.Reference[node[T]] {
+	nodeR, newNode := store.allocNode(view)
 	views := view.quarters()
 	for i, view := range views {
-		leafPointer := store.allocLeaf(view)
-		newNode.children[i] = leafPointer
+		leafReference := store.allocLeaf(view)
+		newNode.children[i] = leafReference
 	}
-	return nodePointer
+	return nodeR
 }
 
 // Inserts list into the single child subtree whose view contains (x,y)
@@ -112,8 +112,8 @@ func (n *node[T]) convertToInternal(store *nodeStore[T]) {
 	n.isLeaf = false
 	views := n.view.quarters()
 	for i, view := range views {
-		leafPointer := store.allocLeaf(view)
-		n.children[i] = leafPointer
+		leafReference := store.allocLeaf(view)
+		n.children[i] = leafReference
 	}
 
 	// re-insert data for the new leaves
@@ -148,8 +148,8 @@ func (n *node[T]) survey(view View, fun func(x, y float64, data *T) bool, store 
 	}
 
 	// Survey each subtree
-	for _, p := range n.children {
-		st := store.getNode(p)
+	for _, r := range n.children {
+		st := store.getNode(r)
 		if view.overlaps(st.view) {
 			if !st.survey(view, fun, store) {
 				return false
@@ -181,8 +181,8 @@ func (n *node[T]) count(view View, store *nodeStore[T]) int64 {
 
 	// Collect the count of the subtrees
 	counted := int64(0)
-	for _, p := range n.children {
-		st := store.getNode(p)
+	for _, r := range n.children {
+		st := store.getNode(r)
 		if view.overlaps(st.view) {
 			counted += st.count(view, store)
 		}

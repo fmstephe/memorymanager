@@ -41,7 +41,7 @@ func NewTestRun(byteConsumer []byte) *fuzzutil.TestRun {
 
 type Objects struct {
 	store    *Store[[16]byte]
-	pointers []Pointer[[16]byte]
+	pointers []Reference[[16]byte]
 	expected []*[16]byte
 	// Indicates whether a pointer/object is still live (has not been freed)
 	live []bool
@@ -50,7 +50,7 @@ type Objects struct {
 func NewObjects() *Objects {
 	return &Objects{
 		store:    New[[16]byte](),
-		pointers: make([]Pointer[[16]byte], 0),
+		pointers: make([]Reference[[16]byte], 0),
 		expected: make([]*[16]byte, 0),
 		live:     make([]bool, 0),
 	}

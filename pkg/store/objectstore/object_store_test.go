@@ -18,7 +18,7 @@ func Test_Object_NewModifyGet(t *testing.T) {
 	os := New[MutableStruct]()
 
 	// Create all the objects and modify field
-	pointers := make([]Pointer[MutableStruct], objectChunkSize*3)
+	pointers := make([]Reference[MutableStruct], objectChunkSize*3)
 	for i := range pointers {
 		p, s := os.Alloc()
 		s.Field = i
@@ -45,7 +45,7 @@ func Test_Object_GetModifyGet(t *testing.T) {
 	os := New[MutableStruct]()
 
 	// Create all the objects
-	pointers := make([]Pointer[MutableStruct], objectChunkSize*3)
+	pointers := make([]Reference[MutableStruct], objectChunkSize*3)
 	for i := range pointers {
 		p, _ := os.Alloc()
 		pointers[i] = p
@@ -97,7 +97,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	objectAllocations := objectChunkSize * 3
 
 	// Create a large number of objects
-	pointers := make([]Pointer[MutableStruct], objectChunkSize*3)
+	pointers := make([]Reference[MutableStruct], objectChunkSize*3)
 	for i := range pointers {
 		p, _ := os.Alloc()
 		pointers[i] = p

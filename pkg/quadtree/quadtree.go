@@ -8,9 +8,9 @@ import (
 
 // This struct is the exported root of a quad tree
 type Tree[T any] struct {
-	store       *nodeStore[T]
-	treePointer objectstore.Pointer[node[T]]
-	view        View
+	store         *nodeStore[T]
+	treeReference objectstore.Reference[node[T]]
+	view          View
 }
 
 // Returns a new Tree ready for use as an empty quadtree
@@ -20,9 +20,9 @@ func NewTree[T any](view View) *Tree[T] {
 	store := newTreeStore[T]()
 	st := makeNode[T](view, store)
 	return &Tree[T]{
-		store:       store,
-		treePointer: st,
-		view:        view,
+		store:         store,
+		treeReference: st,
+		view:          view,
 	}
 }
 
@@ -32,20 +32,20 @@ func (r *Tree[T]) Insert(x, y float64, data T) error {
 		return fmt.Errorf("cannot insert x(%f) y(%f) into view %s", x, y, r.view)
 	}
 	list := r.store.newList(data)
-	st := r.store.getNode(r.treePointer)
+	st := r.store.getNode(r.treeReference)
 	st.insert(x, y, list, r.store)
 	return nil
 }
 
 // Applies fun to every element occurring within view in this tree
 func (r *Tree[T]) Survey(view View, fun func(x, y float64, data *T) bool) {
-	st := r.store.getNode(r.treePointer)
+	st := r.store.getNode(r.treeReference)
 	st.survey(view, fun, r.store)
 }
 
 // Applies fun to every element occurring within view in this tree
 func (r *Tree[T]) Count(view View) int64 {
-	st := r.store.getNode(r.treePointer)
+	st := r.store.getNode(r.treeReference)
 	return st.count(view, r.store)
 }
 
@@ -55,6 +55,6 @@ func (r *Tree[T]) View() View {
 }
 
 func (r *Tree[T]) String() string {
-	st := r.store.getNode(r.treePointer)
+	st := r.store.getNode(r.treeReference)
 	return st.String()
 }
