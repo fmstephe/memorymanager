@@ -7,7 +7,7 @@ import (
 
 type Stats bytestore.Stats
 
-type Pointer bytestore.Pointer
+type Reference bytestore.Pointer
 
 type Store struct {
 	store *bytestore.Store
@@ -19,20 +19,20 @@ func New() *Store {
 	}
 }
 
-func (s *Store) Alloc(str string) (Pointer, string) {
+func (s *Store) Alloc(str string) (Reference, string) {
 	size := len(str)
-	p, bytes := s.store.Alloc(uint32(size))
+	ref, bytes := s.store.Alloc(uint32(size))
 	copy(bytes, str)
-	return Pointer(p), unsafeutil.BytesToString(bytes)
+	return Reference(ref), unsafeutil.BytesToString(bytes)
 }
 
-func (s *Store) Get(p Pointer) string {
-	bytes := s.store.Get(bytestore.Pointer(p))
+func (s *Store) Get(ref Reference) string {
+	bytes := s.store.Get(bytestore.Pointer(ref))
 	return unsafeutil.BytesToString(bytes)
 }
 
-func (s *Store) Free(p Pointer) {
-	s.store.Free(bytestore.Pointer(p))
+func (s *Store) Free(ref Reference) {
+	s.store.Free(bytestore.Pointer(ref))
 }
 
 func (s *Store) GetStats() Stats {

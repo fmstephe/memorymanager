@@ -15,10 +15,10 @@ func TestAllocAndGet(t *testing.T) {
 	ss := New()
 	str := "a very good string"
 
-	p, allocStr := ss.Alloc(str)
+	ref, allocStr := ss.Alloc(str)
 	assert.Equal(t, str, allocStr)
 
-	getStr := ss.Get(p)
+	getStr := ss.Get(ref)
 	assert.Equal(t, str, getStr)
 }
 
@@ -26,18 +26,18 @@ func TestAllocAndGet(t *testing.T) {
 // the freed string Store panics
 func Test_Strings_NewFreeGet_Panic(t *testing.T) {
 	ss := New()
-	p, _ := ss.Alloc("be free!")
-	ss.Free(p)
+	ref, _ := ss.Alloc("be free!")
+	ss.Free(ref)
 
-	assert.Panics(t, func() { ss.Get(p) })
+	assert.Panics(t, func() { ss.Get(ref) })
 }
 
 // Demonstrate that we can alloc a string, then free it. If we try to Free()
 // the freed string Store panics
 func Test_Strings_NewFreeFree_Panic(t *testing.T) {
 	ss := New()
-	p, _ := ss.Alloc("be free!")
-	ss.Free(p)
+	ref, _ := ss.Alloc("be free!")
+	ss.Free(ref)
 
-	assert.Panics(t, func() { ss.Free(p) })
+	assert.Panics(t, func() { ss.Free(ref) })
 }
