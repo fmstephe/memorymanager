@@ -13,7 +13,7 @@ import (
 
 type ParcelHandler struct {
 	byteStore *bytestore.Store
-	tree      *quadtree.Tree[bytestore.Pointer]
+	tree      *quadtree.Tree[bytestore.Reference]
 }
 
 func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {
@@ -90,22 +90,22 @@ var endArray = []byte(`null]`)
 var comma = []byte(`,`)
 var end = []byte(`}`)
 
-func surveyFunc(w http.ResponseWriter, byteStore *bytestore.Store, limit int) func(_, _ float64, bp *bytestore.Pointer) bool {
-	pointerSet := map[bytestore.Pointer]struct{}{}
-	return func(_, _ float64, bp *bytestore.Pointer) bool {
-		if _, ok := pointerSet[*bp]; ok {
-			// We've already seen this pointer, don't write it out again
+func surveyFunc(w http.ResponseWriter, byteStore *bytestore.Store, limit int) func(_, _ float64, br *bytestore.Reference) bool {
+	refSet := map[bytestore.Reference]struct{}{}
+	return func(_, _ float64, br *bytestore.Reference) bool {
+		if _, ok := refSet[*br]; ok {
+			// We've already seen this reference, don't write it out again
 			return true
 		}
 
-		pointerSet[*bp] = struct{}{}
+		refSet[*br] = struct{}{}
 
 		// A limit of 0 or less means unlimited
-		if limit > 0 && len(pointerSet) > limit {
+		if limit > 0 && len(refSet) > limit {
 			return false
 		}
 
-		bytes := byteStore.Get(*bp)
+		bytes := byteStore.Get(*br)
 
 		_, err := w.Write(bytes)
 		if err != nil {

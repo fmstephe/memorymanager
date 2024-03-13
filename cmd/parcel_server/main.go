@@ -50,9 +50,9 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func fillTree(parcelChan chan lds_csv.CSVParcelData) (*quadtree.Tree[bytestore.Pointer], *bytestore.Store) {
+func fillTree(parcelChan chan lds_csv.CSVParcelData) (*quadtree.Tree[bytestore.Reference], *bytestore.Store) {
 	byteStore := bytestore.New()
-	tree := quadtree.NewTree[bytestore.Pointer](quadtree.NewLongLatView())
+	tree := quadtree.NewTree[bytestore.Reference](quadtree.NewLongLatView())
 
 	count := 0
 	errCount := 0
@@ -74,25 +74,25 @@ func fillTree(parcelChan chan lds_csv.CSVParcelData) (*quadtree.Tree[bytestore.P
 				errCount++
 				continue
 			}
-			op, buffer := byteStore.Alloc(uint32(len(bytes)))
+			or, buffer := byteStore.Alloc(uint32(len(bytes)))
 			copy(buffer, bytes)
 
-			if err := tree.Insert(northLong, westLat, op); err != nil {
+			if err := tree.Insert(northLong, westLat, or); err != nil {
 				fmt.Printf("%d: %s\n", line.LineNum, err)
 				errCount++
 				continue
 			}
-			if err := tree.Insert(northLong, eastLat, op); err != nil {
+			if err := tree.Insert(northLong, eastLat, or); err != nil {
 				fmt.Printf("%d: %s\n", line.LineNum, err)
 				errCount++
 				continue
 			}
-			if err := tree.Insert(southLong, westLat, op); err != nil {
+			if err := tree.Insert(southLong, westLat, or); err != nil {
 				fmt.Printf("%d: %s\n", line.LineNum, err)
 				errCount++
 				continue
 			}
-			if err := tree.Insert(southLong, eastLat, op); err != nil {
+			if err := tree.Insert(southLong, eastLat, or); err != nil {
 				fmt.Printf("%d: %s\n", line.LineNum, err)
 				errCount++
 				continue

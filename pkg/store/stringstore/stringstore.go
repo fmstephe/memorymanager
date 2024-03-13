@@ -7,7 +7,7 @@ import (
 
 type Stats bytestore.Stats
 
-type Reference bytestore.Pointer
+type Reference bytestore.Reference
 
 type Store struct {
 	store *bytestore.Store
@@ -27,12 +27,12 @@ func (s *Store) Alloc(str string) (Reference, string) {
 }
 
 func (s *Store) Get(ref Reference) string {
-	bytes := s.store.Get(bytestore.Pointer(ref))
+	bytes := s.store.Get(bytestore.Reference(ref))
 	return unsafeutil.BytesToString(bytes)
 }
 
 func (s *Store) Free(ref Reference) {
-	s.store.Free(bytestore.Pointer(ref))
+	s.store.Free(bytestore.Reference(ref))
 }
 
 func (s *Store) GetStats() Stats {

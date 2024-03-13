@@ -15,15 +15,15 @@ type Stats struct {
 	SlabStats      []ByteSlabStats
 }
 
-type Pointer struct {
+type Reference struct {
 	chunk      uint32
 	slotOffset uint32
 	byteOffset uint32
 	size       uint32
 }
 
-func (p Pointer) IsNil() bool {
-	return p.chunk == 0 && p.slotOffset == 0
+func (r Reference) IsNil() bool {
+	return r.chunk == 0 && r.slotOffset == 0
 }
 
 type Store struct {
@@ -60,23 +60,23 @@ func initialiseSlabs() []byteSlab {
 	return slabs
 }
 
-func (s *Store) Alloc(size uint32) (Pointer, []byte) {
+func (s *Store) Alloc(size uint32) (Reference, []byte) {
 	idx := indexForSize(size)
 	// TODO we should explicitly panic if the idx is out of range here
 	// Need a clear and explicit panic message
 	// Eventually we will probably manage large allocations separately
-	p := s.slabs[idx].alloc(size)
-	return p, s.Get(p)
+	r := s.slabs[idx].alloc(size)
+	return r, s.Get(r)
 }
 
-func (s *Store) Get(p Pointer) []byte {
-	idx := indexForSize(p.size)
-	return s.slabs[idx].get(p)
+func (s *Store) Get(r Reference) []byte {
+	idx := indexForSize(r.size)
+	return s.slabs[idx].get(r)
 }
 
-func (s *Store) Free(p Pointer) {
-	idx := indexForSize(p.size)
-	s.slabs[idx].free(p)
+func (s *Store) Free(r Reference) {
+	idx := indexForSize(r.size)
+	s.slabs[idx].free(r)
 }
 
 func (s *Store) GetStats() Stats {

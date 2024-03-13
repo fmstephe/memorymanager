@@ -60,7 +60,7 @@ func Test_Bytes_GetModifyGet(t *testing.T) {
 	bs := New()
 
 	// Create all the byte slices
-	pointers := make([]Pointer, chunkSize*3)
+	pointers := make([]Reference, chunkSize*3)
 	for i := range pointers {
 		// Allocate the slice
 		p, bytes := bs.Alloc(8)
@@ -152,7 +152,7 @@ func Test_Bytes_GetModifyGet_OddSizing(t *testing.T) {
 	bs := New()
 
 	// Create all the byte slices
-	pointers := make([]Pointer, chunkSize*3)
+	pointers := make([]Reference, chunkSize*3)
 	size := uint32(0)
 	for i := range pointers {
 		p, _ := bs.Alloc(size)
@@ -215,7 +215,7 @@ func Test_Bytes_NewFreeNew_ReusesOldBytes(t *testing.T) {
 	sliceAllocations := 10_000
 
 	// Create a large number of objects
-	slices := make([]Pointer, sliceAllocations)
+	slices := make([]Reference, sliceAllocations)
 	for i := range slices {
 		p, _ := s.Alloc(uint32(i))
 		slices[i] = p

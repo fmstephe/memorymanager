@@ -144,8 +144,8 @@ func assertAllocateChunkFreeRealloc(t *testing.T, slab *byteSlab) {
 	assertBytesAndMeta(t, expectedCount, slab)
 }
 
-func doAllocations(t *testing.T, slab *byteSlab, num int) []Pointer {
-	pointers := []Pointer{}
+func doAllocations(t *testing.T, slab *byteSlab, num int) []Reference {
+	pointers := []Reference{}
 	for i := 0; i < num; i++ {
 		size := getRandomSize(slab.slotSize)
 
@@ -187,7 +187,7 @@ func getRandomSize(slotSize uint32) uint32 {
 	return val + minSize
 }
 
-func freeAllocations(t *testing.T, slab *byteSlab, pointers []Pointer) {
+func freeAllocations(t *testing.T, slab *byteSlab, pointers []Reference) {
 	for i := range pointers {
 		slab.free(pointers[i])
 	}
