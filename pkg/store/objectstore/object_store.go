@@ -1,3 +1,85 @@
+// The objectstore package allows us to alloc and free objects of a specific
+// type.
+//
+// Each objectstore instance can alloc/free a single type of object. This is
+// controlled by generics.
+//
+// Each allocated object has a corresponding Reference which acts like a
+// conventional pointer to retrieve the actual object from the objectstore using
+// the Get() method.
+//
+// A best effort has been made to panic if an object is freed twice or if a
+// freed object is accessed using Get(). However, it isn't guaranteed that
+// these calls will panic, for example if an object is freed the next call to
+// Alloc() will reuse the freed object and future calls to Get() and Free()
+// using the Reference used in the Free will operate on the re-allocated object
+// and not panic. So this behaviour cannot be relied on.
+//
+// Memory Model Constraints:
+//
+// In a pure single threaded context the use of objectstore is fairly
+// straightforward and, I think, should follow familiar behaviour patterns.  In
+// order to get an object you are must first Alloc() it, the Reference you get
+// from Alloc can get used to Get() the object again in the future. You can
+// Free() and object via its Reference, but it is only safe to do this once.
+// Calling Free() multiple times on the same Reference has unpredictable
+// behaviour (although we make a best-effort to panic). Calling Get() on a
+// Reference after Free() has been called on that Reference has similarly
+// unpredictable behaviour (we try to panic here too, but this behaviour cannot
+// be relied on).
+//
+// Supported Concurrent Designs
+//
+// The design of the objectstore supports single-threaded construction of a
+// datastructure which then becomes read-only. This allows an unlimited number
+// of concurrent readers but won't be useful for all systems.
+//
+// Alternatively, it is possible to use the objectstore to build single-reader
+// multiple writer datastructures safely. The design must avoid calls to
+// Alloc/Free in readers and take care to safely publish newly allocated
+// objects to the readers using some kind of happens-before barrier, channel
+// send/receive mutex lock/unlock or atomic write/read etc. This allows for
+// MVCC style datastructures to be developed safely.  Tree style datastructures
+// are ideal for this approach and it is likely that most datastructures
+// developed using the objectstore will be tree based.
+//
+// 1: Independent Read Safety
+//
+// For a given set of live objects, previously allocated objects with a
+// happens-before barrier between the allocators and all readers, all objects
+// can be read freely and calling Get() will work without data races.
+//
+// This guarantee continues to hold even if another goroutine is calling
+// Alloc() and Free() to _independent_ objects/References concurrently with the
+// reads.
+//
+// This seems like an unremarkable guarantee to make, but it does constrain the
+// objectstore implementation in interesting ways. For example we cannot add a
+// non-atomic read counter to Get() calls because this would be an uncontrolled
+// concurrent read/write. We also must ensure that all data read on the Get()
+// path is not written to on either the Alloc() or Free() paths.
+//
+// 2: Alloc Publication Safety
+//
+// It is safe and possible for a writer to allocate new objects, using Alloc(),
+// and then make those objects/references available to readers over a
+// happens-before barrier. Preserving this guarantee requires us to ensure all
+// data on the path of Get() for objects unrelated to the indepenent Alloc()
+// calls are never written to during the call to Alloc().
+//
+// 3: Free Safety
+//
+// It is only safe for an object to be Freed once. It is up to the programmer
+// to ensure that an object which has been Freed is never used again, and you
+// must not call Get() with that object's Reference again. It is envisioned
+// that a single writer will be responsible for both Alloc and Free calls, and
+// a careful mechanism must be established to ensure Freed objects are never
+// read again. The reason for mandating that the single writer be responsible
+// for calling both Alloc() and Free() calls is that calls to Free() make the
+// freed object available to the next call of Alloc(). Calling Alloc() after
+// calling Free() from different goroutines without a happens-before barrier
+// between them will always create a data-race.
+
 package objectstore
 
 import (
