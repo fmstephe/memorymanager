@@ -1,0 +1,20 @@
+#!/bin/bash
+
+STAGED_GO_FILES=$(git diff --cached --name-only | grep ".go$" | grep -v "vendor")
+
+if [[ "$STAGED_GO_FILES" = "" ]]; then
+	exit 0
+fi
+
+STATUS=0
+
+for FILE in $STAGED_GO_FILES
+do
+	DIFF=$(goimports -d -w $FILE)
+	if [[ -n "$DIFF" ]]; then
+		echo "Badly formatted go source:" $FILE
+		STATUS=1
+	fi
+done
+
+exit $STATUS
