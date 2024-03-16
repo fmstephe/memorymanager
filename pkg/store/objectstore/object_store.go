@@ -117,9 +117,10 @@
 //
 // 1: Independent Read Safety
 //
-// For a given set of live objects, previously allocated objects with a
-// happens-before barrier between the allocators and readers, all objects
-// can be read freely and calling Get() and performing arbitrary reads of the retrieved object will work without data races.
+// For a given set of live objects, previously allocated with a happens-before
+// barrier between the allocator and readers, all objects can be read freely.
+// Calling Get() and performing arbitrary reads of the retrieved objects will
+// work without data races.
 //
 // This guarantee continues to hold even if another goroutine is calling
 // Alloc() and Free() to _independent_ objects/References concurrently with the
@@ -137,6 +138,15 @@
 // happens-before barrier. Preserving this guarantee requires us to ensure all
 // data on the path of Get() for objects unrelated to the indepenent Alloc()
 // calls are never written to during the call to Alloc().
+//
+// An example of an implementation restriction produced by the independent
+// allocation safety rule is that we cannot reallocate the backing slice for
+// allocated objects without some form of concurrency protection. This
+// protection is required because objects are stored in a slice of slices i.e.
+// `objects [][]O`. When there are no free slots available in the existing
+// slices we must create a new slice and append it to objects. Calls to Get()
+// _must_ read from `objects` to find the slot required, so any unprotected
+// read or write of `objects` will be racy.
 //
 // 3: Free Safety
 //
