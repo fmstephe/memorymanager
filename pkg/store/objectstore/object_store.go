@@ -119,7 +119,7 @@
 //
 // For a given set of live objects, previously allocated objects with a
 // happens-before barrier between the allocators and readers, all objects
-// can be read freely and calling Get() will work without data races.
+// can be read freely and calling Get() and performing arbitrary reads of the retrieved object will work without data races.
 //
 // This guarantee continues to hold even if another goroutine is calling
 // Alloc() and Free() to _independent_ objects/References concurrently with the
