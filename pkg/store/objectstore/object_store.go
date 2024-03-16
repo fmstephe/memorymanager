@@ -59,6 +59,30 @@
 // indefinitely but incur almost zero garbage collection cost. This could be
 // used to build a very large in memory cache with low GC impact.
 //
+// It is important to note that the objects managed by an objectstore do exist
+// on the heap. They live inside a series of slices managed internally by the
+// objectstore. This means that if the objects managed by an objectstore
+// contain any conventional Go pointers the entire objectstore will be filled
+// with pointers and the garbage collection impact will be the same as a
+// conventionally allocated datastructure. For example none of the structs
+// below should be managed by an objectstore.
+//
+//  type BadStruct1 struct {
+//    stringsHavePointers string
+//  }
+//
+//  type BadStruct2 struct {
+//    mapsHavePointers map[int]int
+//  }
+//
+//  type BadStruct3 struct {
+//    slicesHadPointers []int
+//  }
+//
+//  type BadStruct4 struct {
+//    pointersHavePointers *int
+//  }
+//
 // Memory Model Constraints:
 //
 // objectstore contains _no_ concurrency control inside. There are no atomics,
