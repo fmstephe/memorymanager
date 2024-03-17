@@ -4,29 +4,33 @@
 // Each objectstore instance can alloc/free a single type of object. This is
 // controlled by the generic type of an objectstore instance e.g.
 //
-//   store := objectstore.New[int]()
+//	var store *objectstore.Store
+//	store = objectstore.New[int]()
 //
-// will alloc/free only *int values.
+// will alloc/free only int values.
 //
 // Each allocated object has a corresponding Reference which acts like a
-// conventional pointer to retrieve the actual object from the objectstore using
-// the Get() method e.g.
+// conventional pointer to retrieve the actual object from the objectstore
+// using the Get() method e.g.
 //
-//  store := objectstore.New[int]()
-//  reference, i1 := store.Alloc()
-//  i2 := store.Get(reference)
-//  if i1 == i2 {
-//    println("This is correct, i1 and i2 will be a pointer to the same int")
-//  }
+//	store := objectstore.New[int]()
+//	var reference objectstore.Reference
+//	var i1 *int
+//	reference, i1 = store.Alloc()
+//	var i2 *int
+//	i2 = store.Get(reference)
+//	if i1 == i2 {
+//	  println("This is correct, i1 and i2 will be a pointer to the same int")
+//	}
 //
 // When you know that an allocated object will never be used again it's memory
-// can be freed inside the objectstore using Free() e.g.
+// can be released back to the objectstore using Free() e.g.
 //
-//  store := objectstore.New[int]()
-//  reference, i1 := store.Alloc()
-//  println(*i1)
-//  store.Free(reference)
-//  // You must never user i1 or reference again
+//	store := objectstore.New[int]()
+//	reference, i1 := store.Alloc()
+//	println(*i1)
+//	store.Free(reference)
+//	// You must never user i1 or reference again
 //
 // A best effort has been made to panic if an object is freed twice or if a
 // freed object is accessed using Get(). However, it isn't guaranteed that
@@ -38,11 +42,11 @@
 // References can be kept and stored in arbitrary datastructures, which can
 // themselves be managed by an objectstore e.g.
 //
-//  type Node struct {
-//    left  Reference[Node]
-//    right Reference[Node]
-//  }
-//  store := objectstore.New[Node]()
+//	type Node struct {
+//	  left  Reference[Node]
+//	  right Reference[Node]
+//	}
+//	node := objectstore.New[Node]()
 //
 // The Reference type contains no pointers. This means that we can retain as
 // many of them as we like with no garbage collection cost. The objectstore
@@ -53,46 +57,45 @@
 //
 // The advantage of using an objectstore, over just allocating objects the
 // normal way, is that we get pointer-like references to objects without those
-// references (the objectstore's pointer is a type named Reference) being
-// visible to the garbage collector. This means that we can build large
-// datastructures, like trees or linked lists, which can live in memory
-// indefinitely but incur almost zero garbage collection cost. This could be
-// used to build a very large in memory cache with low GC impact.
+// references being visible to the garbage collector. This means that we can
+// build large datastructures, like trees or linked lists, which can live in
+// memory indefinitely but incur almost zero garbage collection cost.
 //
 // It is important to note that the objects managed by an objectstore do exist
-// on the heap. They live inside a series of slices managed internally by the
+// on the heap. They live inside a series of slices held internally by the
 // objectstore. This means that if the objects managed by an objectstore
 // contain any conventional Go pointers the entire objectstore will be filled
 // with pointers and the garbage collection impact will be the same as a
 // conventionally allocated datastructure. For example none of the structs
 // below should be managed by an objectstore.
 //
-//  type BadStruct1 struct {
-//    stringsHavePointers string
-//  }
+//	type BadStruct1 struct {
+//	  stringsHavePointers string
+//	}
 //
-//  type BadStruct2 struct {
-//    mapsHavePointers map[int]int
-//  }
+//	type BadStruct2 struct {
+//	  mapsHavePointers map[int]int
+//	}
 //
-//  type BadStruct3 struct {
-//    slicesHadPointers []int
-//  }
+//	type BadStruct3 struct {
+//	  slicesHavePointers []int
+//	}
 //
-//  type BadStruct4 struct {
-//    pointersHavePointers *int
-//  }
+//	type BadStruct4 struct {
+//	  pointersHavePointers *int
+//	}
 //
 // Memory Model Constraints:
 //
-// objectstore contains _no_ concurrency control inside. There are no atomics,
-// mutexes or channels to protect against racing reads/writes.
+// objectstore contains very limited concurrency control internally. It is only
+// safe for concurrent access under limit circumstances which are described
+// below.
 //
 // In a pure single threaded context the use of objectstore is fairly
 // straightforward and should follow familiar behaviour patterns.  In order to
 // get an object you are must first Alloc() it, the Reference you get from
-// Alloc can get used to Get() a pointer to the object again in the future. You
-// can Free() and object via its Reference, but it is only safe to do this
+// Alloc() can be used to Get() a pointer to the object again in the future.
+// You can Free() an object via its Reference, but it is only safe to do this
 // once.  Calling Free() multiple times on the same Reference has unpredictable
 // behaviour (although we make a best-effort to panic). Calling Get() on a
 // Reference after Free() has been called on that Reference has similarly
@@ -103,8 +106,9 @@
 //
 // The design of the objectstore supports single-threaded construction of a
 // datastructure which then becomes read-only. This allows an unlimited number
-// of concurrent readers but won't be useful for all systems, because the
-// datastructure cannot be modified after construction.
+// of concurrent readers. This is a simple and robust design, but won't be
+// useful for all systems because the datastructure cannot be modified after
+// construction.
 //
 // Alternatively, it is possible to use the objectstore to build single-reader
 // multiple writer datastructures safely. The design must avoid calls to
@@ -119,8 +123,9 @@
 //
 // For a given set of live objects, previously allocated with a happens-before
 // barrier between the allocator and readers, all objects can be read freely.
-// Calling Get() and performing arbitrary reads of the retrieved objects will
-// work without data races.
+// Calling Get() and performing arbitrary reads of the retrieved objects from
+// multiple goroutines with no other concurrency control code will work without
+// data races.
 //
 // This guarantee continues to hold even if another goroutine is calling
 // Alloc() and Free() to _independent_ objects/References concurrently with the
@@ -134,13 +139,13 @@
 // 2: Independent Alloc Safety
 //
 // It is safe and possible for a writer to allocate new objects, using Alloc(),
-// and then make those objects/references available to readers over a
+// and then make those objects/references available to readers across a
 // happens-before barrier. Preserving this guarantee requires us to ensure all
 // data on the path of Get() for objects unrelated to the indepenent Alloc()
 // calls are never written to during the call to Alloc().
 //
 // An example of an implementation restriction produced by the independent
-// allocation safety rule is that we cannot reallocate the backing slice for
+// allocation safety rule is that we cannot re-allocate the backing slice for
 // allocated objects without some form of concurrency protection. This
 // protection is required because objects are stored in a slice of slices i.e.
 // `objects [][]O`. When there are no free slots available in the existing
@@ -153,14 +158,14 @@
 // It is only safe for an object to be Freed once. It is up to the programmer
 // to ensure that an object which has been Freed is never used again, and you
 // must not call Get() with that object's Reference again. It is envisioned
-// that a single writer will be responsible for both Alloc and Free calls, and
-// a careful mechanism must be established to ensure Freed objects are never
-// read again. The reason for mandating that the single writer be responsible
-// for calling both Alloc() and Free() calls is that calls to Free() make the
-// freed object available to the next call of Alloc(). Calling Alloc() after
-// calling Free() from different goroutines without a happens-before barrier
-// between them will always create a data-race, even when the Alloc() and
-// Free() calls seem independent to the client program.
+// that a single writer will be responsible for both Alloc() and Free() calls,
+// and a careful mechanism must be established to ensure Freed objects are
+// never read again. The reason for mandating that the single writer be
+// responsible for calling both Alloc() and Free() calls is that calls to
+// Free() make the freed object available to the next call of Alloc(). Calling
+// Alloc() after calling Free() from different goroutines without a
+// happens-before barrier between them will always create a data-race, even
+// when the Alloc() and Free() calls seem independent to the client program.
 
 package objectstore
 
