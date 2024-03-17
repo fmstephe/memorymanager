@@ -1,7 +1,7 @@
 // The objectstore package allows us to alloc and free objects of a specific
 // type.
 //
-// Each objectstore instance can alloc/free a single type of object. This is
+// Each Store instance can alloc/free a single type of object. This is
 // controlled by the generic type of an objectstore instance e.g.
 //
 //	var store *objectstore.Store
@@ -10,8 +10,8 @@
 // will alloc/free only int values.
 //
 // Each allocated object has a corresponding Reference which acts like a
-// conventional pointer to retrieve the actual object from the objectstore
-// using the Get() method e.g.
+// conventional pointer to retrieve the actual object from the Store using the
+// Get() method e.g.
 //
 //	store := objectstore.New[int]()
 //	var reference objectstore.Reference
@@ -24,7 +24,7 @@
 //	}
 //
 // When you know that an allocated object will never be used again it's memory
-// can be released back to the objectstore using Free() e.g.
+// can be released back to the Store using Free() e.g.
 //
 //	store := objectstore.New[int]()
 //	reference, i1 := store.Alloc()
@@ -40,7 +40,7 @@
 // and not panic. So this behaviour cannot be relied on.
 //
 // References can be kept and stored in arbitrary datastructures, which can
-// themselves be managed by an objectstore e.g.
+// themselves be managed by a Store e.g.
 //
 //	type Node struct {
 //	  left  Reference[Node]
@@ -49,25 +49,34 @@
 //	node := objectstore.New[Node]()
 //
 // The Reference type contains no pointers. This means that we can retain as
-// many of them as we like with no garbage collection cost. The objectstore
-// itself contains some pointers, and must also be referenced via a pointer to
-// work properly. So storing the objectstore itself in the Node struct above
-// would introduce pointers to the managed object type and defeat the purpose
-// of using an objectstore.
+// many of them as we like with no garbage collection cost. The Store itself
+// contains some pointers, and must also be referenced via a pointer to work
+// properly. So storing the Store itself in the Node struct above would
+// introduce pointers into the managed object type and defeat the purpose of
+// using a Store.
 //
-// The advantage of using an objectstore, over just allocating objects the
-// normal way, is that we get pointer-like references to objects without those
+// The advantage of using a Store, over just allocating objects the normal
+// way, is that we get pointer-like references to objects without those
 // references being visible to the garbage collector. This means that we can
 // build large datastructures, like trees or linked lists, which can live in
 // memory indefinitely but incur almost zero garbage collection cost.
 //
-// It is important to note that the objects managed by an objectstore do exist
-// on the heap. They live inside a series of slices held internally by the
-// objectstore. This means that if the objects managed by an objectstore
-// contain any conventional Go pointers the entire objectstore will be filled
-// with pointers and the garbage collection impact will be the same as a
-// conventionally allocated datastructure. For example none of the structs
-// below should be managed by an objectstore.
+// The disadvantage of using a Store, over just allocating objects the normal
+// way, is that we don't get to enjoy the benefits of the Go garbage collector.
+// We must be responsible for freeing unneeded objects manually. We also need
+// to have a Store instance to be able to retrieve objects with a Reference, so
+// using datastructures built with a Store can feel quite cumbersome. These
+// disadvantages mean that effective use of the objectstore requires a careful
+// design which encapsulates these details and hides the use of the objectstore
+// package from the rest of the program.
+//
+// It is important to note that the objects managed by a Store do exist on the
+// heap. They live inside a series of slices held internally by the Store. This
+// means that if the objects managed by a Store contain any conventional Go
+// pointers the entire Store will be filled with pointers and the garbage
+// collection impact will be the same as a conventionally allocated
+// datastructure. For example none of the structs below should be managed by an
+// Store.
 //
 //	type BadStruct1 struct {
 //	  stringsHavePointers string
@@ -85,39 +94,42 @@
 //	  pointersHavePointers *int
 //	}
 //
+//	type BadStruct5 struct {
+//	  storesHavePointers *objectstore.Store
+//	}
+//
 // Memory Model Constraints:
 //
-// objectstore contains very limited concurrency control internally. It is only
-// safe for concurrent access under limit circumstances which are described
-// below.
+// Store contains very limited concurrency control internally. It is only safe
+// for concurrent access under limit circumstances which are described below.
 //
-// In a pure single threaded context the use of objectstore is fairly
-// straightforward and should follow familiar behaviour patterns.  In order to
-// get an object you are must first Alloc() it, the Reference you get from
-// Alloc() can be used to Get() a pointer to the object again in the future.
-// You can Free() an object via its Reference, but it is only safe to do this
-// once.  Calling Free() multiple times on the same Reference has unpredictable
-// behaviour (although we make a best-effort to panic). Calling Get() on a
-// Reference after Free() has been called on that Reference has similarly
-// unpredictable behaviour (we try to panic here too, but this behaviour cannot
-// be relied on).
+// In a pure single threaded context the use of Store is fairly straightforward
+// and should follow familiar behaviour patterns. In order to get an object
+// you are must first Alloc() it, the Reference you get from Alloc() can be
+// used to Get() a pointer to the object again in the future. You can Free()
+// an object via its Reference, but it is only safe to do this once. Calling
+// Free() multiple times on the same Reference has unpredictable behaviour
+// (although we make a best-effort to panic). Calling Get() on a Reference
+// after Free() has been called on that Reference has similarly unpredictable
+// behaviour (we try to panic here too, but this behaviour cannot be relied
+// on).
 //
 // Supported Concurrent Designs
 //
-// The design of the objectstore supports single-threaded construction of a
+// The design of the Store supports single-threaded construction of a
 // datastructure which then becomes read-only. This allows an unlimited number
 // of concurrent readers. This is a simple and robust design, but won't be
 // useful for all systems because the datastructure cannot be modified after
 // construction.
 //
-// Alternatively, it is possible to use the objectstore to build single-reader
+// Alternatively, it is possible to use the Store to build single-reader
 // multiple writer datastructures safely. The design must avoid calls to
 // Alloc/Free in readers and take care to safely publish newly allocated
 // objects to the readers using some kind of happens-before barrier, channel
 // send/receive mutex lock/unlock or atomic write/read etc. This allows for
-// MVCC style datastructures to be developed safely.  Tree style datastructures
+// MVCC style datastructures to be developed safely. Tree style datastructures
 // are ideal for this approach and it is likely that most datastructures
-// developed using the objectstore will be tree based.
+// developed using the Store will be tree based.
 //
 // 1: Independent Read Safety
 //
@@ -132,7 +144,7 @@
 // reads.
 //
 // This seems like an unremarkable guarantee to make, but it does constrain the
-// objectstore implementation in interesting ways. For example we cannot add a
+// Store implementation in interesting ways. For example we cannot add a
 // non-atomic read counter to Get() calls because this would be an uncontrolled
 // concurrent read/write.
 //
@@ -201,7 +213,7 @@ type Store[O any] struct {
 }
 
 // If the meta for an object has a non-nil nextFree pointer then the
-// object is currently free.  Object's which have never been allocated are
+// object is currently free. Object's which have never been allocated are
 // implicitly free, but have a nil nextFree point in their meta.
 type meta[O any] struct {
 	nextFree Reference[O]
