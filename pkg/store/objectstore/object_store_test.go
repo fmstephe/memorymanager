@@ -110,8 +110,8 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	assert.Equal(t, objectAllocations, stats.Live)
 	// Nothing has been freed
 	assert.Equal(t, 0, stats.Frees)
-	// Internally 4 chunks have been created
-	assert.Equal(t, 4, stats.Chunks)
+	// Internally 3 chunks have been created
+	assert.Equal(t, 3, stats.Chunks)
 
 	// Free all of those objects
 	for _, p := range pointers {
@@ -125,8 +125,8 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	assert.Equal(t, 0, stats.Live)
 	// We have freed one batch of objects
 	assert.Equal(t, objectAllocations, stats.Frees)
-	// Internally 4 chunks have been created
-	assert.Equal(t, 4, stats.Chunks)
+	// Internally 3 chunks have been created
+	assert.Equal(t, 3, stats.Chunks)
 
 	// Allocate the same number of objects again
 	for range pointers {
@@ -140,8 +140,8 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	assert.Equal(t, objectAllocations, stats.Live)
 	// One batch is live
 	assert.Equal(t, objectAllocations, stats.Frees)
-	// Internally 4 chunks have been created
-	assert.Equal(t, 4, stats.Chunks)
+	// Internally 3 chunks have been created
+	assert.Equal(t, 3, stats.Chunks)
 }
 
 // This small test is in response to a bug found in the free implementation.

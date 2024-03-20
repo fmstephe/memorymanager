@@ -198,7 +198,7 @@ type Stats struct {
 
 type Store[O any] struct {
 	// Immutable fields
-	chunkSize uint32
+	chunkSize uint64
 
 	// Accounting fields
 	allocs int
@@ -206,7 +206,7 @@ type Store[O any] struct {
 	reused int
 
 	// Data fields
-	offset   uint32
+	allocIdx uint64
 	rootFree Reference[O]
 	meta     [][]meta[O]
 	objects  [][]O
@@ -220,13 +220,13 @@ type meta[O any] struct {
 }
 
 func New[O any]() *Store[O] {
-	chunkSize := uint32(objectChunkSize)
+	chunkSize := uint64(objectChunkSize)
 	// Initialise the first chunk
 	meta := [][]meta[O]{make([]meta[O], chunkSize)}
 	objects := [][]O{make([]O, chunkSize)}
 	return &Store[O]{
 		chunkSize: chunkSize,
-		offset:    0,
+		allocIdx:  0,
 		meta:      meta,
 		objects:   objects,
 	}
@@ -301,25 +301,24 @@ func (s *Store[O]) allocFromFree() (Reference[O], *O) {
 }
 
 func (s *Store[O]) allocFromOffset() (Reference[O], *O) {
-	chunk := uint32(len(s.objects))
-	s.offset++
-	offset := s.offset
-	if s.offset == s.chunkSize {
+	allocIdx := s.allocIdx
+	s.allocIdx++
+	ref := newReference[O](allocIdx)
+	chunkIdx, offsetIdx := ref.chunkAndOffset(s.chunkSize)
+	if chunkIdx >= uint64(len(s.objects)) {
 		// Create a new chunk
 		s.meta = append(s.meta, make([]meta[O], s.chunkSize))
 		s.objects = append(s.objects, make([]O, s.chunkSize))
-		s.offset = 0
 	}
-	return Reference[O]{
-		chunk:  chunk,
-		offset: offset,
-	}, &s.objects[chunk-1][offset-1]
+	return ref, &s.objects[chunkIdx][offsetIdx]
 }
 
 func (s *Store[O]) getObject(r Reference[O]) *O {
-	return &s.objects[r.chunk-1][r.offset-1]
+	chunkIdx, offsetIdx := r.chunkAndOffset(s.chunkSize)
+	return &s.objects[chunkIdx][offsetIdx]
 }
 
 func (s *Store[O]) getMeta(r Reference[O]) *meta[O] {
-	return &s.meta[r.chunk-1][r.offset-1]
+	chunkIdx, offsetIdx := r.chunkAndOffset(s.chunkSize)
+	return &s.meta[chunkIdx][offsetIdx]
 }
