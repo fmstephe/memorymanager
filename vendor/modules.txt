@@ -1,9 +1,9 @@
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/fmstephe/unsafeutil v1.0.0
-## explicit; go 1.13
-github.com/fmstephe/unsafeutil
+# github.com/fmstephe/flib v0.0.1
+## explicit; go 1.19
+github.com/fmstephe/flib/funsafe
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib

@@ -1,4 +1,4 @@
-package unsafeutil
+package funsafe
 
 import (
 	"unsafe"

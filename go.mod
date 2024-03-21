@@ -3,7 +3,7 @@ module github.com/fmstephe/location-system
 go 1.18
 
 require (
-	github.com/fmstephe/unsafeutil v1.0.0
+	github.com/fmstephe/flib v0.0.1
 	github.com/stretchr/testify v1.8.0
 	golang.org/x/sys v0.18.0
 )

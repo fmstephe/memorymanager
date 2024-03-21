@@ -1,8 +1,8 @@
 package stringstore
 
 import (
+	"github.com/fmstephe/flib/funsafe"
 	"github.com/fmstephe/location-system/pkg/store/bytestore"
-	"github.com/fmstephe/unsafeutil"
 )
 
 type Stats bytestore.Stats
@@ -23,12 +23,12 @@ func (s *Store) Alloc(str string) (Reference, string) {
 	size := len(str)
 	ref, bytes := s.store.Alloc(uint32(size))
 	copy(bytes, str)
-	return Reference(ref), unsafeutil.BytesToString(bytes)
+	return Reference(ref), funsafe.BytesToString(bytes)
 }
 
 func (s *Store) Get(ref Reference) string {
 	bytes := s.store.Get(bytestore.Reference(ref))
-	return unsafeutil.BytesToString(bytes)
+	return funsafe.BytesToString(bytes)
 }
 
 func (s *Store) Free(ref Reference) {
