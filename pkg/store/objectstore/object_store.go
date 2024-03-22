@@ -208,26 +208,24 @@ type Store[O any] struct {
 	// Data fields
 	allocIdx uint64
 	rootFree Reference[O]
-	meta     [][]meta[O]
-	objects  [][]O
+	objects  [][]object[O]
 }
 
-// If the meta for an object has a non-nil nextFree pointer then the
-// object is currently free. Object's which have never been allocated are
-// implicitly free, but have a nil nextFree point in their meta.
-type meta[O any] struct {
+// If the object has a non-nil nextFree pointer then the object is currently
+// free. Object's which have never been allocated are implicitly free, but have
+// a nil nextFree
+type object[O any] struct {
 	nextFree Reference[O]
+	value    O
 }
 
 func New[O any]() *Store[O] {
 	chunkSize := uint64(objectChunkSize)
 	// Initialise the first chunk
-	meta := [][]meta[O]{make([]meta[O], chunkSize)}
-	objects := [][]O{make([]O, chunkSize)}
+	objects := [][]object[O]{make([]object[O], chunkSize)}
 	return &Store[O]{
 		chunkSize: chunkSize,
 		allocIdx:  0,
-		meta:      meta,
 		objects:   objects,
 	}
 }
@@ -244,26 +242,26 @@ func (s *Store[O]) Alloc() (Reference[O], *O) {
 }
 
 func (s *Store[O]) Get(r Reference[O]) *O {
-	m := s.getMeta(r)
-	if !m.nextFree.IsNil() {
+	o := s.getObject(r)
+	if !o.nextFree.IsNil() {
 		panic(fmt.Errorf("attempted to Get freed object %v", r))
 	}
-	return s.getObject(r)
+	return &o.value
 }
 
 func (s *Store[O]) Free(r Reference[O]) {
-	meta := s.getMeta(r)
+	o := s.getObject(r)
 
-	if !meta.nextFree.IsNil() {
+	if !o.nextFree.IsNil() {
 		panic(fmt.Errorf("attempted to Free freed object %v", r))
 	}
 
 	s.frees++
 
 	if s.rootFree.IsNil() {
-		meta.nextFree = r
+		o.nextFree = r
 	} else {
-		meta.nextFree = s.rootFree
+		o.nextFree = s.rootFree
 	}
 
 	s.rootFree = r
@@ -286,9 +284,9 @@ func (s *Store[O]) allocFromFree() (Reference[O], *O) {
 
 	// Grab the meta-data for the slot and nil out the, now
 	// allocated, slot's nextFree pointer
-	freeMeta := s.getMeta(alloc)
-	nextFree := freeMeta.nextFree
-	freeMeta.nextFree = Reference[O]{}
+	freeObject := s.getObject(alloc)
+	nextFree := freeObject.nextFree
+	freeObject.nextFree = Reference[O]{}
 
 	// If the nextFree pointer points to the just allocated slot, then
 	// there are no more freed slots available
@@ -297,7 +295,7 @@ func (s *Store[O]) allocFromFree() (Reference[O], *O) {
 		s.rootFree = Reference[O]{}
 	}
 
-	return alloc, s.getObject(alloc)
+	return alloc, &freeObject.value
 }
 
 func (s *Store[O]) allocFromOffset() (Reference[O], *O) {
@@ -307,18 +305,12 @@ func (s *Store[O]) allocFromOffset() (Reference[O], *O) {
 	chunkIdx, offsetIdx := ref.chunkAndOffset(s.chunkSize)
 	if chunkIdx >= uint64(len(s.objects)) {
 		// Create a new chunk
-		s.meta = append(s.meta, make([]meta[O], s.chunkSize))
-		s.objects = append(s.objects, make([]O, s.chunkSize))
+		s.objects = append(s.objects, make([]object[O], s.chunkSize))
 	}
-	return ref, &s.objects[chunkIdx][offsetIdx]
+	return ref, &(s.objects[chunkIdx][offsetIdx].value)
 }
 
-func (s *Store[O]) getObject(r Reference[O]) *O {
+func (s *Store[O]) getObject(r Reference[O]) *object[O] {
 	chunkIdx, offsetIdx := r.chunkAndOffset(s.chunkSize)
 	return &s.objects[chunkIdx][offsetIdx]
-}
-
-func (s *Store[O]) getMeta(r Reference[O]) *meta[O] {
-	chunkIdx, offsetIdx := r.chunkAndOffset(s.chunkSize)
-	return &s.meta[chunkIdx][offsetIdx]
 }
