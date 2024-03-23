@@ -187,7 +187,7 @@ import (
 	"sync/atomic"
 )
 
-const objectChunkSize = 1024
+const objectSlabSize = 1024
 
 type Stats struct {
 	Allocs    int
@@ -195,12 +195,12 @@ type Stats struct {
 	RawAllocs int
 	Live      int
 	Reused    int
-	Chunks    int
+	Slabs     int
 }
 
 type Store[O any] struct {
 	// Immutable fields
-	chunkSize uint64
+	slabSize uint64
 
 	// Accounting fields
 	allocs atomic.Uint64
@@ -218,7 +218,7 @@ type Store[O any] struct {
 	// Allocating to an existing slab with a free slot only needs a read lock
 	// Adding a new slab to objects requires a write lock
 	objectsLock sync.RWMutex
-	objects     []*[objectChunkSize]object[O]
+	objects     []*[objectSlabSize]object[O]
 }
 
 // If the object has a non-nil nextFree pointer then the object is currently
@@ -230,12 +230,12 @@ type object[O any] struct {
 }
 
 func New[O any]() *Store[O] {
-	chunkSize := uint64(objectChunkSize)
-	objects := []*[objectChunkSize]object[O]{}
+	slabSize := uint64(objectSlabSize)
+	objects := []*[objectSlabSize]object[O]{}
 	return &Store[O]{
-		chunkSize: chunkSize,
-		allocIdx:  atomic.Uint64{},
-		objects:   objects,
+		slabSize: slabSize,
+		allocIdx: atomic.Uint64{},
+		objects:  objects,
 	}
 }
 
@@ -280,7 +280,7 @@ func (s *Store[O]) GetStats() Stats {
 
 	// make sure the size of s.objects doesn't change
 	s.objectsLock.RLock()
-	chunks := len(s.objects)
+	slabs := len(s.objects)
 	s.objectsLock.RUnlock()
 
 	return Stats{
@@ -289,7 +289,7 @@ func (s *Store[O]) GetStats() Stats {
 		RawAllocs: int(allocs - reused),
 		Live:      int(allocs - frees),
 		Reused:    int(reused),
-		Chunks:    chunks,
+		Slabs:     slabs,
 	}
 }
 
@@ -324,19 +324,19 @@ func (s *Store[O]) allocFromFree() (Reference[O], *O) {
 func (s *Store[O]) allocFromOffset() (Reference[O], *O) {
 	allocIdx := s.acquireAllocIdx()
 	// TODO do some power of 2 work here, to eliminate all this division
-	chunkIdx := allocIdx / s.chunkSize
-	offsetIdx := allocIdx % s.chunkSize
+	slabIdx := allocIdx / s.slabSize
+	offsetIdx := allocIdx % s.slabSize
 
 	// Take read lock to access s.objects
 	s.objectsLock.RLock()
-	if chunkIdx >= uint64(len(s.objects)) {
+	if slabIdx >= uint64(len(s.objects)) {
 		// Release read lock
 		s.objectsLock.RUnlock()
-		s.growObjects(int(chunkIdx + 1))
+		s.growObjects(int(slabIdx + 1))
 		// Reacquire read lock
 		s.objectsLock.RLock()
 	}
-	obj := &(s.objects[chunkIdx][offsetIdx])
+	obj := &(s.objects[slabIdx][offsetIdx])
 	// Release read lock
 	s.objectsLock.RUnlock()
 
@@ -355,17 +355,17 @@ func (s *Store[O]) acquireAllocIdx() uint64 {
 }
 
 func (s *Store[O]) growObjects(targetLen int) {
-	newChunk := mmapSlab[O]()
+	newSlab := mmapSlab[O]()
 
 	// Acquire write lock to grow the objects slice
 	s.objectsLock.Lock()
 
-	s.objects = append(s.objects, newChunk)
+	s.objects = append(s.objects, newSlab)
 
 	for len(s.objects) < targetLen {
-		// Create a new chunk
-		newChunk := mmapSlab[O]()
-		s.objects = append(s.objects, newChunk)
+		// Create a new slab
+		newSlab := mmapSlab[O]()
+		s.objects = append(s.objects, newSlab)
 	}
 
 	// Release write lock

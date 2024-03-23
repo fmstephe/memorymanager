@@ -14,13 +14,13 @@ type MutableStruct struct {
 
 // Demonstrate that we can create an object, modify that object and when we get
 // that object from the store we can see the modifications
-// We ensure that we allocate so many objects that we will need more than one chunk
+// We ensure that we allocate so many objects that we will need more than one slab
 // to store all objects.
 func Test_Object_NewModifyGet(t *testing.T) {
 	os := New[MutableStruct]()
 
 	// Create all the objects and modify field
-	pointers := make([]Reference[MutableStruct], objectChunkSize*3)
+	pointers := make([]Reference[MutableStruct], objectSlabSize*3)
 	for i := range pointers {
 		p, s := os.Alloc()
 		s.Field = i
@@ -41,13 +41,13 @@ func Test_Object_NewModifyGet(t *testing.T) {
 
 // Demonstrate that we can create an object, then get that object and modify it
 // we can then get that object again and will see the modification
-// We ensure that we allocate so many objects that we will need more than one chunk
+// We ensure that we allocate so many objects that we will need more than one slab
 // to store all objects.
 func Test_Object_GetModifyGet(t *testing.T) {
 	os := New[MutableStruct]()
 
 	// Create all the objects
-	pointers := make([]Reference[MutableStruct], objectChunkSize*3)
+	pointers := make([]Reference[MutableStruct], objectSlabSize*3)
 	for i := range pointers {
 		p, _ := os.Alloc()
 		pointers[i] = p
@@ -96,10 +96,10 @@ func Test_Object_NewFreeFree_Panic(t *testing.T) {
 func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	os := New[MutableStruct]()
 
-	objectAllocations := objectChunkSize * 3
+	objectAllocations := objectSlabSize * 3
 
 	// Create a large number of objects
-	pointers := make([]Reference[MutableStruct], objectChunkSize*3)
+	pointers := make([]Reference[MutableStruct], objectSlabSize*3)
 	for i := range pointers {
 		p, _ := os.Alloc()
 		pointers[i] = p
@@ -112,8 +112,8 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	assert.Equal(t, objectAllocations, stats.Live)
 	// Nothing has been freed
 	assert.Equal(t, 0, stats.Frees)
-	// Internally 3 chunks have been created
-	assert.Equal(t, 3, stats.Chunks)
+	// Internally 3 slabs have been created
+	assert.Equal(t, 3, stats.Slabs)
 
 	// Free all of those objects
 	for _, p := range pointers {
@@ -127,8 +127,8 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	assert.Equal(t, 0, stats.Live)
 	// We have freed one batch of objects
 	assert.Equal(t, objectAllocations, stats.Frees)
-	// Internally 3 chunks have been created
-	assert.Equal(t, 3, stats.Chunks)
+	// Internally 3 slabs have been created
+	assert.Equal(t, 3, stats.Slabs)
 
 	// Allocate the same number of objects again
 	for range pointers {
@@ -142,8 +142,8 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	assert.Equal(t, objectAllocations, stats.Live)
 	// One batch is live
 	assert.Equal(t, objectAllocations, stats.Frees)
-	// Internally 3 chunks have been created
-	assert.Equal(t, 3, stats.Chunks)
+	// Internally 3 slabs have been created
+	assert.Equal(t, 3, stats.Slabs)
 }
 
 // This small test is in response to a bug found in the free implementation.
