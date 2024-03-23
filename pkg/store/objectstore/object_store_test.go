@@ -20,21 +20,21 @@ func Test_Object_NewModifyGet(t *testing.T) {
 	os := New[MutableStruct]()
 
 	// Create all the objects and modify field
-	pointers := make([]Reference[MutableStruct], objectSlabSize*3)
-	for i := range pointers {
-		p, s := os.Alloc()
+	refs := make([]Reference[MutableStruct], objectSlabSize*3)
+	for i := range refs {
+		r, s := os.Alloc()
 		s.Field = i
-		pointers[i] = p
+		refs[i] = r
 	}
 
 	stats := os.GetStats()
-	assert.Equal(t, len(pointers), stats.Allocs)
-	assert.Equal(t, len(pointers), stats.Live)
+	assert.Equal(t, len(refs), stats.Allocs)
+	assert.Equal(t, len(refs), stats.Live)
 	assert.Equal(t, 0, stats.Frees)
 
 	// Assert that all of the modifications are visible
-	for i, p := range pointers {
-		s := p.GetValue()
+	for i, r := range refs {
+		s := r.GetValue()
 		assert.Equal(t, i, s.Field)
 	}
 }
@@ -47,26 +47,26 @@ func Test_Object_GetModifyGet(t *testing.T) {
 	os := New[MutableStruct]()
 
 	// Create all the objects
-	pointers := make([]Reference[MutableStruct], objectSlabSize*3)
-	for i := range pointers {
-		p, _ := os.Alloc()
-		pointers[i] = p
+	refs := make([]Reference[MutableStruct], objectSlabSize*3)
+	for i := range refs {
+		r, _ := os.Alloc()
+		refs[i] = r
 	}
 
 	stats := os.GetStats()
-	assert.Equal(t, len(pointers), stats.Allocs)
-	assert.Equal(t, len(pointers), stats.Live)
+	assert.Equal(t, len(refs), stats.Allocs)
+	assert.Equal(t, len(refs), stats.Live)
 	assert.Equal(t, 0, stats.Frees)
 
 	// Get each object and modify field
-	for i, p := range pointers {
-		s := p.GetValue()
+	for i, r := range refs {
+		s := r.GetValue()
 		s.Field = i * 2
 	}
 
 	// Assert that all of the modifications are visible
-	for i, p := range pointers {
-		s := p.GetValue()
+	for i, r := range refs {
+		s := r.GetValue()
 		assert.Equal(t, i*2, s.Field)
 	}
 }
@@ -75,20 +75,20 @@ func Test_Object_GetModifyGet(t *testing.T) {
 // the freed object ObjectStore panics
 func Test_Object_NewFreeGet_Panic(t *testing.T) {
 	os := New[MutableStruct]()
-	p, _ := os.Alloc()
-	os.Free(p)
+	r, _ := os.Alloc()
+	os.Free(r)
 
-	assert.Panics(t, func() { p.GetValue() })
+	assert.Panics(t, func() { r.GetValue() })
 }
 
 // Demonstrate that we can create an object, then free it. If we try to Free()
 // the freed object ObjectStore panics
 func Test_Object_NewFreeFree_Panic(t *testing.T) {
 	os := New[MutableStruct]()
-	p, _ := os.Alloc()
-	os.Free(p)
+	r, _ := os.Alloc()
+	os.Free(r)
 
-	assert.Panics(t, func() { os.Free(p) })
+	assert.Panics(t, func() { os.Free(r) })
 }
 
 // Demonstrate that if we create a large number of objects, then free them,
@@ -99,10 +99,10 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	objectAllocations := objectSlabSize * 3
 
 	// Create a large number of objects
-	pointers := make([]Reference[MutableStruct], objectSlabSize*3)
-	for i := range pointers {
-		p, _ := os.Alloc()
-		pointers[i] = p
+	refs := make([]Reference[MutableStruct], objectSlabSize*3)
+	for i := range refs {
+		r, _ := os.Alloc()
+		refs[i] = r
 	}
 
 	stats := os.GetStats()
@@ -116,8 +116,8 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	assert.Equal(t, 3, stats.Slabs)
 
 	// Free all of those objects
-	for _, p := range pointers {
-		os.Free(p)
+	for _, r := range refs {
+		os.Free(r)
 	}
 
 	stats = os.GetStats()
@@ -131,7 +131,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	assert.Equal(t, 3, stats.Slabs)
 
 	// Allocate the same number of objects again
-	for range pointers {
+	for range refs {
 		os.Alloc()
 	}
 
@@ -149,19 +149,19 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 // This small test is in response to a bug found in the free implementation.
 // The bug was that there is a loop in the `nextFree` of the last freed slot in
 // the OjbectStore.  This is because a freed slot must always have a non-nil
-// `nextFree` pointer in its meta-data.  However because we weren't checking
+// `nextFree` reference in its meta-data.  However because we weren't checking
 // for this exact case the last freed slot would re-add itself to the root
-// `nextFree` pointer in the ObjectStore.  This means that in this case calls
+// `nextFree` reference in the ObjectStore.  This means that in this case calls
 // to `Alloc()` would allocate the same slot over and over, meaning multiple
-// independently allocated pointers would all point to the same slot.
+// independently allocated references would all point to the same slot.
 func TestFreeThenAllocTwice(t *testing.T) {
 	os := New[MutableStruct]()
 
 	// Allocate an object
-	p1, o1 := os.Alloc()
+	r1, o1 := os.Alloc()
 	o1.Field = 1
 	// Free it
-	os.Free(p1)
+	os.Free(r1)
 
 	// Allocate another - this should reuse o1
 	_, o2 := os.Alloc()

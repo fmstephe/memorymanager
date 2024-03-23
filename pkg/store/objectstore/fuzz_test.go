@@ -40,42 +40,42 @@ func NewTestRun(byteConsumer []byte) *fuzzutil.TestRun {
 }
 
 type Objects struct {
-	store    *Store[[16]byte]
-	pointers []Reference[[16]byte]
-	expected []*[16]byte
-	// Indicates whether a pointer/object is still live (has not been freed)
+	store      *Store[[16]byte]
+	references []Reference[[16]byte]
+	expected   []*[16]byte
+	// Indicates whether a reference/object is still live (has not been freed)
 	live []bool
 }
 
 func NewObjects() *Objects {
 	return &Objects{
-		store:    New[[16]byte](),
-		pointers: make([]Reference[[16]byte], 0),
-		expected: make([]*[16]byte, 0),
-		live:     make([]bool, 0),
+		store:      New[[16]byte](),
+		references: make([]Reference[[16]byte], 0),
+		expected:   make([]*[16]byte, 0),
+		live:       make([]bool, 0),
 	}
 }
 
 func (o *Objects) Alloc(value [16]byte) {
-	//fmt.Printf("Allocating %v at index %d\n", value, len(o.pointers))
+	//fmt.Printf("Allocating %v at index %d\n", value, len(o.references))
 
-	ptr, obj := o.store.Alloc()
+	ref, obj := o.store.Alloc()
 	expected := [16]byte{}
 	copy(obj[:], value[:])
 	copy(expected[:], value[:])
-	o.pointers = append(o.pointers, ptr)
+	o.references = append(o.references, ref)
 	o.expected = append(o.expected, &expected)
 	o.live = append(o.live, true)
 }
 
 func (o *Objects) Mutate(index uint32, value [16]byte) {
-	if len(o.pointers) == 0 {
+	if len(o.references) == 0 {
 		// No objects to mutate
 		return
 	}
 
 	// Normalise index
-	index = index % uint32(len(o.pointers))
+	index = index % uint32(len(o.references))
 
 	//fmt.Printf("Mutating at index %d with new value %v\n", index, value)
 
@@ -84,8 +84,8 @@ func (o *Objects) Mutate(index uint32, value [16]byte) {
 		return
 	}
 	// Update the allocated data
-	ptr := o.pointers[index]
-	obj := ptr.GetValue()
+	ref := o.references[index]
+	obj := ref.GetValue()
 	copy(obj[:], value[:])
 
 	// Update the expected
@@ -94,13 +94,13 @@ func (o *Objects) Mutate(index uint32, value [16]byte) {
 }
 
 func (o *Objects) Free(index uint32) {
-	if len(o.pointers) == 0 {
+	if len(o.references) == 0 {
 		// No objects to mutate
 		return
 	}
 
-	// Normalise the index so it points into our slice of pointers
-	index = index % uint32(len(o.pointers))
+	// Normalise the index so it points into our slice of references
+	index = index % uint32(len(o.references))
 
 	//fmt.Printf("Freeing at index %d\n", index)
 
@@ -115,24 +115,24 @@ func (o *Objects) Free(index uint32) {
 	}
 
 	// Free the object at index
-	o.store.Free(o.pointers[index])
+	o.store.Free(o.references[index])
 	o.live[index] = false
 }
 
 func (o *Objects) CheckAll() {
-	for idx := range o.pointers {
+	for idx := range o.references {
 		o.checkObject(idx)
 	}
 }
 
 func (o *Objects) checkObject(index int) {
-	if len(o.pointers) == 0 {
+	if len(o.references) == 0 {
 		// No objects to mutate
 		return
 	}
 
-	// Normalise the index so it points into our slice of pointers
-	index = index % len(o.pointers)
+	// Normalise the index so it points into our slice of references
+	index = index % len(o.references)
 
 	if !o.live[index] {
 		// Object has already been freed
@@ -144,8 +144,8 @@ func (o *Objects) checkObject(index int) {
 		return
 	}
 
-	ptr := o.pointers[index]
-	value := ptr.GetValue()
+	ref := o.references[index]
+	value := ref.GetValue()
 	expected := o.expected[index]
 
 	if !reflect.DeepEqual(value, expected) {
