@@ -183,6 +183,7 @@ package objectstore
 
 import (
 	"fmt"
+	"sync"
 	"sync/atomic"
 )
 
@@ -209,7 +210,11 @@ type Store[O any] struct {
 	// Data fields
 	allocIdx atomic.Uint64
 	rootFree Reference[O]
-	objects  []*[objectChunkSize]object[O]
+	// rwLock protects objects
+	// Allocating to an existing slab with a free slot only needs a read lock
+	// Adding a new slab to objects requires a write lock
+	rwLock  sync.RWMutex
+	objects []*[objectChunkSize]object[O]
 }
 
 // If the object has a non-nil nextFree pointer then the object is currently
@@ -263,13 +268,19 @@ func (s *Store[O]) GetStats() Stats {
 	allocs := s.allocs.Load()
 	frees := s.frees.Load()
 	reused := s.reused.Load()
+
+	// make sure the size of s.objects doesn't change
+	s.rwLock.RLock()
+	chunks := len(s.objects)
+	s.rwLock.RUnlock()
+
 	return Stats{
 		Allocs:    int(allocs),
 		Frees:     int(frees),
 		RawAllocs: int(allocs - reused),
 		Live:      int(allocs - frees),
 		Reused:    int(reused),
-		Chunks:    len(s.objects),
+		Chunks:    chunks,
 	}
 }
 
@@ -298,12 +309,20 @@ func (s *Store[O]) allocFromOffset() (Reference[O], *O) {
 	// TODO do some power of 2 work here, to eliminate all this division
 	chunkIdx := allocIdx / s.chunkSize
 	offsetIdx := allocIdx % s.chunkSize
+
+	// Take read lock to access s.objects
+	s.rwLock.RLock()
 	if chunkIdx >= uint64(len(s.objects)) {
-		// Create a new chunk
-		newChunk := mmapSlab[O]()
-		s.objects = append(s.objects, newChunk)
+		// Release read lock
+		s.rwLock.RUnlock()
+		s.growObjects(int(chunkIdx + 1))
+		// Reacquire read lock
+		s.rwLock.RLock()
 	}
 	obj := &(s.objects[chunkIdx][offsetIdx])
+	// Release read lock
+	s.rwLock.RUnlock()
+
 	ref := newReference[O](obj)
 	return ref, &(obj.value)
 }
@@ -316,4 +335,22 @@ func (s *Store[O]) acquireAllocIdx() uint64 {
 			return allocIdx
 		}
 	}
+}
+
+func (s *Store[O]) growObjects(targetLen int) {
+	newChunk := mmapSlab[O]()
+
+	// Acquire write lock to grow the objects slice
+	s.rwLock.Lock()
+
+	s.objects = append(s.objects, newChunk)
+
+	for len(s.objects) < targetLen {
+		// Create a new chunk
+		newChunk := mmapSlab[O]()
+		s.objects = append(s.objects, newChunk)
+	}
+
+	// Release write lock
+	s.rwLock.Unlock()
 }
