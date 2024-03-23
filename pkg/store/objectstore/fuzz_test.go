@@ -57,7 +57,7 @@ func NewObjects() *Objects {
 }
 
 func (o *Objects) Alloc(value [16]byte) {
-	fmt.Printf("Allocating %v at index %d\n", value, len(o.pointers))
+	//fmt.Printf("Allocating %v at index %d\n", value, len(o.pointers))
 
 	ptr, obj := o.store.Alloc()
 	expected := [16]byte{}
@@ -77,7 +77,7 @@ func (o *Objects) Mutate(index uint32, value [16]byte) {
 	// Normalise index
 	index = index % uint32(len(o.pointers))
 
-	fmt.Printf("Mutating at index %d with new value %v\n", index, value)
+	//fmt.Printf("Mutating at index %d with new value %v\n", index, value)
 
 	if !o.live[index] {
 		// object has been freed, don't mutate
@@ -85,7 +85,7 @@ func (o *Objects) Mutate(index uint32, value [16]byte) {
 	}
 	// Update the allocated data
 	ptr := o.pointers[index]
-	obj := o.store.Get(ptr)
+	obj := ptr.GetValue()
 	copy(obj[:], value[:])
 
 	// Update the expected
@@ -102,7 +102,7 @@ func (o *Objects) Free(index uint32) {
 	// Normalise the index so it points into our slice of pointers
 	index = index % uint32(len(o.pointers))
 
-	fmt.Printf("Freeing at index %d\n", index)
+	//fmt.Printf("Freeing at index %d\n", index)
 
 	if !o.live[index] {
 		// Object has already been freed
@@ -145,7 +145,7 @@ func (o *Objects) checkObject(index int) {
 	}
 
 	ptr := o.pointers[index]
-	value := o.store.Get(ptr)
+	value := ptr.GetValue()
 	expected := o.expected[index]
 
 	if !reflect.DeepEqual(value, expected) {

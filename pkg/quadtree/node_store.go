@@ -32,10 +32,6 @@ func (s *nodeStore[T]) allocLeaf(view View) objectstore.Reference[node[T]] {
 	return r
 }
 
-func (s *nodeStore[T]) getNode(r objectstore.Reference[node[T]]) *node[T] {
-	return s.nodes.Get(r)
-}
-
 func (s *nodeStore[T]) newList(data T) linkedlist.List[T] {
 	list := s.listStore.NewList()
 	dataP := list.PushTail(s.listStore)

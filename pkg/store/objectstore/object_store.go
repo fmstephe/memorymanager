@@ -240,16 +240,8 @@ func (s *Store[O]) Alloc() (Reference[O], *O) {
 	return s.allocFromFree()
 }
 
-func (s *Store[O]) Get(r Reference[O]) *O {
-	o := s.getObject(r)
-	if !o.nextFree.IsNil() {
-		panic(fmt.Errorf("attempted to Get freed object %v", r))
-	}
-	return &o.value
-}
-
 func (s *Store[O]) Free(r Reference[O]) {
-	o := s.getObject(r)
+	o := r.getObject()
 
 	if !o.nextFree.IsNil() {
 		panic(fmt.Errorf("attempted to Free freed object %v", r))
@@ -283,7 +275,7 @@ func (s *Store[O]) allocFromFree() (Reference[O], *O) {
 
 	// Grab the meta-data for the slot and nil out the, now
 	// allocated, slot's nextFree pointer
-	freeObject := s.getObject(alloc)
+	freeObject := alloc.getObject()
 	nextFree := freeObject.nextFree
 	freeObject.nextFree = Reference[O]{}
 
@@ -300,17 +292,15 @@ func (s *Store[O]) allocFromFree() (Reference[O], *O) {
 func (s *Store[O]) allocFromOffset() (Reference[O], *O) {
 	allocIdx := s.allocIdx
 	s.allocIdx++
-	ref := newReference[O](allocIdx)
-	chunkIdx, offsetIdx := ref.chunkAndOffset(s.chunkSize)
+	// TODO do some power of 2 work here, to eliminate all this division
+	chunkIdx := allocIdx / s.chunkSize
+	offsetIdx := allocIdx % s.chunkSize
 	if chunkIdx >= uint64(len(s.objects)) {
 		// Create a new chunk
 		newChunk := mmapSlab[O]()
 		s.objects = append(s.objects, newChunk)
 	}
-	return ref, &(s.objects[chunkIdx][offsetIdx].value)
-}
-
-func (s *Store[O]) getObject(r Reference[O]) *object[O] {
-	chunkIdx, offsetIdx := r.chunkAndOffset(s.chunkSize)
-	return &s.objects[chunkIdx][offsetIdx]
+	obj := &(s.objects[chunkIdx][offsetIdx])
+	ref := newReference[O](obj)
+	return ref, &(obj.value)
 }

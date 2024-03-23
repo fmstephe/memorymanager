@@ -1,9 +1,5 @@
 package fuzzutil
 
-import (
-	"fmt"
-)
-
 type TestRun struct {
 	steps []Step
 }
@@ -22,7 +18,7 @@ func NewTestRun(bytes []byte, stepMaker func(*ByteConsumer) Step) *TestRun {
 }
 
 func (t *TestRun) Run() {
-	fmt.Printf("\nTesting Run with %d steps\n", len(t.steps))
+	//fmt.Printf("\nTesting Run with %d steps\n", len(t.steps))
 	for _, step := range t.steps {
 		step.DoStep()
 	}

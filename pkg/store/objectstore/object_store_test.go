@@ -32,7 +32,7 @@ func Test_Object_NewModifyGet(t *testing.T) {
 
 	// Assert that all of the modifications are visible
 	for i, p := range pointers {
-		s := os.Get(p)
+		s := p.GetValue()
 		assert.Equal(t, i, s.Field)
 	}
 }
@@ -58,13 +58,13 @@ func Test_Object_GetModifyGet(t *testing.T) {
 
 	// Get each object and modify field
 	for i, p := range pointers {
-		s := os.Get(p)
+		s := p.GetValue()
 		s.Field = i * 2
 	}
 
 	// Assert that all of the modifications are visible
 	for i, p := range pointers {
-		s := os.Get(p)
+		s := p.GetValue()
 		assert.Equal(t, i*2, s.Field)
 	}
 }
@@ -76,7 +76,7 @@ func Test_Object_NewFreeGet_Panic(t *testing.T) {
 	p, _ := os.Alloc()
 	os.Free(p)
 
-	assert.Panics(t, func() { os.Get(p) })
+	assert.Panics(t, func() { p.GetValue() })
 }
 
 // Demonstrate that we can create an object, then free it. If we try to Free()

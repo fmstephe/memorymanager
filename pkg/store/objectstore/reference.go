@@ -1,23 +1,33 @@
 package objectstore
 
+import (
+	"fmt"
+	"unsafe"
+)
+
 type Reference[O any] struct {
-	allocIdx uint64
+	address uintptr
 }
 
-func newReference[O any](allocIdx uint64) Reference[O] {
+func newReference[O any](obj *object[O]) Reference[O] {
 	return Reference[O]{
-		allocIdx: allocIdx + 1,
+		address: (uintptr)(unsafe.Pointer(obj)),
 	}
 }
 
-func (r *Reference[O]) chunkAndOffset(chunkSize uint64) (chunkIdx uint64, offsetIdx uint64) {
-	allocIdx := r.allocIdx - 1
-	// TODO do some power of 2 work here, to eliminate all this division
-	chunkIdx = allocIdx / chunkSize
-	offsetIdx = allocIdx % chunkSize
-	return chunkIdx, offsetIdx
+func (r *Reference[O]) GetValue() *O {
+	obj := (*object[O])(unsafe.Pointer(r.address))
+	if !obj.nextFree.IsNil() {
+		panic(fmt.Errorf("attempted to get freed object %v", r))
+	}
+	return &obj.value
+}
+
+func (r *Reference[O]) getObject() *object[O] {
+	obj := (*object[O])(unsafe.Pointer(r.address))
+	return obj
 }
 
 func (r *Reference[O]) IsNil() bool {
-	return r.allocIdx == 0
+	return r.address == 0
 }
