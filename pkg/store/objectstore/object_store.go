@@ -183,6 +183,7 @@ package objectstore
 
 import (
 	"fmt"
+	"sync/atomic"
 )
 
 const objectChunkSize = 1024
@@ -201,12 +202,12 @@ type Store[O any] struct {
 	chunkSize uint64
 
 	// Accounting fields
-	allocs int
-	frees  int
-	reused int
+	allocs atomic.Uint64
+	frees  atomic.Uint64
+	reused atomic.Uint64
 
 	// Data fields
-	allocIdx uint64
+	allocIdx atomic.Uint64
 	rootFree Reference[O]
 	objects  []*[objectChunkSize]object[O]
 }
@@ -224,19 +225,19 @@ func New[O any]() *Store[O] {
 	objects := []*[objectChunkSize]object[O]{}
 	return &Store[O]{
 		chunkSize: chunkSize,
-		allocIdx:  0,
+		allocIdx:  atomic.Uint64{},
 		objects:   objects,
 	}
 }
 
 func (s *Store[O]) Alloc() (Reference[O], *O) {
-	s.allocs++
+	s.allocs.Add(1)
 
 	if s.rootFree.IsNil() {
 		return s.allocFromOffset()
 	}
 
-	s.reused++
+	s.reused.Add(1)
 	return s.allocFromFree()
 }
 
@@ -247,7 +248,7 @@ func (s *Store[O]) Free(r Reference[O]) {
 		panic(fmt.Errorf("attempted to Free freed object %v", r))
 	}
 
-	s.frees++
+	s.frees.Add(1)
 
 	if s.rootFree.IsNil() {
 		o.nextFree = r
@@ -259,12 +260,15 @@ func (s *Store[O]) Free(r Reference[O]) {
 }
 
 func (s *Store[O]) GetStats() Stats {
+	allocs := s.allocs.Load()
+	frees := s.frees.Load()
+	reused := s.reused.Load()
 	return Stats{
-		Allocs:    s.allocs,
-		Frees:     s.frees,
-		RawAllocs: s.allocs - s.reused,
-		Live:      s.allocs - s.frees,
-		Reused:    s.reused,
+		Allocs:    int(allocs),
+		Frees:     int(frees),
+		RawAllocs: int(allocs - reused),
+		Live:      int(allocs - frees),
+		Reused:    int(reused),
 		Chunks:    len(s.objects),
 	}
 }
@@ -290,8 +294,7 @@ func (s *Store[O]) allocFromFree() (Reference[O], *O) {
 }
 
 func (s *Store[O]) allocFromOffset() (Reference[O], *O) {
-	allocIdx := s.allocIdx
-	s.allocIdx++
+	allocIdx := s.acquireAllocIdx()
 	// TODO do some power of 2 work here, to eliminate all this division
 	chunkIdx := allocIdx / s.chunkSize
 	offsetIdx := allocIdx % s.chunkSize
@@ -303,4 +306,14 @@ func (s *Store[O]) allocFromOffset() (Reference[O], *O) {
 	obj := &(s.objects[chunkIdx][offsetIdx])
 	ref := newReference[O](obj)
 	return ref, &(obj.value)
+}
+
+func (s *Store[O]) acquireAllocIdx() uint64 {
+	for {
+		allocIdx := s.allocIdx.Load()
+		if s.allocIdx.CompareAndSwap(allocIdx, allocIdx+1) {
+			// Success
+			return allocIdx
+		}
+	}
 }
