@@ -207,14 +207,18 @@ type Store[O any] struct {
 	frees  atomic.Uint64
 	reused atomic.Uint64
 
-	// Data fields
+	// allIdx provides unique allocation locations for each new allocation
 	allocIdx atomic.Uint64
+
+	// freeRWLock protects rootFree
+	freeLock sync.Mutex
 	rootFree Reference[O]
-	// rwLock protects objects
+
+	// objectsLock protects objects
 	// Allocating to an existing slab with a free slot only needs a read lock
 	// Adding a new slab to objects requires a write lock
-	rwLock  sync.RWMutex
-	objects []*[objectChunkSize]object[O]
+	objectsLock sync.RWMutex
+	objects     []*[objectChunkSize]object[O]
 }
 
 // If the object has a non-nil nextFree pointer then the object is currently
@@ -238,12 +242,14 @@ func New[O any]() *Store[O] {
 func (s *Store[O]) Alloc() (Reference[O], *O) {
 	s.allocs.Add(1)
 
-	if s.rootFree.IsNil() {
-		return s.allocFromOffset()
+	r, o := s.allocFromFree()
+	if o != nil {
+		s.reused.Add(1)
+		return r, o
 	}
 
-	s.reused.Add(1)
-	return s.allocFromFree()
+	// allocFromFree failed, fall back to allocating from new slot
+	return s.allocFromOffset()
 }
 
 func (s *Store[O]) Free(r Reference[O]) {
@@ -253,7 +259,8 @@ func (s *Store[O]) Free(r Reference[O]) {
 		panic(fmt.Errorf("attempted to Free freed object %v", r))
 	}
 
-	s.frees.Add(1)
+	s.freeLock.Lock()
+	defer s.freeLock.Unlock()
 
 	if s.rootFree.IsNil() {
 		o.nextFree = r
@@ -262,6 +269,8 @@ func (s *Store[O]) Free(r Reference[O]) {
 	}
 
 	s.rootFree = r
+
+	s.frees.Add(1)
 }
 
 func (s *Store[O]) GetStats() Stats {
@@ -270,9 +279,9 @@ func (s *Store[O]) GetStats() Stats {
 	reused := s.reused.Load()
 
 	// make sure the size of s.objects doesn't change
-	s.rwLock.RLock()
+	s.objectsLock.RLock()
 	chunks := len(s.objects)
-	s.rwLock.RUnlock()
+	s.objectsLock.RUnlock()
 
 	return Stats{
 		Allocs:    int(allocs),
@@ -285,6 +294,14 @@ func (s *Store[O]) GetStats() Stats {
 }
 
 func (s *Store[O]) allocFromFree() (Reference[O], *O) {
+	s.freeLock.Lock()
+	defer s.freeLock.Unlock()
+
+	// No free objects available - allocFromFree failed
+	if s.rootFree.IsNil() {
+		return Reference[O]{}, nil
+	}
+
 	// Get pointer to the next available freed slot
 	alloc := s.rootFree
 
@@ -311,17 +328,17 @@ func (s *Store[O]) allocFromOffset() (Reference[O], *O) {
 	offsetIdx := allocIdx % s.chunkSize
 
 	// Take read lock to access s.objects
-	s.rwLock.RLock()
+	s.objectsLock.RLock()
 	if chunkIdx >= uint64(len(s.objects)) {
 		// Release read lock
-		s.rwLock.RUnlock()
+		s.objectsLock.RUnlock()
 		s.growObjects(int(chunkIdx + 1))
 		// Reacquire read lock
-		s.rwLock.RLock()
+		s.objectsLock.RLock()
 	}
 	obj := &(s.objects[chunkIdx][offsetIdx])
 	// Release read lock
-	s.rwLock.RUnlock()
+	s.objectsLock.RUnlock()
 
 	ref := newReference[O](obj)
 	return ref, &(obj.value)
@@ -341,7 +358,7 @@ func (s *Store[O]) growObjects(targetLen int) {
 	newChunk := mmapSlab[O]()
 
 	// Acquire write lock to grow the objects slice
-	s.rwLock.Lock()
+	s.objectsLock.Lock()
 
 	s.objects = append(s.objects, newChunk)
 
@@ -352,5 +369,5 @@ func (s *Store[O]) growObjects(targetLen int) {
 	}
 
 	// Release write lock
-	s.rwLock.Unlock()
+	s.objectsLock.Unlock()
 }
