@@ -208,7 +208,7 @@ type Store[O any] struct {
 	// Data fields
 	allocIdx uint64
 	rootFree Reference[O]
-	objects  [][]object[O]
+	objects  []*[objectChunkSize]object[O]
 }
 
 // If the object has a non-nil nextFree pointer then the object is currently
@@ -221,8 +221,7 @@ type object[O any] struct {
 
 func New[O any]() *Store[O] {
 	chunkSize := uint64(objectChunkSize)
-	// Initialise the first chunk
-	objects := [][]object[O]{make([]object[O], chunkSize)}
+	objects := []*[objectChunkSize]object[O]{}
 	return &Store[O]{
 		chunkSize: chunkSize,
 		allocIdx:  0,
@@ -305,7 +304,8 @@ func (s *Store[O]) allocFromOffset() (Reference[O], *O) {
 	chunkIdx, offsetIdx := ref.chunkAndOffset(s.chunkSize)
 	if chunkIdx >= uint64(len(s.objects)) {
 		// Create a new chunk
-		s.objects = append(s.objects, make([]object[O], s.chunkSize))
+		newChunk := mmapSlab[O]()
+		s.objects = append(s.objects, newChunk)
 	}
 	return ref, &(s.objects[chunkIdx][offsetIdx].value)
 }
