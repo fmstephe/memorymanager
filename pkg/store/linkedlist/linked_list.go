@@ -4,17 +4,17 @@ import (
 	"github.com/fmstephe/location-system/pkg/store/objectstore"
 )
 
-// A node contains the list data as well as the forward and previous getPointers
-// to next nodes in the list. The next and prev getPointers are never nil. If the
-// list contains only one node then the next and prev getPointers point back to
-// themselves.
+// A node contains the list data as well as the forward and previous References
+// to next nodes in the list. The next and prev References are never nil. If the
+// list contains only one node then the next and prev References point back to
+// this node.
 type node[O any] struct {
 	data O
 	next objectstore.Reference[node[O]]
 	prev objectstore.Reference[node[O]]
 }
 
-// Convenience method to get a getPointer to the embedded data.
+// Convenience method to get a pointer to the embedded data.
 func (n *node[O]) getData() *O {
 	return &n.data
 }
@@ -33,7 +33,7 @@ func New[O any]() *Store[O] {
 }
 
 // Creates a new empty list
-// l.getPointer().IsNil() will return true
+// l.getReference().IsNil() will return true
 // This method isn't strictly necessary. The zero value of a List[O] behaves
 // exactly the same as one created by a Store[O]. However we include the method
 // because it makes code easier to follow.
@@ -41,16 +41,16 @@ func (s *Store[O]) NewList() List[O] {
 	return List[O]{}
 }
 
-// A List is simply a pointer to a node
+// A List is simply a Reference to a node
 type List[O any] objectstore.Reference[node[O]]
 
-// converts a List into the raw pointer value
-func (l *List[O]) getPointer() objectstore.Reference[node[O]] {
+// casts a List to the raw Reference
+func (l *List[O]) getReference() objectstore.Reference[node[O]] {
 	return objectstore.Reference[node[O]](*l)
 }
 
-// sets the value of a List using a raw pointer value
-func (l *List[O]) setPointer(r objectstore.Reference[node[O]]) {
+// sets the value of a List using a raw Reference value
+func (l *List[O]) setReference(r objectstore.Reference[node[O]]) {
 	*l = List[O](r)
 }
 
@@ -61,7 +61,7 @@ func (l *List[O]) setPointer(r objectstore.Reference[node[O]]) {
 func (l *List[O]) PushHead(store *Store[O]) *O {
 	newR, newNode := store.nodeStore.Alloc()
 	l.pushTail(store, newR, newNode)
-	l.setPointer(newR)
+	l.setReference(newR)
 	return newNode.getData()
 }
 
@@ -76,14 +76,14 @@ func (l *List[O]) PushTail(store *Store[O]) *O {
 }
 
 func (l *List[O]) pushTail(store *Store[O], newR objectstore.Reference[node[O]], newNode *node[O]) {
-	firstR := l.getPointer()
+	firstR := l.getReference()
 
 	// If we are inserting into an empty list, then make it point to itself
 	// and directly update l
 	if firstR.IsNil() {
 		newNode.next = newR
 		newNode.prev = newR
-		l.setPointer(newR)
+		l.setReference(newR)
 		return
 	}
 
@@ -101,14 +101,14 @@ func (l *List[O]) pushTail(store *Store[O], newR objectstore.Reference[node[O]],
 }
 
 func (l *List[O]) PeakHead(store *Store[O]) *O {
-	firstR := l.getPointer()
+	firstR := l.getReference()
 
 	firstNode := firstR.GetValue()
 	return firstNode.getData()
 }
 
 func (l *List[O]) PeakTail(store *Store[O]) *O {
-	firstR := l.getPointer()
+	firstR := l.getReference()
 
 	firstNode := firstR.GetValue()
 	lastNode := firstNode.prev.GetValue()
@@ -116,11 +116,11 @@ func (l *List[O]) PeakTail(store *Store[O]) *O {
 }
 
 func (l *List[O]) RemoveHead(store *Store[O]) {
-	l.remove(store, l.getPointer())
+	l.remove(store, l.getReference())
 }
 
 func (l *List[O]) RemoveTail(store *Store[O]) {
-	ref := l.getPointer()
+	ref := l.getReference()
 	origin := ref.GetValue()
 	l.remove(store, origin.prev)
 }
@@ -143,7 +143,7 @@ func (l *List[O]) remove(store *Store[O], r objectstore.Reference[node[O]]) {
 	next.prev = n.prev
 
 	// If the removed node is the head of this list, point the list to next
-	if r == l.getPointer() {
+	if r == l.getReference() {
 		*l = List[O](n.next)
 	}
 
@@ -165,13 +165,13 @@ func (l *List[O]) Append(store *Store[O], attach List[O]) {
 	}
 
 	// Get nodes in this linked list
-	lR := l.getPointer()
+	lR := l.getReference()
 	lElem := lR.GetValue()
 	lPrev := lElem.prev
 	lPrevElem := lPrev.GetValue()
 
 	// Get nodes in the attaching linked list
-	attachR := attach.getPointer()
+	attachR := attach.getReference()
 	attachElem := attachR.GetValue()
 	attachPrev := attachElem.prev
 	attachPrevElem := attachPrev.GetValue()
@@ -201,7 +201,7 @@ func (l *List[O]) Survey(store *Store[O], fun func(o *O) bool) bool {
 	}
 
 	// Follow through the linked list until we return to head
-	origin := l.getPointer()
+	origin := l.getReference()
 	current := origin
 	for {
 		n := current.GetValue()
@@ -228,7 +228,7 @@ func (l *List[O]) Survey(store *Store[O], fun func(o *O) bool) bool {
 // data value.
 func (l *List[O]) Filter(store *Store[O], pred func(o *O) bool) {
 	// Follow through the linked list until we return to origin
-	origin := l.getPointer()
+	origin := l.getReference()
 	if origin.IsNil() {
 		// If p is nil, the list is empty, we have successfully
 		// filtered it
@@ -239,7 +239,7 @@ func (l *List[O]) Filter(store *Store[O], pred func(o *O) bool) {
 		// node in the list. If we filtered out the node pointed to by
 		// h, we will have to modify it to point a node which is still
 		// in the list. If we filtered all nodes from the list origin will
-		// be a nil getPointer.
+		// be a nil getReference.
 		*l = List[O](origin)
 	}()
 
@@ -268,7 +268,7 @@ func (l *List[O]) Filter(store *Store[O], pred func(o *O) bool) {
 			if current != origin {
 				panic("We assumed that this case could only be hit when origin == current")
 			}
-			// Make origin a nil getPointer
+			// Make origin a nil Reference
 			origin = objectstore.Reference[node[O]]{}
 			return
 		}
@@ -304,6 +304,6 @@ func (l *List[O]) Len(store *Store[O]) int {
 // 1: Because it does not actually look at any list data, no *Store argument is needed.
 // 2: It is fast, because it doesn't need to iterate over the list
 func (l *List[O]) IsEmpty() bool {
-	r := l.getPointer()
+	r := l.getReference()
 	return r.IsNil()
 }
