@@ -10,15 +10,15 @@
 // will alloc/free only int values.
 //
 // Each allocated object has a corresponding Reference which acts like a
-// conventional pointer to retrieve the actual object from the Store using the
-// Get() method e.g.
+// conventional pointer to retrieve the allocated object Reference.GetValue()
+// e.g.
 //
 //	store := objectstore.New[int]()
-//	var reference objectstore.Reference
+//	var ref objectstore.Reference
 //	var i1 *int
-//	reference, i1 = store.Alloc()
+//	ref, i1 = store.Alloc()
 //	var i2 *int
-//	i2 = store.Get(reference)
+//	i2 = ref.GetValue()
 //	if i1 == i2 {
 //	  println("This is correct, i1 and i2 will be a pointer to the same int")
 //	}
@@ -27,17 +27,18 @@
 // can be released back to the Store using Free() e.g.
 //
 //	store := objectstore.New[int]()
-//	reference, i1 := store.Alloc()
+//	ref, i1 := store.Alloc()
 //	println(*i1)
-//	store.Free(reference)
-//	// You must never user i1 or reference again
+//	store.Free(ref)
+//	// You must never user i1 or ref again
 //
 // A best effort has been made to panic if an object is freed twice or if a
-// freed object is accessed using Get(). However, it isn't guaranteed that
-// these calls will panic. For example if an object is freed the next call to
-// Alloc() will reuse the freed object and future calls to Get() and Free()
-// using the Reference used in the Free will operate on the re-allocated object
-// and not panic. So this behaviour cannot be relied on.
+// freed object is accessed using Reference.GetValue(). However, it isn't
+// guaranteed that these calls will panic. For example if an object is freed
+// the next call to Alloc() will reuse the freed object and future calls to
+// Reference.GetValue() and Free() using the Reference used in the Free will
+// operate on the re-allocated object and not panic. So this behaviour cannot
+// be relied on.
 //
 // References can be kept and stored in arbitrary datastructures, which can
 // themselves be managed by a Store e.g.
@@ -48,12 +49,12 @@
 //	}
 //	node := objectstore.New[Node]()
 //
-// The Reference type contains no pointers. This means that we can retain as
-// many of them as we like with no garbage collection cost. The Store itself
-// contains some pointers, and must also be referenced via a pointer to work
-// properly. So storing the Store itself in the Node struct above would
-// introduce pointers into the managed object type and defeat the purpose of
-// using a Store.
+// The Reference type contains no pointers which are recognised by the garbage
+// collector. This means that we can retain as many of them as we like with no
+// garbage collection cost. The Store itself contains some pointers, and must
+// also be referenced via a pointer to work properly. So storing the Store
+// itself in the Node struct above would introduce pointers into the managed
+// object type and defeat the purpose of using a Store.
 //
 // The advantage of using a Store, over just allocating objects the normal
 // way, is that we get pointer-like references to objects without those
@@ -63,20 +64,24 @@
 //
 // The disadvantage of using a Store, over just allocating objects the normal
 // way, is that we don't get to enjoy the benefits of the Go garbage collector.
-// We must be responsible for freeing unneeded objects manually. We also need
-// to have a Store instance to be able to retrieve objects with a Reference, so
-// using datastructures built with a Store can feel quite cumbersome. These
+// We must be responsible for freeing unneeded objects manually.  The
 // disadvantages mean that effective use of the objectstore requires a careful
 // design which encapsulates these details and hides the use of the objectstore
 // package from the rest of the program.
 //
-// It is important to note that the objects managed by a Store do exist on the
-// heap. They live inside a series of slices held internally by the Store. This
-// means that if the objects managed by a Store contain any conventional Go
-// pointers the entire Store will be filled with pointers and the garbage
-// collection impact will be the same as a conventionally allocated
-// datastructure. For example none of the structs below should be managed by an
-// Store.
+// It is important to note that the objects managed by a Store do not exist on
+// the managed Go heap. They live in a series of manually mapped memory regions
+// which are managed internally by the Store. This means that the amount of
+// memory used by the Store has no impact on the frequency of garbage
+// collection runs.
+//
+// If we attempt to manage an object which itself contains conventional Go
+// pointers we invalidate the purpose of the Store because the garbage
+// collector would have to mark all of the objects in the store providing no
+// performance benefit. Alternatively it's possible the garbage collector may
+// simply fail to observe the pointers inside the Store's objects and may free
+// data pointed too by these objects. For example none of the structs below
+// should be managed by an Store.
 //
 //	type BadStruct1 struct {
 //	  stringsHavePointers string
@@ -100,84 +105,72 @@
 //
 // Memory Model Constraints:
 //
-// Store contains very limited concurrency control internally. It is only safe
-// for concurrent access under limit circumstances which are described below.
+// Store has a moderate degree of concurrency safety, but users must still be
+// careful how they access and modify data allocated by a Store instance.
 //
-// In a pure single threaded context the use of Store is fairly straightforward
-// and should follow familiar behaviour patterns. In order to get an object
-// you are must first Alloc() it, the Reference you get from Alloc() can be
-// used to Get() a pointer to the object again in the future. You can Free()
-// an object via its Reference, but it is only safe to do this once. Calling
-// Free() multiple times on the same Reference has unpredictable behaviour
-// (although we make a best-effort to panic). Calling Get() on a Reference
-// after Free() has been called on that Reference has similarly unpredictable
-// behaviour (we try to panic here too, but this behaviour cannot be relied
-// on).
-//
-// Supported Concurrent Designs
-//
-// The design of the Store supports single-threaded construction of a
-// datastructure which then becomes read-only. This allows an unlimited number
-// of concurrent readers. This is a simple and robust design, but won't be
-// useful for all systems because the datastructure cannot be modified after
-// construction.
-//
-// Alternatively, it is possible to use the Store to build single-reader
-// multiple writer datastructures safely. The design must avoid calls to
-// Alloc/Free in readers and take care to safely publish newly allocated
-// objects to the readers using some kind of happens-before barrier, channel
-// send/receive mutex lock/unlock or atomic write/read etc. This allows for
-// MVCC style datastructures to be developed safely. Tree style datastructures
-// are ideal for this approach and it is likely that most datastructures
-// developed using the Store will be tree based.
+// Concurrency Guarantees
 //
 // 1: Independent Read Safety
 //
 // For a given set of live objects, previously allocated with a happens-before
 // barrier between the allocator and readers, all objects can be read freely.
-// Calling Get() and performing arbitrary reads of the retrieved objects from
-// multiple goroutines with no other concurrency control code will work without
-// data races.
+// Calling Reference.GetValue() and performing arbitrary reads of the retrieved
+// objects from multiple goroutines with no other concurrency control code will
+// work without data races.
 //
-// This guarantee continues to hold even if another goroutine is calling
-// Alloc() and Free() to _independent_ objects/References concurrently with the
-// reads.
+// This guarantee continues to hold even if other goroutines are calling
+// Alloc() and Free() to _independent_ objects/References concurrently with
+// these reads.
 //
 // This seems like an unremarkable guarantee to make, but it does constrain the
 // Store implementation in interesting ways. For example we cannot add a
-// non-atomic read counter to Get() calls because this would be an uncontrolled
-// concurrent read/write.
+// non-atomic read counter to Reference.GetValue() calls because this would be
+// an uncontrolled concurrent read/write.
 //
 // 2: Independent Alloc Safety
 //
 // It is safe and possible for a writer to allocate new objects, using Alloc(),
 // and then make those objects/references available to readers across a
 // happens-before barrier. Preserving this guarantee requires us to ensure all
-// data on the path of Get() for objects unrelated to the indepenent Alloc()
-// calls are never written to during the call to Alloc().
-//
-// An example of an implementation restriction produced by the independent
-// allocation safety rule is that we cannot re-allocate the backing slice for
-// allocated objects without some form of concurrency protection. This
-// protection is required because objects are stored in a slice of slices i.e.
-// `objects [][]O`. When there are no free slots available in the existing
-// slices we must create a new slice and append it to objects. Calls to Get()
-// _must_ read from `objects` to find the slot required, so any unprotected
-// read or write of `objects` will be racy.
+// data on the path of Reference.GetValue() for objects unrelated to the
+// indepenent Alloc() calls are never written to during the call to Alloc().
 //
 // 3: Free Safety
 //
 // It is only safe for an object to be Freed once. It is up to the programmer
 // to ensure that an object which has been Freed is never used again, and you
-// must not call Get() with that object's Reference again. It is envisioned
-// that a single writer will be responsible for both Alloc() and Free() calls,
-// and a careful mechanism must be established to ensure Freed objects are
-// never read again. The reason for mandating that the single writer be
-// responsible for calling both Alloc() and Free() calls is that calls to
-// Free() make the freed object available to the next call of Alloc(). Calling
-// Alloc() after calling Free() from different goroutines without a
-// happens-before barrier between them will always create a data-race, even
-// when the Alloc() and Free() calls seem independent to the client program.
+// must not call Reference.GetValue() with that object's Reference again.
+//
+// If we call Free() on the same Reference (a Reference pointing to the same
+// allocation) concurrently from two or more goroutines this will be a data
+// race. The behaviour is unpredictable in this case. This is also a bug, but
+// potentially one with stranger behaviour than just calling Free() twice from
+// a single goroutine.
+//
+// It is always a bug to call Reference.GetValue() on a Reference which has
+// previously had Free() called on it. But, if we call Reference.GetValue() and
+// Free() on that Reference from two or more goroutines this will be a data
+// race. Similar to the Free() case above the behaviour will be a less
+// predictable bug than the single threaded case.
+//
+// 4: Safe Data Publication
+//
+// It is safe to create objects using Alloc() and then share those objects with
+// other goroutines. We must establish the usual happens-before relationships
+// when sharing objects/References with other goroutines. For example it is
+// safe to Alloc() new objects and publish References to those objects on a
+// channel.
+//
+// 5: Safe Objecet Reads And Writes
+//
+// It is safe to call Reference.GetValue() on the same Reference from multiple
+// goroutines and it is safe to read the contents of the object returned. It is
+// not safe for multiple goroutines to freely write to the object, nor to have
+// multiple goroutines freely perform a mixture of read/write operations on the
+// object. You can however perform arbitrary reads and writes to a shared
+// object. This is a pretty long-winded way to say that allocated objects
+// (accessed via Reference.GetValue()) work like normal go data.
+//
 
 package objectstore
 
