@@ -3,68 +3,91 @@ package objectstore
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 )
+
+type typePaths struct {
+	paths []string
+}
+
+func (p *typePaths) addPath(path string) {
+	p.paths = append(p.paths, path)
+}
+
+func (p *typePaths) Len() int {
+	return len(p.paths)
+}
+
+func (p *typePaths) String() string {
+	if p.Len() == 0 {
+		return ""
+	}
+
+	result := ""
+	for _, path := range p.paths {
+		result += path + ","
+	}
+	// Quietly strip off the trailing ,
+	return result[:len(result)-1]
+}
 
 func containsNoPointers[O any]() error {
 	t := reflect.TypeFor[O]()
-	return searchForPointers(t)
+	paths := &typePaths{}
+	searchForPointers(t, "", paths)
+	if paths.Len() != 0 {
+		return fmt.Errorf("found pointer(s): %s", paths)
+	}
+	return nil
 }
 
-func searchForPointers(t reflect.Type) error {
+func searchForPointers(t reflect.Type, path string, paths *typePaths) {
 	switch t.Kind() {
 	case reflect.Bool:
-		return nil
 
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return nil
 
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return nil
 
 	case reflect.Float32, reflect.Float64:
-		return nil
 
 	case reflect.Complex64, reflect.Complex128:
-		return nil
 
 	case reflect.Array:
-		return searchForPointers(t.Elem())
+		size := strconv.Itoa(t.Len())
+		searchForPointers(t.Elem(), path+"["+size+"]", paths)
 
 	case reflect.Chan:
-		return fmt.Errorf("channel found in %s", t)
+		paths.addPath(path + "<" + t.String() + ">")
 
 	case reflect.Func:
-		return fmt.Errorf("func found in %s", t)
+		paths.addPath(path + "<" + t.String() + ">")
 
 	case reflect.Interface:
-		return fmt.Errorf("interface found in %s", t)
+		paths.addPath(path + "<" + t.String() + ">")
 
 	case reflect.Map:
-		return fmt.Errorf("map found in %s", t)
+		paths.addPath(path + "<" + t.String() + ">")
 
 	case reflect.Pointer:
-		return fmt.Errorf("pointer found in %s", t)
+		paths.addPath(path + "<" + t.String() + ">")
 
 	case reflect.Slice:
-		return fmt.Errorf("slice found in %s", t)
+		paths.addPath(path + "<" + t.String() + ">")
 
 	case reflect.String:
-		return fmt.Errorf("string found in %s", t)
+		paths.addPath(path + "<" + t.String() + ">")
 
 	case reflect.Struct:
 		for i := 0; i < t.NumField(); i++ {
 			sV := t.Field(i)
-			err := searchForPointers(sV.Type)
-			if err != nil {
-				return err
-			}
+			searchForPointers(sV.Type, path+"("+t.String()+")"+sV.Name, paths)
 		}
-		return nil
 
 	case reflect.UnsafePointer:
-		return fmt.Errorf("unsafe pointer found in %s", t)
+		paths.addPath(path + "<" + t.String() + ">")
 
 	default:
-		return fmt.Errorf("unknown kind found in %s", t)
+		paths.addPath(path + "<" + t.String() + ">")
 	}
 }

@@ -8,8 +8,8 @@ import (
 )
 
 type deepBadStruct struct {
-	goodField int
-	badField  badStruct
+	badInt       *int
+	deepBadField badStruct
 }
 
 type badStruct struct {
@@ -20,29 +20,48 @@ type stringSmugglerStruct struct {
 	reference Reference[string]
 }
 
+type manyPointers struct {
+	chanField      chan int
+	funcField      func(int) int
+	interfaceField any
+	mapField       map[int]int
+	pointerField   *int
+	sliceField     []int
+	stringField    string
+}
+
 func TestBadTypes(t *testing.T) {
 	// No arrays with pointers in them
-	assert.NotNil(t, containsNoPointers[[32]deepBadStruct]())
+	assert.EqualError(t, containsNoPointers[[32]badStruct](), "found pointer(s): [32](objectstore.badStruct)badField<string>")
 	// No channels
-	assert.NotNil(t, containsNoPointers[chan int]())
+	assert.EqualError(t, containsNoPointers[chan int](), "found pointer(s): <chan int>")
 	// No functions
-	assert.NotNil(t, containsNoPointers[func(int) int]())
+	assert.EqualError(t, containsNoPointers[func(int) int](), "found pointer(s): <func(int) int>")
 	// No interfaces
-	assert.NotNil(t, containsNoPointers[any]())
+	assert.EqualError(t, containsNoPointers[any](), "found pointer(s): <interface {}>")
 	// No maps
-	assert.NotNil(t, containsNoPointers[map[int]int]())
-	// No pointers
-	assert.NotNil(t, containsNoPointers[*int]())
+	assert.EqualError(t, containsNoPointers[map[int]int](), "found pointer(s): <map[int]int>")
+	// No pointer(s)
+	assert.EqualError(t, containsNoPointers[*int](), "found pointer(s): <*int>")
 	// No slices
-	assert.NotNil(t, containsNoPointers[[]int]())
+	assert.EqualError(t, containsNoPointers[[]int](), "found pointer(s): <[]int>")
 	// No strings
-	assert.NotNil(t, containsNoPointers[string]())
+	assert.EqualError(t, containsNoPointers[string](), "found pointer(s): <string>")
 	// No structs with any pointerful fields
-	assert.NotNil(t, containsNoPointers[badStruct]())
-	assert.NotNil(t, containsNoPointers[deepBadStruct]())
-	//assert.NotNil(t, containsNoPointers[stringSmugglerStruct]())
-	// No unsafe pointers
-	assert.NotNil(t, containsNoPointers[unsafe.Pointer]())
+	assert.EqualError(t, containsNoPointers[badStruct](), "found pointer(s): (objectstore.badStruct)badField<string>")
+	assert.EqualError(t, containsNoPointers[deepBadStruct](), "found pointer(s): (objectstore.deepBadStruct)badInt<*int>,(objectstore.deepBadStruct)deepBadField(objectstore.badStruct)badField<string>")
+	//assert.EqualError(t, containsNoPointers[stringSmugglerStruct](), "found pointer(s): ")
+	// No unsafe pointer(s)
+	assert.EqualError(t, containsNoPointers[unsafe.Pointer](), "found pointer(s): <unsafe.Pointer>")
+	// We should find all of the bad fields in this struct
+	assert.EqualError(t, containsNoPointers[manyPointers](), "found pointer(s): "+
+		"(objectstore.manyPointers)chanField<chan int>,"+
+		"(objectstore.manyPointers)funcField<func(int) int>,"+
+		"(objectstore.manyPointers)interfaceField<interface {}>,"+
+		"(objectstore.manyPointers)mapField<map[int]int>,"+
+		"(objectstore.manyPointers)pointerField<*int>,"+
+		"(objectstore.manyPointers)sliceField<[]int>,"+
+		"(objectstore.manyPointers)stringField<string>")
 }
 
 type deepGoodStruct struct {
