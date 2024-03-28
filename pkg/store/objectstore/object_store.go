@@ -97,6 +97,9 @@
 //	  storesHavePointers *Store
 //	}
 //
+// Trying to create an instance of Store with a generic type which contains
+// pointers will panic.
+//
 // Memory Model Constraints:
 //
 // A Store has a moderate degree of concurrency safety, but users must still be
@@ -204,6 +207,10 @@ type object[O any] struct {
 }
 
 func New[O any]() *Store[O] {
+	if err := containsNoPointers[O](); err != nil {
+		panic(fmt.Errorf("cannot instantiate Store with generic type containing pointers %w", err))
+	}
+
 	slabSize := uint64(objectSlabSize)
 	objects := []*[objectSlabSize]object[O]{}
 	return &Store[O]{

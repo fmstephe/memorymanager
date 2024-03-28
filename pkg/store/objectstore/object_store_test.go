@@ -267,3 +267,11 @@ func allocateAndModifyShared(
 		os.Free(ref)
 	}
 }
+
+func Test_New_CheckGenericTypeForPointers(t *testing.T) {
+	// If generic type contains pointers, New will panic
+	assert.Panics(t, func() { New[*int]() })
+
+	// If generic type does not contain pointers, New will not panic
+	assert.NotPanics(t, func() { New[int]() })
+}
