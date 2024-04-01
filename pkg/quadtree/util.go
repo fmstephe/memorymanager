@@ -1,41 +1,32 @@
 package quadtree
 
-import (
-	"container/list"
-)
-
 // A Simple quadtree collector which will push every element into col
-func SimpleSurvey[K any]() (fun func(x, y float64, e *K) bool, col *list.List) {
-	col = list.New()
-	fun = func(x, y float64, e *K) bool {
-		col.PushBack(*e)
-		return true
-	}
-	return fun, col
-}
-
-// A Simple quadtree collector which will push every element into col
-func LimitSurvey[K any](limit int) (fun func(x, y float64, e *K) bool, col *list.List) {
-	col = list.New()
+func LimitSurvey[K any](limit int) (fun func(x, y float64, e *K) bool, colP *[]K) {
 	count := 0
+	col := []K{}
+	colP = &col
+
 	fun = func(x, y float64, e *K) bool {
 		if count >= limit {
 			return false
 		}
-		col.PushBack(*e)
+
+		col = *colP
+		col = append(col, *e)
+		colP = &col
 		count++
 		return true
 	}
-	return fun, col
+	return fun, colP
 }
 
 // A Simple quadtree collector which will push every element into col
-func SliceSurvey[K any]() (fun func(x, y float64, e K) bool, colP *[]K) {
+func SliceSurvey[K any]() (fun func(x, y float64, e *K) bool, colP *[]K) {
 	col := []K{}
 	colP = &col
-	fun = func(x, y float64, e K) bool {
+	fun = func(x, y float64, e *K) bool {
 		col = *colP
-		col = append(col, e)
+		col = append(col, *e)
 		colP = &col
 		return true
 	}

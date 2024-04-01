@@ -1,9 +1,7 @@
 package quadtree
 
 import (
-	"fmt"
 	"math/rand"
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,33 +13,33 @@ const dups = 10
 // This is done to make the benchmarks consistent between runs
 var testRand = rand.New(rand.NewSource(1))
 
-func buildTestTrees() []*Tree[string] {
-	return []*Tree[string]{
-		NewTree[string](NewView(0, 10, 10, 0)),
-		NewTree[string](NewView(0, 1, 2, 0)),
-		NewTree[string](NewView(0, 100, 300, 0)),
-		NewTree[string](NewView(0, 20.4, 35.6, 0)),
-		NewTree[string](NewView(0, 1e10, 500.00000001, 0)),
+func buildTestTrees() []*Tree[int] {
+	return []*Tree[int]{
+		NewTree[int](NewView(0, 10, 10, 0)),
+		NewTree[int](NewView(0, 1, 2, 0)),
+		NewTree[int](NewView(0, 100, 300, 0)),
+		NewTree[int](NewView(0, 20.4, 35.6, 0)),
+		NewTree[int](NewView(0, 1e10, 500.00000001, 0)),
 		// Negative regions
-		NewTree[string](NewView(-10, 10, 10, -10)),
-		NewTree[string](NewView(-1, 1, 2, -2)),
-		NewTree[string](NewView(-100, 100, 300, -300)),
-		NewTree[string](NewView(-20.4, 20.4, 35.6, -35.6)),
-		NewTree[string](NewView(-1e10, 1e10, 500.00000001, -500.00000001)),
+		NewTree[int](NewView(-10, 10, 10, -10)),
+		NewTree[int](NewView(-1, 1, 2, -2)),
+		NewTree[int](NewView(-100, 100, 300, -300)),
+		NewTree[int](NewView(-20.4, 20.4, 35.6, -35.6)),
+		NewTree[int](NewView(-1e10, 1e10, 500.00000001, -500.00000001)),
 	}
 }
 
 func TestOverflowLeaf(t *testing.T) {
-	tree := NewTree[string](NewView(0, 1, 1, 0))
+	tree := NewTree[int](NewView(0, 1, 1, 0))
 	ps := fillView(tree.View(), 70)
 	for i, p := range ps {
-		err := tree.Insert(p.x, p.y, fmt.Sprintf("test-%d", i))
+		err := tree.Insert(p.x, p.y, i)
 		assert.NoError(t, err)
 	}
-	fun, results := SimpleSurvey[string]()
+	fun, results := SliceSurvey[int]()
 	tree.Survey(tree.View(), fun)
-	if 70 != results.Len() {
-		t.Errorf("Failed to retrieve 70 elements in scatter test, found only %d", results.Len())
+	if 70 != len(*results) {
+		t.Errorf("Failed to retrieve 70 elements in scatter test, found only %d", len(*results))
 	}
 }
 
@@ -53,13 +51,13 @@ func TestOneElement(t *testing.T) {
 	}
 }
 
-func testOneElement(tree *Tree[string], t *testing.T) {
+func testOneElement(tree *Tree[int], t *testing.T) {
 	x, y := randomPosition(tree.View())
-	err := tree.Insert(x, y, "test")
+	err := tree.Insert(x, y, -1)
 	assert.NoError(t, err)
-	fun, results := SimpleSurvey[string]()
+	fun, results := SliceSurvey[int]()
 	tree.Survey(tree.View(), fun)
-	if results.Len() != 1 || "test" != results.Front().Value {
+	if len(*results) != 1 || -1 != (*results)[0] {
 		t.Errorf("Failed to find required element at (%f,%f), in tree \n%v", x, y, tree)
 	}
 }
@@ -73,23 +71,22 @@ func TestFullLeaf(t *testing.T) {
 	for _, tree := range testTrees {
 		views := tree.View().quarters()
 		for _, view := range views {
-			testFullLeaf(tree, view, "v1", t)
+			testFullLeaf(tree, view, 1, t)
 		}
 	}
 }
 
-func testFullLeaf(tree *Tree[string], v View, msg string, t *testing.T) {
+func testFullLeaf(tree *Tree[int], v View, msg int, t *testing.T) {
 	inserts := LEAF_SIZE * 2
 	for i := 0; i < inserts; i++ {
 		x, y := randomPosition(v)
-		name := "test" + strconv.Itoa(i)
-		err := tree.Insert(x, y, name)
+		err := tree.Insert(x, y, i)
 		assert.NoError(t, err)
 	}
-	fun, results := SimpleSurvey[string]()
+	fun, results := SliceSurvey[int]()
 	tree.Survey(v, fun)
-	if results.Len() != inserts {
-		t.Error(msg, "Inserted %d elements into a fresh quadtree and retrieved only %s", inserts, results.Len())
+	if len(*results) != inserts {
+		t.Error(msg, "Inserted %d elements into a fresh quadtree and retrieved only %s", inserts, len(*results))
 	}
 }
 
@@ -97,10 +94,10 @@ func testFullLeaf(tree *Tree[string], v View, msg string, t *testing.T) {
 // returns and error
 func TestBadInsert(t *testing.T) {
 	v1, v2 := disjoint()
-	tree := NewTree[string](v1)
+	tree := NewTree[int](v1)
 	ps := fillView(v2, 100)
 	for _, p := range ps {
-		err := tree.Insert(p.x, p.y, "test")
+		err := tree.Insert(p.x, p.y, -1)
 		assert.Error(t, err)
 	}
 }
@@ -118,10 +115,10 @@ func TestScatter(t *testing.T) {
 	}
 }
 
-func testScatter(tree *Tree[string], t *testing.T) {
+func testScatter(tree *Tree[int], t *testing.T) {
 	ps := fillView(tree.View(), 10000)
 	for i, p := range ps {
-		err := tree.Insert(p.x, p.y, "test")
+		err := tree.Insert(p.x, p.y, -1)
 		assert.NoError(t, err)
 		count := tree.Count(tree.View())
 		if int64(i+1) != count {
@@ -138,10 +135,10 @@ func testScatter(tree *Tree[string], t *testing.T) {
 			}
 		}
 
-		fun, results := SimpleSurvey[string]()
+		fun, results := SliceSurvey[int]()
 		tree.Survey(sv, fun)
-		if pointCount != int64(results.Len()) {
-			t.Errorf("Failed to retrieve %d elements in scatter test, found %d", pointCount, results.Len())
+		if pointCount != int64(len(*results)) {
+			t.Errorf("Failed to retrieve %d elements in scatter test, found %d", pointCount, len(*results))
 		}
 
 		count := tree.Count(sv)
@@ -154,12 +151,12 @@ func testScatter(tree *Tree[string], t *testing.T) {
 // Tests that we can add multiple elements to the same location
 // and still retrieve all elements, including duplicates, using
 // randomly generated views.
-func testScatterDup(tree *Tree[string], t *testing.T) {
+func testScatterDup(tree *Tree[int], t *testing.T) {
 	return
 	ps := fillView(tree.View(), 1000)
 	for _, p := range ps {
 		for i := 0; i < dups; i++ {
-			err := tree.Insert(p.x, p.y, "test_"+strconv.Itoa(i))
+			err := tree.Insert(p.x, p.y, i)
 			assert.NoError(t, err)
 		}
 	}
@@ -172,10 +169,10 @@ func testScatterDup(tree *Tree[string], t *testing.T) {
 			}
 		}
 
-		fun, results := SimpleSurvey[string]()
+		fun, results := SliceSurvey[int]()
 		tree.Survey(sv, fun)
-		if pointCount*dups != int64(results.Len()) {
-			t.Error("Failed to retrieve %i elements in duplicate scatter test, found only %i", pointCount*dups, results.Len())
+		if pointCount*dups != int64(len(*results)) {
+			t.Error("Failed to retrieve %i elements in duplicate scatter test, found only %i", pointCount*dups, len(*results))
 		}
 
 		count := tree.Count(sv)
@@ -192,14 +189,14 @@ func TestLimitedSurvey(t *testing.T) {
 	for _, tree := range testTrees {
 		ps := fillView(tree.View(), 1000)
 		for _, p := range ps {
-			err := tree.Insert(p.x, p.y, "test")
+			err := tree.Insert(p.x, p.y, -1)
 			assert.NoError(t, err)
 		}
 		for i := 0; i < 1000; i++ {
-			fun, results := LimitSurvey[string](i)
+			fun, results := LimitSurvey[int](i)
 			tree.Survey(tree.View(), fun)
-			if results.Len() != i {
-				t.Errorf("Failed to retrieve %d elements, found %d instead", i, results.Len())
+			if len(*results) != i {
+				t.Errorf("Failed to retrieve %d elements, found %d instead", i, len(*results))
 			}
 		}
 	}
