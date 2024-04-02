@@ -203,6 +203,7 @@ type Store[O any] struct {
 // a nil nextFree
 type object[O any] struct {
 	nextFree Reference[O]
+	meta     byte
 	value    O
 }
 
@@ -234,19 +235,23 @@ func (s *Store[O]) Alloc() (Reference[O], *O) {
 }
 
 func (s *Store[O]) Free(r Reference[O]) {
-	o := r.getObject()
+	obj := r.getObject()
 
-	if !o.nextFree.IsNil() {
+	if !obj.nextFree.IsNil() {
 		panic(fmt.Errorf("attempted to Free freed object %v", r))
+	}
+
+	if obj.meta != r.getMetaByte() {
+		panic(fmt.Errorf("Attempt to free value (%d) using stale reference (%d)", obj.meta, r.getMetaByte()))
 	}
 
 	s.freeLock.Lock()
 	defer s.freeLock.Unlock()
 
 	if s.rootFree.IsNil() {
-		o.nextFree = r
+		obj.nextFree = r
 	} else {
-		o.nextFree = s.rootFree
+		obj.nextFree = s.rootFree
 	}
 
 	s.rootFree = r
@@ -288,9 +293,9 @@ func (s *Store[O]) allocFromFree() (Reference[O], *O) {
 
 	// Grab the meta-data for the slot and nil out the, now
 	// allocated, slot's nextFree pointer
-	freeObject := alloc.getObject()
-	nextFree := freeObject.nextFree
-	freeObject.nextFree = Reference[O]{}
+	allocObject := alloc.getObject()
+	nextFree := allocObject.nextFree
+	allocObject.nextFree = Reference[O]{}
 
 	// If the nextFree pointer points to the just allocated slot, then
 	// there are no more freed slots available
@@ -299,7 +304,12 @@ func (s *Store[O]) allocFromFree() (Reference[O], *O) {
 		s.rootFree = Reference[O]{}
 	}
 
-	return alloc, &freeObject.value
+	// Increment the generation meta-data for the object
+	// and set that meta value in the Reference
+	allocObject.meta++
+	alloc.setMeta(allocObject.meta)
+
+	return alloc, &allocObject.value
 }
 
 func (s *Store[O]) allocFromOffset() (Reference[O], *O) {

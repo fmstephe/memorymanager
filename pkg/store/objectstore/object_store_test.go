@@ -91,6 +91,70 @@ func Test_Object_NewFreeFree_Panic(t *testing.T) {
 	assert.Panics(t, func() { os.Free(r) })
 }
 
+// Demonstrate that when we double free a re-allocated object we panic
+func Test_Object_NewFreeAllocFree_Panic(t *testing.T) {
+	os := New[MutableStruct]()
+	r, _ := os.Alloc()
+	os.Free(r)
+	// This will re-allocate the just-freed object
+	_, _ = os.Alloc()
+
+	assert.Panics(t, func() { os.Free(r) })
+}
+
+// Demonstrate that the meta check on Free suffers from the ABA problem.
+// This means if we re-allocate the same slot repeatedly the meta field will
+// eventually overflow and old values will be repeated.
+func Test_Object_NewFree256ReallocFree_NoPanic(t *testing.T) {
+	os := New[MutableStruct]()
+	r, _ := os.Alloc()
+	oldMeta := r.getObject().meta
+	os.Free(r)
+
+	// Keep allocating and free the slot until the meta overflows back to
+	// the oldMeta value
+	temp, _ := os.Alloc()
+	for temp.getObject().meta != oldMeta {
+		// This will re-allocate the just-freed object
+		os.Free(temp)
+		temp, _ = os.Alloc()
+	}
+
+	assert.NotPanics(t, func() { os.Free(r) })
+}
+
+// Demonstrate that when we get a re-allocated object we panic
+func Test_Object_NewFreeAllocGet_Panic(t *testing.T) {
+	os := New[MutableStruct]()
+	r, _ := os.Alloc()
+	os.Free(r)
+	// This will re-allocate the just-freed object
+	_, _ = os.Alloc()
+
+	assert.Panics(t, func() { r.GetValue() })
+}
+
+// Demonstrate that the meta check on Free suffers from the ABA problem.
+// This means if we re-allocate the same slot repeatedly the meta field will
+// eventually overflow and old values will be repeated.
+func Test_Object_NewFree256ReallocGet_NoPanic(t *testing.T) {
+	os := New[MutableStruct]()
+	r, _ := os.Alloc()
+	oldMeta := r.getObject().meta
+	os.Free(r)
+
+	// Keep allocating and free the slot until the meta overflows back to
+	// the oldMeta value
+	temp, _ := os.Alloc()
+	for temp.getObject().meta != oldMeta {
+		// This will re-allocate the just-freed object
+		os.Free(temp)
+		temp, _ = os.Alloc()
+	}
+
+	assert.NotPanics(t, func() { r.GetValue() })
+}
+
 // Demonstrate that if we create a large number of objects, then free them,
 // then allocate that same number again, we re-use the freed objects
 func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
@@ -148,7 +212,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 
 // This small test is in response to a bug found in the free implementation.
 // The bug was that there is a loop in the `nextFree` of the last freed slot in
-// the OjbectStore.  This is because a freed slot must always have a non-nil
+// the ObjectStore.  This is because a freed slot must always have a non-nil
 // `nextFree` reference in its meta-data.  However because we weren't checking
 // for this exact case the last freed slot would re-add itself to the root
 // `nextFree` reference in the ObjectStore.  This means that in this case calls
@@ -160,16 +224,25 @@ func TestFreeThenAllocTwice(t *testing.T) {
 	// Allocate an object
 	r1, o1 := os.Alloc()
 	o1.Field = 1
+	// This is an original object - meta is 0
+	assert.Equal(t, byte(0), r1.getMetaByte())
 	// Free it
 	os.Free(r1)
 
 	// Allocate another - this should reuse o1
-	_, o2 := os.Alloc()
+	r2, o2 := os.Alloc()
 	o2.Field = 2
+	// This object is re-allocated - meta is 1
+	assert.Equal(t, byte(1), r2.getMetaByte())
 
 	// Allocate a third, this should be a non-recycled allocation
-	_, o3 := os.Alloc()
+	r3, o3 := os.Alloc()
+	// This is an original object - meta is 0
+	assert.Equal(t, byte(0), r3.getMetaByte())
 	o3.Field = 3
+
+	// Assert that the references point to distinct memory locations
+	assert.NotEqual(t, r2.GetValue(), r3.GetValue())
 
 	// Assert that our allocations are independent of each other
 	assert.Equal(t, 2, o2.Field)
