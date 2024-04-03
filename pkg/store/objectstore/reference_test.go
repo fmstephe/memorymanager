@@ -28,6 +28,6 @@ func TestIsNotNil(t *testing.T) {
 		// The value pointed to, is the value in object
 		assert.Equal(t, r.GetValue(), &object.value)
 		// The meta of the object is the same as the meta in the reference
-		assert.Equal(t, object.meta, r.getMetaByte())
+		assert.Equal(t, object.meta, r.getMeta())
 	}
 }

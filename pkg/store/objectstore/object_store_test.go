@@ -225,7 +225,7 @@ func TestFreeThenAllocTwice(t *testing.T) {
 	r1, o1 := os.Alloc()
 	o1.Field = 1
 	// This is an original object - meta is 0
-	assert.Equal(t, byte(0), r1.getMetaByte())
+	assert.Equal(t, byte(0), r1.getMeta())
 	// Free it
 	os.Free(r1)
 
@@ -233,12 +233,12 @@ func TestFreeThenAllocTwice(t *testing.T) {
 	r2, o2 := os.Alloc()
 	o2.Field = 2
 	// This object is re-allocated - meta is 1
-	assert.Equal(t, byte(1), r2.getMetaByte())
+	assert.Equal(t, byte(1), r2.getMeta())
 
 	// Allocate a third, this should be a non-recycled allocation
 	r3, o3 := os.Alloc()
 	// This is an original object - meta is 0
-	assert.Equal(t, byte(0), r3.getMetaByte())
+	assert.Equal(t, byte(0), r3.getMeta())
 	o3.Field = 3
 
 	// Assert that the references point to distinct memory locations
