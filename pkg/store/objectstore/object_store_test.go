@@ -102,19 +102,19 @@ func Test_Object_NewFreeAllocFree_Panic(t *testing.T) {
 	assert.Panics(t, func() { os.Free(r) })
 }
 
-// Demonstrate that the meta check on Free suffers from the ABA problem.
-// This means if we re-allocate the same slot repeatedly the meta field will
+// Demonstrate that the gen check on Free suffers from the ABA problem.
+// This means if we re-allocate the same slot repeatedly the gen field will
 // eventually overflow and old values will be repeated.
 func Test_Object_NewFree256ReallocFree_NoPanic(t *testing.T) {
 	os := New[MutableStruct]()
 	r, _ := os.Alloc()
-	oldMeta := r.getObject().meta
+	oldGen := r.getObject().gen
 	os.Free(r)
 
-	// Keep allocating and free the slot until the meta overflows back to
-	// the oldMeta value
+	// Keep allocating and free the slot until the gen overflows back to
+	// the oldGen value
 	temp, _ := os.Alloc()
-	for temp.getObject().meta != oldMeta {
+	for temp.getObject().gen != oldGen {
 		// This will re-allocate the just-freed object
 		os.Free(temp)
 		temp, _ = os.Alloc()
@@ -134,19 +134,19 @@ func Test_Object_NewFreeAllocGet_Panic(t *testing.T) {
 	assert.Panics(t, func() { r.GetValue() })
 }
 
-// Demonstrate that the meta check on Free suffers from the ABA problem.
-// This means if we re-allocate the same slot repeatedly the meta field will
+// Demonstrate that the gen check on Free suffers from the ABA problem.
+// This means if we re-allocate the same slot repeatedly the gen field will
 // eventually overflow and old values will be repeated.
 func Test_Object_NewFree256ReallocGet_NoPanic(t *testing.T) {
 	os := New[MutableStruct]()
 	r, _ := os.Alloc()
-	oldMeta := r.getObject().meta
+	oldGen := r.getObject().gen
 	os.Free(r)
 
-	// Keep allocating and free the slot until the meta overflows back to
-	// the oldMeta value
+	// Keep allocating and free the slot until the gen overflows back to
+	// the oldGen value
 	temp, _ := os.Alloc()
-	for temp.getObject().meta != oldMeta {
+	for temp.getObject().gen != oldGen {
 		// This will re-allocate the just-freed object
 		os.Free(temp)
 		temp, _ = os.Alloc()
@@ -224,21 +224,21 @@ func TestFreeThenAllocTwice(t *testing.T) {
 	// Allocate an object
 	r1, o1 := os.Alloc()
 	o1.Field = 1
-	// This is an original object - meta is 0
-	assert.Equal(t, byte(0), r1.getMeta())
+	// This is an original object - gen is 0
+	assert.Equal(t, byte(0), r1.getGen())
 	// Free it
 	os.Free(r1)
 
 	// Allocate another - this should reuse o1
 	r2, o2 := os.Alloc()
 	o2.Field = 2
-	// This object is re-allocated - meta is 1
-	assert.Equal(t, byte(1), r2.getMeta())
+	// This object is re-allocated - gen is 1
+	assert.Equal(t, byte(1), r2.getGen())
 
 	// Allocate a third, this should be a non-recycled allocation
 	r3, o3 := os.Alloc()
-	// This is an original object - meta is 0
-	assert.Equal(t, byte(0), r3.getMeta())
+	// This is an original object - gen is 0
+	assert.Equal(t, byte(0), r3.getGen())
 	o3.Field = 3
 
 	// Assert that the references point to distinct memory locations

@@ -27,7 +27,7 @@ func TestIsNotNil(t *testing.T) {
 		assert.False(t, r.IsNil())
 		// The value pointed to, is the value in object
 		assert.Equal(t, r.GetValue(), &object.value)
-		// The meta of the object is the same as the meta in the reference
-		assert.Equal(t, object.meta, r.getMeta())
+		// The gen of the object is the same as the gen in the reference
+		assert.Equal(t, object.gen, r.getGen())
 	}
 }
