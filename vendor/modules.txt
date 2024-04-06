@@ -3,6 +3,7 @@
 github.com/davecgh/go-spew/spew
 # github.com/fmstephe/flib v0.0.1
 ## explicit; go 1.19
+github.com/fmstephe/flib/fmath
 github.com/fmstephe/flib/funsafe
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit

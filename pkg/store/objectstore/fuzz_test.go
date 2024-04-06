@@ -20,7 +20,7 @@ func FuzzObjectStore(f *testing.F) {
 	})
 }
 
-func NewTestRun(byteConsumer []byte) *fuzzutil.TestRun {
+func NewTestRun(bytes []byte) *fuzzutil.TestRun {
 	objects := NewObjects()
 
 	stepMaker := func(byteConsumer *fuzzutil.ByteConsumer) fuzzutil.Step {
@@ -36,7 +36,7 @@ func NewTestRun(byteConsumer []byte) *fuzzutil.TestRun {
 		panic("Unreachable")
 	}
 
-	return fuzzutil.NewTestRun(byteConsumer, stepMaker)
+	return fuzzutil.NewTestRun(bytes, stepMaker)
 }
 
 type Objects struct {
@@ -49,7 +49,7 @@ type Objects struct {
 
 func NewObjects() *Objects {
 	return &Objects{
-		store:      New[[16]byte](),
+		store:      New[[16]byte](128),
 		references: make([]Reference[[16]byte], 0),
 		expected:   make([]*[16]byte, 0),
 		live:       make([]bool, 0),

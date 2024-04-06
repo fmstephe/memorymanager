@@ -17,10 +17,11 @@ type MutableStruct struct {
 // We ensure that we allocate so many objects that we will need more than one slab
 // to store all objects.
 func Test_Object_NewModifyGet(t *testing.T) {
-	os := New[MutableStruct]()
+	objectsPerSlab := uint64(32)
+	os := New[MutableStruct](objectsPerSlab)
 
 	// Create all the objects and modify field
-	refs := make([]Reference[MutableStruct], objectSlabSize*3)
+	refs := make([]Reference[MutableStruct], objectsPerSlab*3)
 	for i := range refs {
 		r, s := os.Alloc()
 		s.Field = i
@@ -44,10 +45,11 @@ func Test_Object_NewModifyGet(t *testing.T) {
 // We ensure that we allocate so many objects that we will need more than one slab
 // to store all objects.
 func Test_Object_GetModifyGet(t *testing.T) {
-	os := New[MutableStruct]()
+	objectsPerSlab := uint64(32)
+	os := New[MutableStruct](objectsPerSlab)
 
 	// Create all the objects
-	refs := make([]Reference[MutableStruct], objectSlabSize*3)
+	refs := make([]Reference[MutableStruct], objectsPerSlab*3)
 	for i := range refs {
 		r, _ := os.Alloc()
 		refs[i] = r
@@ -74,7 +76,8 @@ func Test_Object_GetModifyGet(t *testing.T) {
 // Demonstrate that we can create an object, then free it. If we try to Get()
 // the freed object ObjectStore panics
 func Test_Object_NewFreeGet_Panic(t *testing.T) {
-	os := New[MutableStruct]()
+	objectsPerSlab := uint64(32)
+	os := New[MutableStruct](objectsPerSlab)
 	r, _ := os.Alloc()
 	os.Free(r)
 
@@ -84,7 +87,8 @@ func Test_Object_NewFreeGet_Panic(t *testing.T) {
 // Demonstrate that we can create an object, then free it. If we try to Free()
 // the freed object ObjectStore panics
 func Test_Object_NewFreeFree_Panic(t *testing.T) {
-	os := New[MutableStruct]()
+	objectsPerSlab := uint64(32)
+	os := New[MutableStruct](objectsPerSlab)
 	r, _ := os.Alloc()
 	os.Free(r)
 
@@ -93,7 +97,8 @@ func Test_Object_NewFreeFree_Panic(t *testing.T) {
 
 // Demonstrate that when we double free a re-allocated object we panic
 func Test_Object_NewFreeAllocFree_Panic(t *testing.T) {
-	os := New[MutableStruct]()
+	objectsPerSlab := uint64(32)
+	os := New[MutableStruct](objectsPerSlab)
 	r, _ := os.Alloc()
 	os.Free(r)
 	// This will re-allocate the just-freed object
@@ -106,15 +111,16 @@ func Test_Object_NewFreeAllocFree_Panic(t *testing.T) {
 // This means if we re-allocate the same slot repeatedly the gen field will
 // eventually overflow and old values will be repeated.
 func Test_Object_NewFree256ReallocFree_NoPanic(t *testing.T) {
-	os := New[MutableStruct]()
+	objectsPerSlab := uint64(32)
+	os := New[MutableStruct](objectsPerSlab)
 	r, _ := os.Alloc()
-	oldGen := r.getObject().gen
+	oldGen := r.ref.GetGen()
 	os.Free(r)
 
 	// Keep allocating and free the slot until the gen overflows back to
 	// the oldGen value
 	temp, _ := os.Alloc()
-	for temp.getObject().gen != oldGen {
+	for temp.ref.GetGen() != oldGen {
 		// This will re-allocate the just-freed object
 		os.Free(temp)
 		temp, _ = os.Alloc()
@@ -125,7 +131,8 @@ func Test_Object_NewFree256ReallocFree_NoPanic(t *testing.T) {
 
 // Demonstrate that when we get a re-allocated object we panic
 func Test_Object_NewFreeAllocGet_Panic(t *testing.T) {
-	os := New[MutableStruct]()
+	objectsPerSlab := uint64(32)
+	os := New[MutableStruct](objectsPerSlab)
 	r, _ := os.Alloc()
 	os.Free(r)
 	// This will re-allocate the just-freed object
@@ -138,15 +145,16 @@ func Test_Object_NewFreeAllocGet_Panic(t *testing.T) {
 // This means if we re-allocate the same slot repeatedly the gen field will
 // eventually overflow and old values will be repeated.
 func Test_Object_NewFree256ReallocGet_NoPanic(t *testing.T) {
-	os := New[MutableStruct]()
+	objectsPerSlab := uint64(32)
+	os := New[MutableStruct](objectsPerSlab)
 	r, _ := os.Alloc()
-	oldGen := r.getObject().gen
+	oldGen := r.ref.GetGen()
 	os.Free(r)
 
 	// Keep allocating and free the slot until the gen overflows back to
 	// the oldGen value
 	temp, _ := os.Alloc()
-	for temp.getObject().gen != oldGen {
+	for temp.ref.GetGen() != oldGen {
 		// This will re-allocate the just-freed object
 		os.Free(temp)
 		temp, _ = os.Alloc()
@@ -158,12 +166,13 @@ func Test_Object_NewFree256ReallocGet_NoPanic(t *testing.T) {
 // Demonstrate that if we create a large number of objects, then free them,
 // then allocate that same number again, we re-use the freed objects
 func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
-	os := New[MutableStruct]()
+	objectsPerSlab := uint64(32)
+	os := New[MutableStruct](objectsPerSlab)
 
-	objectAllocations := objectSlabSize * 3
+	objectAllocations := int(objectsPerSlab * 3)
 
 	// Create a large number of objects
-	refs := make([]Reference[MutableStruct], objectSlabSize*3)
+	refs := make([]Reference[MutableStruct], objectsPerSlab*3)
 	for i := range refs {
 		r, _ := os.Alloc()
 		refs[i] = r
@@ -219,13 +228,14 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 // to `Alloc()` would allocate the same slot over and over, meaning multiple
 // independently allocated references would all point to the same slot.
 func TestFreeThenAllocTwice(t *testing.T) {
-	os := New[MutableStruct]()
+	objectsPerSlab := uint64(32)
+	os := New[MutableStruct](objectsPerSlab)
 
 	// Allocate an object
 	r1, o1 := os.Alloc()
 	o1.Field = 1
 	// This is an original object - gen is 0
-	assert.Equal(t, byte(0), r1.getGen())
+	assert.Equal(t, byte(0), r1.ref.GetGen())
 	// Free it
 	os.Free(r1)
 
@@ -233,12 +243,12 @@ func TestFreeThenAllocTwice(t *testing.T) {
 	r2, o2 := os.Alloc()
 	o2.Field = 2
 	// This object is re-allocated - gen is 1
-	assert.Equal(t, byte(1), r2.getGen())
+	assert.Equal(t, byte(1), r2.ref.GetGen())
 
 	// Allocate a third, this should be a non-recycled allocation
 	r3, o3 := os.Alloc()
 	// This is an original object - gen is 0
-	assert.Equal(t, byte(0), r3.getGen())
+	assert.Equal(t, byte(0), r3.ref.GetGen())
 	o3.Field = 3
 
 	// Assert that the references point to distinct memory locations
@@ -252,7 +262,8 @@ func TestFreeThenAllocTwice(t *testing.T) {
 // Demonstrate that multiple goroutines can alloc/get/free on a shared Store instance
 // This test should be run with -race
 func TestSeparateGoroutines(t *testing.T) {
-	os := New[MutableStruct]()
+	objectsPerSlab := uint64(32)
+	os := New[MutableStruct](objectsPerSlab)
 
 	barrier := sync.WaitGroup{}
 	barrier.Add(1)
@@ -294,7 +305,8 @@ func allocateAndModify(t *testing.T, os *Store[MutableStruct], barrier *sync.Wai
 func TestAllocAndShare(t *testing.T) {
 	sharedChannel := make(chan Reference[MutableStruct], 100*10_000)
 
-	os := New[MutableStruct]()
+	objectsPerSlab := uint64(32)
+	os := New[MutableStruct](objectsPerSlab)
 
 	barrier := sync.WaitGroup{}
 	barrier.Add(1)
@@ -343,8 +355,8 @@ func allocateAndModifyShared(
 
 func Test_New_CheckGenericTypeForPointers(t *testing.T) {
 	// If generic type contains pointers, New will panic
-	assert.Panics(t, func() { New[*int]() })
+	assert.Panics(t, func() { New[*int](32) })
 
 	// If generic type does not contain pointers, New will not panic
-	assert.NotPanics(t, func() { New[int]() })
+	assert.NotPanics(t, func() { New[int](32) })
 }
