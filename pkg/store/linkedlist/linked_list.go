@@ -28,8 +28,7 @@ type Store[O any] struct {
 // Creates a new Store.
 func New[O any]() *Store[O] {
 	return &Store[O]{
-		// TODO we should probably expose the number of objects per slab to the caller
-		nodeStore: objectstore.New[node[O]](1024),
+		nodeStore: objectstore.New[node[O]](),
 	}
 }
 

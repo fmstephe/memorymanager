@@ -16,8 +16,7 @@ type Stats struct {
 
 type Store struct {
 	// Immutable fields
-	objectSize     uint64
-	objectsPerSlab uint64
+	allocConf AllocationConfig
 
 	// Accounting fields
 	allocs atomic.Uint64
@@ -38,13 +37,12 @@ type Store struct {
 	objects     [][]uintptr
 }
 
-func New(objectSize, objectsPerSlab uint64) *Store {
+func New(allocConf AllocationConfig) *Store {
 	objects := [][]uintptr{}
 	return &Store{
-		objectSize:     objectSize,
-		objectsPerSlab: objectsPerSlab,
-		allocIdx:       atomic.Uint64{},
-		objects:        objects,
+		allocConf: allocConf,
+		allocIdx:  atomic.Uint64{},
+		objects:   objects,
 	}
 }
 
@@ -90,6 +88,10 @@ func (s *Store) GetStats() Stats {
 	}
 }
 
+func (s *Store) GetAllocationConfig() AllocationConfig {
+	return s.allocConf
+}
+
 func (s *Store) allocFromFree() (Reference, bool) {
 	s.freeLock.Lock()
 	defer s.freeLock.Unlock()
@@ -109,8 +111,8 @@ func (s *Store) allocFromFree() (Reference, bool) {
 func (s *Store) allocFromOffset() Reference {
 	allocIdx := s.acquireAllocIdx()
 	// TODO do some power of 2 work here, to eliminate all this division
-	slabIdx := allocIdx / s.objectsPerSlab
-	offsetIdx := allocIdx % s.objectsPerSlab
+	slabIdx := allocIdx / s.allocConf.ActualObjectsPerSlab
+	offsetIdx := allocIdx % s.allocConf.ActualObjectsPerSlab
 
 	// Take read lock to access s.objects
 	s.objectsLock.RLock()
@@ -144,7 +146,7 @@ func (s *Store) growObjects(targetLen int) {
 	s.objectsLock.Lock()
 	for len(s.objects) < targetLen {
 		// Create a new slab
-		newSlab := MmapSlab(int64(s.objectSize), int64(s.objectsPerSlab))
+		newSlab := MmapSlab(s.allocConf)
 		s.objects = append(s.objects, newSlab)
 	}
 

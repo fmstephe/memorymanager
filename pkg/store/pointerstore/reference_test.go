@@ -2,7 +2,6 @@ package pointerstore
 
 import (
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -20,7 +19,8 @@ func TestNewReferenceWithNilPanics(t *testing.T) {
 
 // Demonstrate that a pointer with any non-0 field is not nil
 func TestIsNotNil(t *testing.T) {
-	slab := MmapSlab(int64(unsafe.Sizeof(uint32(1))), 32)
+	allocConfig := NewAllocationConfigByObjects(8, 32)
+	slab := MmapSlab(allocConfig)
 	for _, ptr := range slab {
 		r := NewReference(ptr)
 		// The object is not nil

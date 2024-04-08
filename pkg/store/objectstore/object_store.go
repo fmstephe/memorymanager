@@ -11,14 +11,17 @@ type Store[O any] struct {
 	store *pointerstore.Store
 }
 
-func New[O any](objectsPerSlab uint64) *Store[O] {
+func New[O any]() *Store[O] {
 	if err := containsNoPointers[O](); err != nil {
 		panic(fmt.Errorf("cannot instantiate Store with generic type containing pointers %w", err))
 	}
 
 	t := reflect.TypeFor[O]()
 	objectSize := uint64(t.Size())
-	pStore := pointerstore.New(objectSize, objectsPerSlab)
+	// Aim to allocate 8KB slabs
+	allocConf := pointerstore.NewAllocationConfigBySize(objectSize, 1<<13)
+
+	pStore := pointerstore.New(allocConf)
 	return &Store[O]{
 		store: pStore,
 	}
@@ -36,4 +39,8 @@ func (s *Store[O]) Free(r Reference[O]) {
 
 func (s *Store[O]) GetStats() pointerstore.Stats {
 	return s.store.GetStats()
+}
+
+func (s *Store[O]) GetAllocationConfig() pointerstore.AllocationConfig {
+	return s.store.GetAllocationConfig()
 }

@@ -49,7 +49,7 @@ type Objects struct {
 
 func NewObjects() *Objects {
 	return &Objects{
-		store:      New[[16]byte](128),
+		store:      New[[16]byte](),
 		references: make([]Reference[[16]byte], 0),
 		expected:   make([]*[16]byte, 0),
 		live:       make([]bool, 0),
