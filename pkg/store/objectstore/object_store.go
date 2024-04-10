@@ -215,11 +215,7 @@ func Alloc[T any](s *Store) (Reference[T], *T) {
 }
 
 func (s *Store) alloc(size uint64) pointerstore.Reference {
-	size32 := uint32(size)
-	if size != uint64(size32) {
-		panic(fmt.Errorf("too big TODO think this through %d", size))
-	}
-	idx := indexForSize(size32)
+	idx := indexForSize(size)
 	return s.sizedStores[idx].Alloc()
 }
 
@@ -230,11 +226,7 @@ func Free[T any](s *Store, r Reference[T]) {
 }
 
 func (s *Store) free(size uint64, r pointerstore.Reference) {
-	size32 := uint32(size)
-	if size != uint64(size32) {
-		panic(fmt.Errorf("too big TODO think this through %d", size))
-	}
-	idx := indexForSize(size32)
+	idx := indexForSize(size)
 	s.sizedStores[idx].Free(r)
 }
 
@@ -254,10 +246,14 @@ func (s *Store) GetAllocationConfigs() []pointerstore.AllocationConfig {
 	return sizedAllocConfigs
 }
 
-func indexForSize(size uint32) int {
+func indexForSize(size uint64) int {
+	if size > math.MaxUint32 {
+		panic(fmt.Errorf("too big TODO think this through %d", size))
+	}
+
 	if size == 0 {
 		return 0
 	}
-	idx := bits.Len32(size-1) + 1
+	idx := bits.Len64(size-1) + 1
 	return idx
 }

@@ -370,6 +370,6 @@ func Test_New_CheckGenericTypeForPointers(t *testing.T) {
 
 func indexForType[T any]() int {
 	t := reflect.TypeFor[T]()
-	size := uint32(t.Size())
+	size := uint64(t.Size())
 	return indexForSize(size)
 }
