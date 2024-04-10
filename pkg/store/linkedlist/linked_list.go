@@ -22,13 +22,13 @@ func (n *node[O]) getData() *O {
 // The store for linked lists. It is used to create a new list, but must also
 // be passed into any method which operates on linkedlists.
 type Store[O any] struct {
-	nodeStore *objectstore.Store[node[O]]
+	nodeStore *objectstore.Store
 }
 
 // Creates a new Store.
 func New[O any]() *Store[O] {
 	return &Store[O]{
-		nodeStore: objectstore.New[node[O]](),
+		nodeStore: objectstore.New(),
 	}
 }
 
@@ -59,7 +59,7 @@ func (l *List[O]) setReference(r objectstore.Reference[node[O]]) {
 // the embedded data is returned. The embedded data can then be mutated via
 // this pointer.
 func (l *List[O]) PushHead(store *Store[O]) *O {
-	newR, newNode := store.nodeStore.Alloc()
+	newR, newNode := objectstore.Alloc[node[O]](store.nodeStore)
 	l.pushTail(store, newR, newNode)
 	l.setReference(newR)
 	return newNode.getData()
@@ -70,7 +70,7 @@ func (l *List[O]) PushHead(store *Store[O]) *O {
 // the embedded data is returned. The embedded data can then be mutated via
 // this pointer.
 func (l *List[O]) PushTail(store *Store[O]) *O {
-	newR, newNode := store.nodeStore.Alloc()
+	newR, newNode := objectstore.Alloc[node[O]](store.nodeStore)
 	l.pushTail(store, newR, newNode)
 	return newNode.getData()
 }
@@ -132,7 +132,7 @@ func (l *List[O]) remove(store *Store[O], r objectstore.Reference[node[O]]) {
 		*l = List[O]{}
 
 		// Free the removed node
-		store.nodeStore.Free(r)
+		objectstore.Free(store.nodeStore, r)
 		return
 	}
 
@@ -148,7 +148,7 @@ func (l *List[O]) remove(store *Store[O], r objectstore.Reference[node[O]]) {
 	}
 
 	// Free the removed node
-	store.nodeStore.Free(r)
+	objectstore.Free(store.nodeStore, r)
 }
 
 // Adds the nodes in attach to l. After this method is called attach should
@@ -260,7 +260,7 @@ func (l *List[O]) Filter(store *Store[O], pred func(o *O) bool) {
 		}
 
 		// Filter current node
-		store.nodeStore.Free(current)
+		objectstore.Free(store.nodeStore, current)
 
 		if n.prev == current && n.next == current {
 			// Special case where we are filtering the last node

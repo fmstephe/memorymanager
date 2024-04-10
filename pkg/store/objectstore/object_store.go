@@ -160,45 +160,104 @@ package objectstore
 
 import (
 	"fmt"
+	"math"
+	"math/bits"
 	"reflect"
 
 	"github.com/fmstephe/location-system/pkg/store/pointerstore"
 )
 
-type Store[O any] struct {
-	store *pointerstore.Store
+type Store struct {
+	sizedStores []*pointerstore.Store
 }
 
-func New[O any]() *Store[O] {
-	if err := containsNoPointers[O](); err != nil {
-		panic(fmt.Errorf("cannot instantiate Store with generic type containing pointers %w", err))
-	}
-
-	t := reflect.TypeFor[O]()
-	objectSize := uint64(t.Size())
-	// Aim to allocate 8KB slabs
-	allocConf := pointerstore.NewAllocationConfigBySize(objectSize, 1<<13)
-
-	pStore := pointerstore.New(allocConf)
-	return &Store[O]{
-		store: pStore,
+func New() *Store {
+	return &Store{
+		sizedStores: initSizeStore(),
 	}
 }
 
-func (s *Store[O]) Alloc() (Reference[O], *O) {
-	pRef := s.store.Alloc()
-	oRef := newReference[O](pRef)
+func initSizeStore() []*pointerstore.Store {
+	slabs := make([]*pointerstore.Store, 34)
+
+	allocSize := uint64(1)
+	for i := range slabs {
+		// Special case for 0 size slab allocations
+		if i == 0 {
+			slabs[0] = pointerstore.New(pointerstore.NewAllocationConfigBySize(0, 1<<13))
+			continue
+		}
+		// Special case for allocations greater than 2^31 In principal
+		// we would want this slab to be sized 2^32, but with 32 bits
+		// that's 0, so we get as close as we can.
+		if i == 33 {
+			slabs[i] = pointerstore.New(pointerstore.NewAllocationConfigBySize(math.MaxUint32, 1<<13))
+			continue
+		}
+		slabs[i] = pointerstore.New(pointerstore.NewAllocationConfigBySize(allocSize, 1<<13))
+		allocSize = allocSize << 1
+	}
+
+	return slabs
+}
+
+func Alloc[T any](s *Store) (Reference[T], *T) {
+	// TODO this is not fast - we _need_ to cache this type data
+	if err := containsNoPointers[T](); err != nil {
+		panic(fmt.Errorf("cannot allocate generic type containing pointers %w", err))
+	}
+
+	t := reflect.TypeFor[T]()
+	size := uint64(t.Size())
+	pRef := s.alloc(size)
+	oRef := newReference[T](pRef)
 	return oRef, oRef.GetValue()
 }
 
-func (s *Store[O]) Free(r Reference[O]) {
-	s.store.Free(r.ref)
+func (s *Store) alloc(size uint64) pointerstore.Reference {
+	size32 := uint32(size)
+	if size != uint64(size32) {
+		panic(fmt.Errorf("too big TODO think this through %d", size))
+	}
+	idx := indexForSize(size32)
+	return s.sizedStores[idx].Alloc()
 }
 
-func (s *Store[O]) GetStats() pointerstore.Stats {
-	return s.store.GetStats()
+func Free[T any](s *Store, r Reference[T]) {
+	t := reflect.TypeFor[T]()
+	size := uint64(t.Size())
+	s.free(size, r.ref)
 }
 
-func (s *Store[O]) GetAllocationConfig() pointerstore.AllocationConfig {
-	return s.store.GetAllocationConfig()
+func (s *Store) free(size uint64, r pointerstore.Reference) {
+	size32 := uint32(size)
+	if size != uint64(size32) {
+		panic(fmt.Errorf("too big TODO think this through %d", size))
+	}
+	idx := indexForSize(size32)
+	s.sizedStores[idx].Free(r)
+}
+
+func (s *Store) GetStats() []pointerstore.Stats {
+	sizedStats := make([]pointerstore.Stats, len(s.sizedStores))
+	for i := range s.sizedStores {
+		sizedStats[i] = s.sizedStores[i].GetStats()
+	}
+	return sizedStats
+}
+
+func (s *Store) GetAllocationConfigs() []pointerstore.AllocationConfig {
+	sizedAllocConfigs := make([]pointerstore.AllocationConfig, len(s.sizedStores))
+	for i := range s.sizedStores {
+		sizedAllocConfigs[i] = s.sizedStores[i].GetAllocationConfig()
+	}
+	return sizedAllocConfigs
+}
+
+func indexForSize(size uint32) int {
+	if size == 0 {
+		return 0
+	}
+	idx := bits.Len32(size-1) + 1
+	return idx
 }

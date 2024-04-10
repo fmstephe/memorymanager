@@ -40,7 +40,7 @@ func NewTestRun(bytes []byte) *fuzzutil.TestRun {
 }
 
 type Objects struct {
-	store      *Store[[16]byte]
+	store      *Store
 	references []Reference[[16]byte]
 	expected   []*[16]byte
 	// Indicates whether a reference/object is still live (has not been freed)
@@ -49,7 +49,7 @@ type Objects struct {
 
 func NewObjects() *Objects {
 	return &Objects{
-		store:      New[[16]byte](),
+		store:      New(),
 		references: make([]Reference[[16]byte], 0),
 		expected:   make([]*[16]byte, 0),
 		live:       make([]bool, 0),
@@ -59,7 +59,7 @@ func NewObjects() *Objects {
 func (o *Objects) Alloc(value [16]byte) {
 	//fmt.Printf("Allocating %v at index %d\n", value, len(o.references))
 
-	ref, obj := o.store.Alloc()
+	ref, obj := Alloc[[16]byte](o.store)
 	expected := [16]byte{}
 	copy(obj[:], value[:])
 	copy(expected[:], value[:])
@@ -115,7 +115,7 @@ func (o *Objects) Free(index uint32) {
 	}
 
 	// Free the object at index
-	o.store.Free(o.references[index])
+	Free(o.store, o.references[index])
 	o.live[index] = false
 }
 
