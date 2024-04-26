@@ -8,6 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const allocsPerGoroutine = 1000
+const goroutines = 100
+
 // Demonstrate that multiple goroutines can alloc/get/free on a shared Store instance
 // This test should be run with -race
 func TestSeparateGoroutines_Race(t *testing.T) {
@@ -17,7 +20,7 @@ func TestSeparateGoroutines_Race(t *testing.T) {
 	barrier.Add(1)
 
 	complete := sync.WaitGroup{}
-	for i := 0; i < 100; i++ {
+	for i := 0; i < goroutines; i++ {
 		complete.Add(1)
 		go func() {
 			defer complete.Done()
@@ -33,7 +36,7 @@ func TestSeparateGoroutines_Race(t *testing.T) {
 func allocateAndModify(t *testing.T, os *Store, barrier *sync.WaitGroup) {
 	barrier.Wait()
 	refs := []Reference[MutableStruct]{}
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < allocsPerGoroutine; i++ {
 		ref, v := Alloc[MutableStruct](os)
 		refs = append(refs, ref)
 		v.Field = i
@@ -51,7 +54,7 @@ func allocateAndModify(t *testing.T, os *Store, barrier *sync.WaitGroup) {
 // We test that the shared total is what we expect.
 // This test should be run with -race
 func TestAllocAndShare_Race(t *testing.T) {
-	sharedChannel := make(chan Reference[MutableStruct], 100*1000)
+	sharedChannel := make(chan Reference[MutableStruct], goroutines*allocsPerGoroutine)
 
 	os := New()
 
@@ -60,7 +63,7 @@ func TestAllocAndShare_Race(t *testing.T) {
 	total := atomic.Uint64{}
 
 	complete := sync.WaitGroup{}
-	for i := 0; i < 100; i++ {
+	for i := 0; i < goroutines; i++ {
 		complete.Add(1)
 		go func() {
 			defer complete.Done()
@@ -72,7 +75,7 @@ func TestAllocAndShare_Race(t *testing.T) {
 
 	complete.Wait()
 
-	expectedTotal := uint64(100 * ((1000 - 1) * (1000) / 2))
+	expectedTotal := uint64(goroutines * ((allocsPerGoroutine - 1) * (1000) / 2))
 
 	assert.Equal(t, total.Load(), expectedTotal)
 }
@@ -86,13 +89,13 @@ func allocateAndModifyShared(
 ) {
 	barrier.Wait()
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < allocsPerGoroutine; i++ {
 		ref, v := Alloc[MutableStruct](os)
 		v.Field = i
 		sharedChan <- ref
 	}
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < allocsPerGoroutine; i++ {
 		ref := <-sharedChan
 		v := ref.GetValue()
 		total.Add(uint64(v.Field))
@@ -106,7 +109,7 @@ func allocateAndModifyShared(
 // We test that the shared total is what we expect.
 // This test should be run with -race
 func TestAllocAndShare_Multitype_Race(t *testing.T) {
-	sharedChannel := make(chan *MultitypeAllocation, 100*1000)
+	sharedChannel := make(chan *MultitypeAllocation, goroutines*allocsPerGoroutine)
 
 	os := New()
 
@@ -114,7 +117,7 @@ func TestAllocAndShare_Multitype_Race(t *testing.T) {
 	barrier.Add(1)
 
 	complete := sync.WaitGroup{}
-	for i := 0; i < 100; i++ {
+	for i := 0; i < goroutines; i++ {
 		complete.Add(1)
 		go func() {
 			defer complete.Done()
@@ -134,14 +137,14 @@ func allocateAndModifySharedMultitype(
 ) {
 	barrier.Wait()
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < allocsPerGoroutine; i++ {
 		allocation := allocMultitype(os, i)
 		allocSlice := allocation.getSlice()
 		writeToField(allocSlice, i)
 		sharedChan <- allocation
 	}
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < allocsPerGoroutine; i++ {
 		allocation := <-sharedChan
 		allocSlice := allocation.getSlice()
 		writeToField(allocSlice, i)
