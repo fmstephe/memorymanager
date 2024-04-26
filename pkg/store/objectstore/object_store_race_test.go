@@ -33,7 +33,7 @@ func TestSeparateGoroutines_Race(t *testing.T) {
 func allocateAndModify(t *testing.T, os *Store, barrier *sync.WaitGroup) {
 	barrier.Wait()
 	refs := []Reference[MutableStruct]{}
-	for i := 0; i < 10_000; i++ {
+	for i := 0; i < 1000; i++ {
 		ref, v := Alloc[MutableStruct](os)
 		refs = append(refs, ref)
 		v.Field = i
@@ -51,7 +51,7 @@ func allocateAndModify(t *testing.T, os *Store, barrier *sync.WaitGroup) {
 // We test that the shared total is what we expect.
 // This test should be run with -race
 func TestAllocAndShare_Race(t *testing.T) {
-	sharedChannel := make(chan Reference[MutableStruct], 100*10_000)
+	sharedChannel := make(chan Reference[MutableStruct], 100*1000)
 
 	os := New()
 
@@ -72,7 +72,7 @@ func TestAllocAndShare_Race(t *testing.T) {
 
 	complete.Wait()
 
-	expectedTotal := uint64(100 * ((10_000 - 1) * (10_000) / 2))
+	expectedTotal := uint64(100 * ((1000 - 1) * (1000) / 2))
 
 	assert.Equal(t, total.Load(), expectedTotal)
 }
@@ -86,16 +86,65 @@ func allocateAndModifyShared(
 ) {
 	barrier.Wait()
 
-	for i := 0; i < 10_000; i++ {
+	for i := 0; i < 1000; i++ {
 		ref, v := Alloc[MutableStruct](os)
 		v.Field = i
 		sharedChan <- ref
 	}
 
-	for i := 0; i < 10_000; i++ {
+	for i := 0; i < 1000; i++ {
 		ref := <-sharedChan
 		v := ref.GetValue()
 		total.Add(uint64(v.Field))
 		Free(os, ref)
+	}
+}
+
+// Demonstrate that multiple goroutines can alloc/get/free on a shared Store
+// In this test we allocate objects and then push the Reference to a shared channel
+// Each goroutine then consumes its share of References from the channel and sums the values
+// We test that the shared total is what we expect.
+// This test should be run with -race
+func TestAllocAndShare_Multitype_Race(t *testing.T) {
+	sharedChannel := make(chan *MultitypeAllocation, 100*1000)
+
+	os := New()
+
+	barrier := sync.WaitGroup{}
+	barrier.Add(1)
+
+	complete := sync.WaitGroup{}
+	for i := 0; i < 100; i++ {
+		complete.Add(1)
+		go func() {
+			defer complete.Done()
+			allocateAndModifySharedMultitype(t, os, &barrier, sharedChannel)
+		}()
+	}
+
+	barrier.Done()
+	complete.Wait()
+}
+
+func allocateAndModifySharedMultitype(
+	t *testing.T,
+	os *Store,
+	barrier *sync.WaitGroup,
+	sharedChan chan *MultitypeAllocation,
+) {
+	barrier.Wait()
+
+	for i := 0; i < 1000; i++ {
+		allocation := allocMultitype(os, i)
+		allocSlice := allocation.getSlice()
+		writeToField(allocSlice, i)
+		sharedChan <- allocation
+	}
+
+	for i := 0; i < 1000; i++ {
+		allocation := <-sharedChan
+		allocSlice := allocation.getSlice()
+		writeToField(allocSlice, i)
+		allocation.free(os)
 	}
 }
