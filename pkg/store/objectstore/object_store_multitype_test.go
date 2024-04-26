@@ -109,56 +109,155 @@ func (a *MultitypeAllocation) getSlice() []byte {
 	}
 }
 
-func allocMultitype(os *Store, idx int) *MultitypeAllocation {
-	switch idx % numberOfTypes {
+func (a *MultitypeAllocation) free(s *Store) {
+	ref := a.ref
+	switch t := ref.(type) {
+	case Reference[SizedArray0]:
+		Free[SizedArray0](s, t)
+	case Reference[SizedArray1]:
+		Free[SizedArray1](s, t)
+	case Reference[SizedArray2]:
+		Free[SizedArray2](s, t)
+	case Reference[SizedArray5Small]:
+		Free[SizedArray5Small](s, t)
+	case Reference[SizedArray5]:
+		Free[SizedArray5](s, t)
+	case Reference[SizedArray5Large]:
+		Free[SizedArray5Large](s, t)
+	case Reference[SizedArray9Small]:
+		Free[SizedArray9Small](s, t)
+	case Reference[SizedArray9]:
+		Free[SizedArray9](s, t)
+	case Reference[SizedArray9Large]:
+		Free[SizedArray9Large](s, t)
+	case Reference[SizedArray14Small]:
+		Free[SizedArray14Small](s, t)
+	case Reference[SizedArray14]:
+		Free[SizedArray14](s, t)
+	case Reference[SizedArray14Large]:
+		Free[SizedArray14Large](s, t)
+	default:
+		panic(fmt.Errorf("Bad type %+v", t))
+	}
+}
+
+func allocMultitype(os *Store, selector int) *MultitypeAllocation {
+	switch selector % numberOfTypes {
 	case 0:
 		r, v := Alloc[SizedArray0](os)
-		writeToField(v.Field[:], idx)
+		writeToField(v.Field[:], selector)
 		return &MultitypeAllocation{r}
 	case 1:
 		r, v := Alloc[SizedArray1](os)
-		writeToField(v.Field[:], idx)
+		writeToField(v.Field[:], selector)
 		return &MultitypeAllocation{r}
 	case 2:
 		r, v := Alloc[SizedArray2](os)
-		writeToField(v.Field[:], idx)
+		writeToField(v.Field[:], selector)
 		return &MultitypeAllocation{r}
 	case 3:
 		r, v := Alloc[SizedArray5Small](os)
-		writeToField(v.Field[:], idx)
+		writeToField(v.Field[:], selector)
 		return &MultitypeAllocation{r}
 	case 4:
 		r, v := Alloc[SizedArray5](os)
-		writeToField(v.Field[:], idx)
+		writeToField(v.Field[:], selector)
 		return &MultitypeAllocation{r}
 	case 5:
 		r, v := Alloc[SizedArray5Large](os)
-		writeToField(v.Field[:], idx)
+		writeToField(v.Field[:], selector)
 		return &MultitypeAllocation{r}
 	case 6:
 		r, v := Alloc[SizedArray9Small](os)
-		writeToField(v.Field[:], idx)
+		writeToField(v.Field[:], selector)
 		return &MultitypeAllocation{r}
 	case 7:
 		r, v := Alloc[SizedArray9](os)
-		writeToField(v.Field[:], idx)
+		writeToField(v.Field[:], selector)
 		return &MultitypeAllocation{r}
 	case 8:
 		r, v := Alloc[SizedArray9Large](os)
-		writeToField(v.Field[:], idx)
+		writeToField(v.Field[:], selector)
 		return &MultitypeAllocation{r}
 	case 9:
 		r, v := Alloc[SizedArray14Small](os)
-		writeToField(v.Field[:], idx)
+		writeToField(v.Field[:], selector)
 		return &MultitypeAllocation{r}
 	case 10:
 		r, v := Alloc[SizedArray14](os)
-		writeToField(v.Field[:], idx)
+		writeToField(v.Field[:], selector)
 		return &MultitypeAllocation{r}
 	case 11:
 		r, v := Alloc[SizedArray14Large](os)
-		writeToField(v.Field[:], idx)
+		writeToField(v.Field[:], selector)
 		return &MultitypeAllocation{r}
+	default:
+		panic("unreachable")
+	}
+}
+
+func multitypeAllocFunc(selector int) func(*Store) *MultitypeAllocation {
+	switch selector % numberOfTypes {
+	case 0:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := Alloc[SizedArray0](os)
+			return &MultitypeAllocation{r}
+		}
+	case 1:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := Alloc[SizedArray1](os)
+			return &MultitypeAllocation{r}
+		}
+	case 2:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := Alloc[SizedArray2](os)
+			return &MultitypeAllocation{r}
+		}
+	case 3:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := Alloc[SizedArray5Small](os)
+			return &MultitypeAllocation{r}
+		}
+	case 4:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := Alloc[SizedArray5](os)
+			return &MultitypeAllocation{r}
+		}
+	case 5:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := Alloc[SizedArray5Large](os)
+			return &MultitypeAllocation{r}
+		}
+	case 6:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := Alloc[SizedArray9Small](os)
+			return &MultitypeAllocation{r}
+		}
+	case 7:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := Alloc[SizedArray9](os)
+			return &MultitypeAllocation{r}
+		}
+	case 8:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := Alloc[SizedArray9Large](os)
+			return &MultitypeAllocation{r}
+		}
+	case 9:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := Alloc[SizedArray14Small](os)
+			return &MultitypeAllocation{r}
+		}
+	case 10:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := Alloc[SizedArray14](os)
+			return &MultitypeAllocation{r}
+		}
+	case 11:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := Alloc[SizedArray14Large](os)
+			return &MultitypeAllocation{r}
+		}
 	default:
 		panic("unreachable")
 	}

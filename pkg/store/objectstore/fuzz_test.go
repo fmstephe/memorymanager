@@ -40,42 +40,43 @@ func NewTestRun(bytes []byte) *fuzzutil.TestRun {
 }
 
 type Objects struct {
-	store      *Store
-	references []Reference[[16]byte]
-	expected   []*[16]byte
+	store       *Store
+	allocations []*MultitypeAllocation
+	expected    [][]byte
 	// Indicates whether a reference/object is still live (has not been freed)
 	live []bool
 }
 
 func NewObjects() *Objects {
 	return &Objects{
-		store:      New(),
-		references: make([]Reference[[16]byte], 0),
-		expected:   make([]*[16]byte, 0),
-		live:       make([]bool, 0),
+		store:       New(),
+		allocations: make([]*MultitypeAllocation, 0),
+		expected:    make([][]byte, 0),
+		live:        make([]bool, 0),
 	}
 }
 
-func (o *Objects) Alloc(value [16]byte) {
-	//fmt.Printf("Allocating %v at index %d\n", value, len(o.references))
+func (o *Objects) Alloc(allocFunc func(*Store) *MultitypeAllocation, value [16]byte) {
+	//fmt.Printf("Allocating %v at index %d\n", value, len(o.allocations))
 
-	ref, obj := Alloc[[16]byte](o.store)
-	expected := [16]byte{}
-	copy(obj[:], value[:])
-	copy(expected[:], value[:])
-	o.references = append(o.references, ref)
-	o.expected = append(o.expected, &expected)
+	allocation := allocFunc(o.store)
+	allocSlice := allocation.getSlice()
+	expected := make([]byte, len(allocSlice))
+	copy(allocSlice, value[:])
+	copy(expected, value[:])
+	o.allocations = append(o.allocations, allocation)
+	o.expected = append(o.expected, expected)
 	o.live = append(o.live, true)
 }
 
 func (o *Objects) Mutate(index uint32, value [16]byte) {
-	if len(o.references) == 0 {
+	if len(o.allocations) == 0 {
 		// No objects to mutate
 		return
 	}
 
 	// Normalise index
-	index = index % uint32(len(o.references))
+	index = index % uint32(len(o.allocations))
 
 	//fmt.Printf("Mutating at index %d with new value %v\n", index, value)
 
@@ -84,9 +85,9 @@ func (o *Objects) Mutate(index uint32, value [16]byte) {
 		return
 	}
 	// Update the allocated data
-	ref := o.references[index]
-	obj := ref.GetValue()
-	copy(obj[:], value[:])
+	allocation := o.allocations[index]
+	allocSlice := allocation.getSlice()
+	copy(allocSlice, value[:])
 
 	// Update the expected
 	copy(o.expected[index][:], value[:])
@@ -94,13 +95,13 @@ func (o *Objects) Mutate(index uint32, value [16]byte) {
 }
 
 func (o *Objects) Free(index uint32) {
-	if len(o.references) == 0 {
+	if len(o.allocations) == 0 {
 		// No objects to mutate
 		return
 	}
 
-	// Normalise the index so it points into our slice of references
-	index = index % uint32(len(o.references))
+	// Normalise the index so it points into our slice of allocations
+	index = index % uint32(len(o.allocations))
 
 	//fmt.Printf("Freeing at index %d\n", index)
 
@@ -115,24 +116,24 @@ func (o *Objects) Free(index uint32) {
 	}
 
 	// Free the object at index
-	Free(o.store, o.references[index])
+	o.allocations[index].free(o.store)
 	o.live[index] = false
 }
 
 func (o *Objects) CheckAll() {
-	for idx := range o.references {
+	for idx := range o.allocations {
 		o.checkObject(idx)
 	}
 }
 
 func (o *Objects) checkObject(index int) {
-	if len(o.references) == 0 {
+	if len(o.allocations) == 0 {
 		// No objects to mutate
 		return
 	}
 
-	// Normalise the index so it points into our slice of references
-	index = index % len(o.references)
+	// Normalise the index so it points into our slice of allocations
+	index = index % len(o.allocations)
 
 	if !o.live[index] {
 		// Object has already been freed
@@ -144,31 +145,33 @@ func (o *Objects) checkObject(index int) {
 		return
 	}
 
-	ref := o.references[index]
-	value := ref.GetValue()
+	allocation := o.allocations[index]
+	allocSlice := allocation.getSlice()
 	expected := o.expected[index]
 
-	if !reflect.DeepEqual(value, expected) {
-		panic(fmt.Sprintf("Unequal values found \n\t%v \n\t%v", value, expected))
+	if !reflect.DeepEqual(allocSlice, expected) {
+		panic(fmt.Sprintf("Unequal values found \n\t%v \n\t%v", allocSlice, expected))
 	}
 }
 
 // Allocate an object
 type AllocStep struct {
-	objects *Objects
-	value   [16]byte
+	objects   *Objects
+	allocFunc func(*Store) *MultitypeAllocation
+	value     [16]byte
 }
 
 func NewAllocStep(objects *Objects, byteConsumer *fuzzutil.ByteConsumer) *AllocStep {
 	step := &AllocStep{
-		objects: objects,
+		objects:   objects,
+		allocFunc: multitypeAllocFunc(int(byteConsumer.Uint32())),
 	}
 	copy(step.value[:], byteConsumer.Bytes(len(step.value)))
 	return step
 }
 
 func (s *AllocStep) DoStep() {
-	s.objects.Alloc(s.value)
+	s.objects.Alloc(s.allocFunc, s.value)
 	s.objects.CheckAll()
 }
 
