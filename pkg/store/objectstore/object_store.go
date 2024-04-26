@@ -108,7 +108,7 @@
 // allocating and retrieving objects managed by a Store has the same guarantees
 // and limitations that conventionally allocated Go objects have.
 //
-// Concurrency Guarantees
+// # Concurrency Guarantees
 //
 // 1: Independent Alloc/Free Safety
 //
@@ -154,13 +154,10 @@
 // If we call Free() on a Reference while another goroutine is calling
 // Reference.GetValue() this is a data race. This will have unpredictable
 // behaviour, and is never safe.
-//
-
 package objectstore
 
 import (
 	"fmt"
-	"math"
 	"math/bits"
 	"reflect"
 
@@ -178,24 +175,22 @@ func New() *Store {
 }
 
 func initSizeStore() []*pointerstore.Store {
-	slabs := make([]*pointerstore.Store, 34)
+	// We allow allocations up to 48 bits in size
+	//
+	// The upper limit is chosen because (at time of writing) X86 systems
+	// only use 48 bits in 64 bit addresses so this size limit feels like
+	// an inclusive and generous upper limit
+	slabs := make([]*pointerstore.Store, 49)
 
 	allocSize := uint64(1)
 	for i := range slabs {
-		// Special case for 0 size slab allocations
 		if i == 0 {
+			// Special case for 0 size slab allocations
 			slabs[0] = pointerstore.New(pointerstore.NewAllocationConfigBySize(0, 1<<13))
-			continue
+		} else {
+			slabs[i] = pointerstore.New(pointerstore.NewAllocationConfigBySize(allocSize, 1<<13))
+			allocSize = allocSize << 1
 		}
-		// Special case for allocations greater than 2^31 In principal
-		// we would want this slab to be sized 2^32, but with 32 bits
-		// that's 0, so we get as close as we can.
-		if i == 33 {
-			slabs[i] = pointerstore.New(pointerstore.NewAllocationConfigBySize(math.MaxUint32, 1<<13))
-			continue
-		}
-		slabs[i] = pointerstore.New(pointerstore.NewAllocationConfigBySize(allocSize, 1<<13))
-		allocSize = allocSize << 1
 	}
 
 	return slabs
@@ -207,26 +202,26 @@ func Alloc[T any](s *Store) (Reference[T], *T) {
 		panic(fmt.Errorf("cannot allocate generic type containing pointers %w", err))
 	}
 
-	t := reflect.TypeFor[T]()
-	size := uint64(t.Size())
-	pRef := s.alloc(size)
+	idx := indexForType[T]()
+	if idx >= len(s.sizedStores) {
+		panic(fmt.Errorf("Allocation too large at %d", sizeForType[T]()))
+	}
+
+	pRef := s.alloc(idx)
 	oRef := newReference[T](pRef)
 	return oRef, oRef.GetValue()
 }
 
-func (s *Store) alloc(size uint64) pointerstore.Reference {
-	idx := indexForSize(size)
+func (s *Store) alloc(idx int) pointerstore.Reference {
 	return s.sizedStores[idx].Alloc()
 }
 
 func Free[T any](s *Store, r Reference[T]) {
-	t := reflect.TypeFor[T]()
-	size := uint64(t.Size())
-	s.free(size, r.ref)
+	idx := indexForType[T]()
+	s.free(idx, r.ref)
 }
 
-func (s *Store) free(size uint64, r pointerstore.Reference) {
-	idx := indexForSize(size)
+func (s *Store) free(idx int, r pointerstore.Reference) {
 	s.sizedStores[idx].Free(r)
 }
 
@@ -246,14 +241,17 @@ func (s *Store) GetAllocationConfigs() []pointerstore.AllocationConfig {
 	return sizedAllocConfigs
 }
 
-func indexForSize(size uint64) int {
-	if size > math.MaxUint32 {
-		panic(fmt.Errorf("too big TODO think this through %d", size))
-	}
+func indexForType[T any]() int {
+	size := sizeForType[T]()
 
 	if size == 0 {
 		return 0
 	}
-	idx := bits.Len64(size-1) + 1
-	return idx
+
+	return bits.Len64(uint64(size)-1) + 1
+}
+
+func sizeForType[T any]() uint64 {
+	t := reflect.TypeFor[T]()
+	return uint64(t.Size())
 }

@@ -1,7 +1,6 @@
 package objectstore
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -274,8 +273,13 @@ func Test_New_CheckGenericTypeForPointers(t *testing.T) {
 	assert.NotPanics(t, func() { Alloc[int](os) })
 }
 
-func indexForType[T any]() int {
-	t := reflect.TypeFor[T]()
-	size := uint64(t.Size())
-	return indexForSize(size)
+func Test_CannotAllocateVeryBigStruct(t *testing.T) {
+	// In principle this code should panic - but Go won't even compile a
+	// type this large.  At the time when this test was written the Store's
+	// allocation limit is larger than what can be allocated by Go natively
+	// on the development system.
+	/*
+		os := New()
+		assert.Panics(t, func() { Alloc[[2 << 49]byte](os) })
+	*/
 }
