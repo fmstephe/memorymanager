@@ -138,9 +138,7 @@ func allocateAndModifySharedMultitype(
 	barrier.Wait()
 
 	for i := 0; i < allocsPerGoroutine; i++ {
-		allocation := allocMultitype(os, i)
-		allocSlice := allocation.getSlice()
-		writeToField(allocSlice, i)
+		allocation := allocAndWrite(os, i)
 		sharedChan <- allocation
 	}
 

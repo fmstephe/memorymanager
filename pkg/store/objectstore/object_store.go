@@ -164,6 +164,8 @@ import (
 	"github.com/fmstephe/location-system/pkg/store/pointerstore"
 )
 
+const slabSize = 1 << 13
+
 type Store struct {
 	sizedStores []*pointerstore.Store
 }
@@ -186,9 +188,9 @@ func initSizeStore() []*pointerstore.Store {
 	for i := range slabs {
 		if i == 0 {
 			// Special case for 0 size slab allocations
-			slabs[0] = pointerstore.New(pointerstore.NewAllocationConfigBySize(0, 1<<13))
+			slabs[0] = pointerstore.New(pointerstore.NewAllocationConfigBySize(0, slabSize))
 		} else {
-			slabs[i] = pointerstore.New(pointerstore.NewAllocationConfigBySize(allocSize, 1<<13))
+			slabs[i] = pointerstore.New(pointerstore.NewAllocationConfigBySize(allocSize, slabSize))
 			allocSize = allocSize << 1
 		}
 	}

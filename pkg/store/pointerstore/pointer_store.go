@@ -78,7 +78,7 @@ func (s *Store) GetStats() Stats {
 	slabs := len(s.objects)
 	s.objectsLock.RUnlock()
 
-	stats := Stats{
+	return Stats{
 		Allocs:    int(allocs),
 		Frees:     int(frees),
 		RawAllocs: int(allocs - reused),
@@ -86,8 +86,6 @@ func (s *Store) GetStats() Stats {
 		Reused:    int(reused),
 		Slabs:     slabs,
 	}
-	//fmt.Printf("\n\n%v - %v\n\n", s, stats)
-	return stats
 }
 
 func (s *Store) GetAllocationConfig() AllocationConfig {

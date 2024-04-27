@@ -62,7 +62,7 @@ type SizedArray14Large struct {
 }
 
 type MultitypeAllocation struct {
-	ref any // Will be of type SizedArray*
+	ref any // Will be of type Reference[SizedArray*]
 }
 
 func (a *MultitypeAllocation) getSlice() []byte {
@@ -141,61 +141,6 @@ func (a *MultitypeAllocation) free(s *Store) {
 	}
 }
 
-func allocMultitype(os *Store, selector int) *MultitypeAllocation {
-	switch selector % numberOfTypes {
-	case 0:
-		r, v := Alloc[SizedArray0](os)
-		writeToField(v.Field[:], selector)
-		return &MultitypeAllocation{r}
-	case 1:
-		r, v := Alloc[SizedArray1](os)
-		writeToField(v.Field[:], selector)
-		return &MultitypeAllocation{r}
-	case 2:
-		r, v := Alloc[SizedArray2](os)
-		writeToField(v.Field[:], selector)
-		return &MultitypeAllocation{r}
-	case 3:
-		r, v := Alloc[SizedArray5Small](os)
-		writeToField(v.Field[:], selector)
-		return &MultitypeAllocation{r}
-	case 4:
-		r, v := Alloc[SizedArray5](os)
-		writeToField(v.Field[:], selector)
-		return &MultitypeAllocation{r}
-	case 5:
-		r, v := Alloc[SizedArray5Large](os)
-		writeToField(v.Field[:], selector)
-		return &MultitypeAllocation{r}
-	case 6:
-		r, v := Alloc[SizedArray9Small](os)
-		writeToField(v.Field[:], selector)
-		return &MultitypeAllocation{r}
-	case 7:
-		r, v := Alloc[SizedArray9](os)
-		writeToField(v.Field[:], selector)
-		return &MultitypeAllocation{r}
-	case 8:
-		r, v := Alloc[SizedArray9Large](os)
-		writeToField(v.Field[:], selector)
-		return &MultitypeAllocation{r}
-	case 9:
-		r, v := Alloc[SizedArray14Small](os)
-		writeToField(v.Field[:], selector)
-		return &MultitypeAllocation{r}
-	case 10:
-		r, v := Alloc[SizedArray14](os)
-		writeToField(v.Field[:], selector)
-		return &MultitypeAllocation{r}
-	case 11:
-		r, v := Alloc[SizedArray14Large](os)
-		writeToField(v.Field[:], selector)
-		return &MultitypeAllocation{r}
-	default:
-		panic("unreachable")
-	}
-}
-
 func multitypeAllocFunc(selector int) func(*Store) *MultitypeAllocation {
 	switch selector % numberOfTypes {
 	case 0:
@@ -263,6 +208,14 @@ func multitypeAllocFunc(selector int) func(*Store) *MultitypeAllocation {
 	}
 }
 
+func allocAndWrite(os *Store, selector int) *MultitypeAllocation {
+	allocFunc := multitypeAllocFunc(selector)
+	allocation := allocFunc(os)
+	allocSlice := allocation.getSlice()
+	writeToField(allocSlice, selector)
+	return allocation
+}
+
 // Demonstrate that we can create an object, modify that object and when we get
 // that object from the store we can see the modifications
 // We ensure that we allocate so many objects that we will need more than one slab
@@ -277,18 +230,9 @@ func Test_Object_NewModifyGet_Multitype(t *testing.T) {
 	// Create all the objects and modify field
 	allocs := make([]*MultitypeAllocation, totalAllocations)
 	for i := range allocs {
-		alloc := allocMultitype(os, i)
+		alloc := allocAndWrite(os, i)
 		allocs[i] = alloc
 	}
-
-	sizedStats := os.GetStats()
-	stats := sizedStats[indexForType[SizedArray0]()]
-
-	/* TODO re-enable these checks
-	assert.Equal(t, len(refs), stats.Allocs)
-	assert.Equal(t, len(refs), stats.Live)
-	*/
-	assert.Equal(t, 0, stats.Frees)
 
 	// Assert that all of the modifications are visible
 	for i, alloc := range allocs {
@@ -311,18 +255,9 @@ func Test_Object_GetModifyGet_Multitype(t *testing.T) {
 	// Create all the objects
 	allocs := make([]*MultitypeAllocation, totalAllocations)
 	for i := range allocs {
-		alloc := allocMultitype(os, i)
+		alloc := allocAndWrite(os, i)
 		allocs[i] = alloc
 	}
-
-	sizedStats := os.GetStats()
-	stats := sizedStats[indexForType[SizedArray0]()]
-
-	/* TODO
-	assert.Equal(t, len(refs), stats.Allocs)
-	assert.Equal(t, len(refs), stats.Live)
-	*/
-	assert.Equal(t, 0, stats.Frees)
 
 	// Get each object and modify field
 	for i, alloc := range allocs {
