@@ -230,6 +230,22 @@ func allocAndWrite(os *Store, selector int) *MultitypeAllocation {
 	return allocation
 }
 
+func TestIndexForType(t *testing.T) {
+	assert.Equal(t, 0, indexForType[SizedArrayZero](), "SizedArray0 %d", sizeForType[SizedArray0]())
+	assert.Equal(t, 1, indexForType[SizedArray0](), "SizedArray0 %d", sizeForType[SizedArray0]())
+	assert.Equal(t, 2, indexForType[SizedArray1](), "SizedArray1 %d", sizeForType[SizedArray1]())
+	assert.Equal(t, 3, indexForType[SizedArray2](), "SizedArray2 %d", sizeForType[SizedArray2]())
+	assert.Equal(t, 6, indexForType[SizedArray5Small](), "SizedArray5Small %d", sizeForType[SizedArray5Small]())
+	assert.Equal(t, 6, indexForType[SizedArray5](), "SizedArray5 %d", sizeForType[SizedArray5]())
+	assert.Equal(t, 7, indexForType[SizedArray5Large](), "SizedArray5Large %d", sizeForType[SizedArray5Large]())
+	assert.Equal(t, 10, indexForType[SizedArray9Small](), "SizedArray9Small %d", sizeForType[SizedArray9Small]())
+	assert.Equal(t, 10, indexForType[SizedArray9](), "SizedArray9 %d", sizeForType[SizedArray9]())
+	assert.Equal(t, 11, indexForType[SizedArray9Large](), "SizedArray9Large %d", sizeForType[SizedArray9Large]())
+	assert.Equal(t, 15, indexForType[SizedArray14Small](), "SizedArray14Small %d", sizeForType[SizedArray14Small]())
+	assert.Equal(t, 15, indexForType[SizedArray14](), "SizedArray14 %d", sizeForType[SizedArray14]())
+	assert.Equal(t, 16, indexForType[SizedArray14Large](), "SizedArray14Large %d", sizeForType[SizedArray14Large]())
+}
+
 // Demonstrate that we can create an object, modify that object and when we get
 // that object from the store we can see the modifications
 // We ensure that we allocate so many objects that we will need more than one slab
