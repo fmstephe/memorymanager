@@ -9,9 +9,13 @@ import (
 
 // If we add/remove types for testing, update this number (or find a better way
 // to manage this)
-const numberOfTypes = 12
+const numberOfTypes = 13
 
 // A range of differently sized structs.
+
+type SizedArrayZero struct {
+	Field [0]byte
+}
 
 type SizedArray0 struct {
 	Field [1]byte
@@ -68,6 +72,9 @@ type MultitypeAllocation struct {
 func (a *MultitypeAllocation) getSlice() []byte {
 	ref := a.ref
 	switch t := ref.(type) {
+	case Reference[SizedArrayZero]:
+		v := t.GetValue()
+		return v.Field[:]
 	case Reference[SizedArray0]:
 		v := t.GetValue()
 		return v.Field[:]
@@ -112,6 +119,8 @@ func (a *MultitypeAllocation) getSlice() []byte {
 func (a *MultitypeAllocation) free(s *Store) {
 	ref := a.ref
 	switch t := ref.(type) {
+	case Reference[SizedArrayZero]:
+		Free[SizedArrayZero](s, t)
 	case Reference[SizedArray0]:
 		Free[SizedArray0](s, t)
 	case Reference[SizedArray1]:
@@ -145,60 +154,65 @@ func multitypeAllocFunc(selector int) func(*Store) *MultitypeAllocation {
 	switch selector % numberOfTypes {
 	case 0:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray0](os)
+			r, _ := Alloc[SizedArrayZero](os)
 			return &MultitypeAllocation{r}
 		}
 	case 1:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray1](os)
+			r, _ := Alloc[SizedArray0](os)
 			return &MultitypeAllocation{r}
 		}
 	case 2:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray2](os)
+			r, _ := Alloc[SizedArray1](os)
 			return &MultitypeAllocation{r}
 		}
 	case 3:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray5Small](os)
+			r, _ := Alloc[SizedArray2](os)
 			return &MultitypeAllocation{r}
 		}
 	case 4:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray5](os)
+			r, _ := Alloc[SizedArray5Small](os)
 			return &MultitypeAllocation{r}
 		}
 	case 5:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray5Large](os)
+			r, _ := Alloc[SizedArray5](os)
 			return &MultitypeAllocation{r}
 		}
 	case 6:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray9Small](os)
+			r, _ := Alloc[SizedArray5Large](os)
 			return &MultitypeAllocation{r}
 		}
 	case 7:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray9](os)
+			r, _ := Alloc[SizedArray9Small](os)
 			return &MultitypeAllocation{r}
 		}
 	case 8:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray9Large](os)
+			r, _ := Alloc[SizedArray9](os)
 			return &MultitypeAllocation{r}
 		}
 	case 9:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray14Small](os)
+			r, _ := Alloc[SizedArray9Large](os)
 			return &MultitypeAllocation{r}
 		}
 	case 10:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray14](os)
+			r, _ := Alloc[SizedArray14Small](os)
 			return &MultitypeAllocation{r}
 		}
 	case 11:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := Alloc[SizedArray14](os)
+			return &MultitypeAllocation{r}
+		}
+	case 12:
 		return func(os *Store) *MultitypeAllocation {
 			r, _ := Alloc[SizedArray14Large](os)
 			return &MultitypeAllocation{r}
