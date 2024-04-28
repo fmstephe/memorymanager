@@ -56,20 +56,19 @@ func NewObjects() *Objects {
 	}
 }
 
-func (o *Objects) Alloc(allocFunc func(*Store) *MultitypeAllocation, value [16]byte) {
+func (o *Objects) Alloc(allocFunc func(*Store) *MultitypeAllocation, value byte) {
 	//fmt.Printf("Allocating %v at index %d\n", value, len(o.allocations))
 
 	allocation := allocFunc(o.store)
 	allocSlice := allocation.getSlice()
-	expected := make([]byte, len(allocSlice))
-	copy(allocSlice, value[:])
-	copy(expected, value[:])
+	writeToField(allocSlice, int(value))
+	expected := generateField(len(allocSlice), int(value))
 	o.allocations = append(o.allocations, allocation)
 	o.expected = append(o.expected, expected)
 	o.live = append(o.live, true)
 }
 
-func (o *Objects) Mutate(index uint32, value [16]byte) {
+func (o *Objects) Mutate(index uint32, value byte) {
 	if len(o.allocations) == 0 {
 		// No objects to mutate
 		return
@@ -87,11 +86,10 @@ func (o *Objects) Mutate(index uint32, value [16]byte) {
 	// Update the allocated data
 	allocation := o.allocations[index]
 	allocSlice := allocation.getSlice()
-	copy(allocSlice, value[:])
+	writeToField(allocSlice, int(value))
 
 	// Update the expected
-	copy(o.expected[index][:], value[:])
-
+	writeToField(o.expected[index][:], int(value))
 }
 
 func (o *Objects) Free(index uint32) {
@@ -158,15 +156,15 @@ func (o *Objects) checkObject(index int) {
 type AllocStep struct {
 	objects   *Objects
 	allocFunc func(*Store) *MultitypeAllocation
-	value     [16]byte
+	value     byte
 }
 
 func NewAllocStep(objects *Objects, byteConsumer *fuzzutil.ByteConsumer) *AllocStep {
 	step := &AllocStep{
 		objects:   objects,
 		allocFunc: multitypeAllocFunc(int(byteConsumer.Uint32())),
+		value:     byteConsumer.Byte(),
 	}
-	copy(step.value[:], byteConsumer.Bytes(len(step.value)))
 	return step
 }
 
@@ -184,8 +182,8 @@ type FreeStep struct {
 func NewFreeStep(objects *Objects, byteConsumer *fuzzutil.ByteConsumer) *FreeStep {
 	step := &FreeStep{
 		objects: objects,
+		index:   byteConsumer.Uint32(),
 	}
-	step.index = byteConsumer.Uint32()
 	return step
 }
 
@@ -197,15 +195,15 @@ func (s *FreeStep) DoStep() {
 type MutateStep struct {
 	objects  *Objects
 	index    uint32
-	newValue [16]byte
+	newValue byte
 }
 
 func NewMutateStep(objects *Objects, byteConsumer *fuzzutil.ByteConsumer) *MutateStep {
 	step := &MutateStep{
-		objects: objects,
+		objects:  objects,
+		index:    byteConsumer.Uint32(),
+		newValue: byteConsumer.Byte(),
 	}
-	step.index = byteConsumer.Uint32()
-	copy(step.newValue[:], byteConsumer.Bytes(len(step.newValue)))
 	return step
 }
 
