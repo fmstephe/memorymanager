@@ -264,7 +264,7 @@ func TestFreeThenAllocTwice(t *testing.T) {
 	assert.Equal(t, 3, o3.Field)
 }
 
-func Test_New_CheckGenericTypeForPointers(t *testing.T) {
+func TestCheckGenericTypeForPointersInAlloc(t *testing.T) {
 	os := New()
 	// If generic type contains pointers, Alloc will panic
 	assert.Panics(t, func() { Alloc[*int](os) })
@@ -273,7 +273,7 @@ func Test_New_CheckGenericTypeForPointers(t *testing.T) {
 	assert.NotPanics(t, func() { Alloc[int](os) })
 }
 
-func Test_CannotAllocateVeryBigStruct(t *testing.T) {
+func TestCannotAllocateVeryBigStruct(t *testing.T) {
 	// In principle this code should panic - but Go won't even compile a
 	// type this large.  At the time when this test was written the Store's
 	// allocation limit is larger than what can be allocated by Go natively
@@ -282,4 +282,41 @@ func Test_CannotAllocateVeryBigStruct(t *testing.T) {
 		os := New()
 		assert.Panics(t, func() { Alloc[[2 << 49]byte](os) })
 	*/
+}
+
+// This is a very odd looking test. It is a response to an intermittent failure
+// case with zero sized types.  The problem occurs because when we get the data
+// portion of the Reference we add the size of the meta-data to the pointer and
+// treat that as pointing to the data-portion of the allocation. In the case of
+// zero sized types this data-portion does not exist. In most cases the
+// data-portion will now point to the beginning of the next allocation's
+// meta-data, but for the last allocation in a slab it will point just past the
+// allocated memory region. If we get lucky the address just after the
+// allocated region is another allocated region, and everything works. If we
+// are unlucky the address just after the allocated region is invalid memory
+// and we segfault.
+//
+// Because we cannot rely on being lucky, we now allocate a single byte to
+// ensure we can safely point to valid memory even though the zero sized type
+// won't use it to read/write.
+//
+// This test should alert us if this problem ever reappears.
+//
+// NB: In the future meta-data will likely be moved to a separate allocation
+// space and some details described above will become out of date. The test
+// will still be useful though. Zero sized types are a likely source of
+// edge-case bugs for all eternity.
+func TestZeroSizedType_FullSlab(t *testing.T) {
+	os := New()
+	allocConfs := os.GetAllocationConfigs()
+	allocConf := allocConfs[indexForType[SizedArrayZero]()]
+
+	lenTotal := 0
+
+	for range allocConf.ActualObjectsPerSlab * 24 {
+		_, val := Alloc[SizedArrayZero](os)
+		lenTotal += len(val.Field[:])
+	}
+
+	assert.Equal(t, 0, lenTotal)
 }

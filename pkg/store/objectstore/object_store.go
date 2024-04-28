@@ -182,17 +182,10 @@ func initSizeStore() []*pointerstore.Store {
 	// The upper limit is chosen because (at time of writing) X86 systems
 	// only use 48 bits in 64 bit addresses so this size limit feels like
 	// an inclusive and generous upper limit
-	slabs := make([]*pointerstore.Store, 49)
+	slabs := make([]*pointerstore.Store, 48)
 
-	allocSize := uint64(1)
 	for i := range slabs {
-		if i == 0 {
-			// Special case for 0 size slab allocations
-			slabs[0] = pointerstore.New(pointerstore.NewAllocationConfigBySize(0, slabSize))
-		} else {
-			slabs[i] = pointerstore.New(pointerstore.NewAllocationConfigBySize(allocSize, slabSize))
-			allocSize = allocSize << 1
-		}
+		slabs[i] = pointerstore.New(pointerstore.NewAllocationConfigBySize(1<<i, slabSize))
 	}
 
 	return slabs
@@ -250,7 +243,7 @@ func indexForType[T any]() int {
 		return 0
 	}
 
-	return bits.Len64(uint64(size)-1) + 1
+	return bits.Len64(uint64(size) - 1)
 }
 
 func sizeForType[T any]() uint64 {
