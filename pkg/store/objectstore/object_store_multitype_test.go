@@ -246,6 +246,54 @@ func TestIndexForType(t *testing.T) {
 	assert.Equal(t, 16, indexForType[SizedArray14Large](), "SizedArray14Large %d", sizeForType[SizedArray14Large]())
 }
 
+// These tests are a bit fragile, as we have to _carefully_ only allocate
+// objects of each size class only once. Because we track the number of slabs
+// allocated as well as raw/reused allocations asserting the correct metrics
+// quickly becomes difficult when we exercise the same size class multiple
+// times.
+func TestSizedStats(t *testing.T) {
+	os := New()
+
+	testSizedStats[SizedArrayZero](t, os)
+	testSizedStats[SizedArray0](t, os)
+	testSizedStats[SizedArray1](t, os)
+	testSizedStats[SizedArray2](t, os)
+	testSizedStats[SizedArray5](t, os)
+	testSizedStats[SizedArray5Large](t, os)
+	testSizedStats[SizedArray9](t, os)
+	testSizedStats[SizedArray9Large](t, os)
+	testSizedStats[SizedArray14](t, os)
+	testSizedStats[SizedArray14Large](t, os)
+}
+
+func testSizedStats[T any](t *testing.T, os *Store) {
+	idx := indexForType[T]()
+	expectedStats := os.GetStats()[idx]
+
+	r1, _ := Alloc[T](os)
+	r2, _ := Alloc[T](os)
+	Free[T](os, r1)
+	r3, _ := Alloc[T](os)
+	Free[T](os, r2)
+	Free[T](os, r3)
+
+	expectedStats.Allocs = 3
+	expectedStats.Frees = 3
+	expectedStats.RawAllocs = 2
+	expectedStats.Reused = 1
+	if sizeForType[T]() < slabSize {
+		// Only expect one slab to be allocated for smaller objects
+		expectedStats.Slabs = 1
+	} else {
+		// Larger objects will require a slab per allocation
+		expectedStats.Slabs = 2
+	}
+
+	actualStats := os.GetStats()[idx]
+
+	assert.Equal(t, expectedStats, actualStats)
+}
+
 // Demonstrate that we can create an object, modify that object and when we get
 // that object from the store we can see the modifications
 // We ensure that we allocate so many objects that we will need more than one slab
