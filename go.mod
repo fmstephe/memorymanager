@@ -1,6 +1,6 @@
 module github.com/fmstephe/location-system
 
-go 1.18
+go 1.22
 
 require (
 	github.com/fmstephe/flib v0.0.1
