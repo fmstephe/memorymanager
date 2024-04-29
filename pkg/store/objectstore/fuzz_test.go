@@ -157,6 +157,9 @@ func (o *Objects) checkObject(index int) {
 }
 
 func (o *Objects) Cleanup() {
+	if err := o.store.Destroy(); err != nil {
+		panic(err)
+	}
 }
 
 // Allocate an object

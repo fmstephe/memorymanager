@@ -15,6 +15,7 @@ const goroutines = 100
 // This test should be run with -race
 func TestSeparateGoroutines_Race(t *testing.T) {
 	os := New()
+	defer os.Destroy()
 
 	barrier := sync.WaitGroup{}
 	barrier.Add(1)
@@ -57,6 +58,7 @@ func TestAllocAndShare_Race(t *testing.T) {
 	sharedChannel := make(chan Reference[MutableStruct], goroutines*allocsPerGoroutine)
 
 	os := New()
+	defer os.Destroy()
 
 	barrier := sync.WaitGroup{}
 	barrier.Add(1)
@@ -112,6 +114,7 @@ func TestAllocAndShare_Multitype_Race(t *testing.T) {
 	sharedChannel := make(chan *MultitypeAllocation, goroutines*allocsPerGoroutine)
 
 	os := New()
+	defer os.Destroy()
 
 	barrier := sync.WaitGroup{}
 	barrier.Add(1)

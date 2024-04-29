@@ -16,6 +16,8 @@ type MutableStruct struct {
 // to store all objects.
 func Test_Object_NewModifyGet(t *testing.T) {
 	os := New()
+	defer os.Destroy()
+
 	allocConfs := os.GetAllocationConfigs()
 	allocConf := allocConfs[indexForType[MutableStruct]()]
 
@@ -47,6 +49,8 @@ func Test_Object_NewModifyGet(t *testing.T) {
 // to store all objects.
 func Test_Object_GetModifyGet(t *testing.T) {
 	os := New()
+	defer os.Destroy()
+
 	allocConfs := os.GetAllocationConfigs()
 	allocConf := allocConfs[indexForType[MutableStruct]()]
 
@@ -81,6 +85,8 @@ func Test_Object_GetModifyGet(t *testing.T) {
 // the freed object ObjectStore panics
 func Test_Object_NewFreeGet_Panic(t *testing.T) {
 	os := New()
+	defer os.Destroy()
+
 	r, _ := Alloc[MutableStruct](os)
 	Free(os, r)
 
@@ -91,6 +97,8 @@ func Test_Object_NewFreeGet_Panic(t *testing.T) {
 // the freed object ObjectStore panics
 func Test_Object_NewFreeFree_Panic(t *testing.T) {
 	os := New()
+	defer os.Destroy()
+
 	r, _ := Alloc[MutableStruct](os)
 	Free(os, r)
 
@@ -100,6 +108,8 @@ func Test_Object_NewFreeFree_Panic(t *testing.T) {
 // Demonstrate that when we double free a re-allocated object we panic
 func Test_Object_NewFreeAllocFree_Panic(t *testing.T) {
 	os := New()
+	defer os.Destroy()
+
 	r, _ := Alloc[MutableStruct](os)
 	Free(os, r)
 	// This will re-allocate the just-freed object
@@ -113,6 +123,8 @@ func Test_Object_NewFreeAllocFree_Panic(t *testing.T) {
 // eventually overflow and old values will be repeated.
 func Test_Object_NewFree256ReallocFree_NoPanic(t *testing.T) {
 	os := New()
+	defer os.Destroy()
+
 	r, _ := Alloc[MutableStruct](os)
 	oldGen := r.ref.GetGen()
 	Free(os, r)
@@ -132,6 +144,8 @@ func Test_Object_NewFree256ReallocFree_NoPanic(t *testing.T) {
 // Demonstrate that when we get a re-allocated object we panic
 func Test_Object_NewFreeAllocGet_Panic(t *testing.T) {
 	os := New()
+	defer os.Destroy()
+
 	r, _ := Alloc[MutableStruct](os)
 	Free(os, r)
 	// This will re-allocate the just-freed object
@@ -145,6 +159,8 @@ func Test_Object_NewFreeAllocGet_Panic(t *testing.T) {
 // eventually overflow and old values will be repeated.
 func Test_Object_NewFree256ReallocGet_NoPanic(t *testing.T) {
 	os := New()
+	defer os.Destroy()
+
 	r, _ := Alloc[MutableStruct](os)
 	oldGen := r.ref.GetGen()
 	Free(os, r)
@@ -165,6 +181,8 @@ func Test_Object_NewFree256ReallocGet_NoPanic(t *testing.T) {
 // then allocate that same number again, we re-use the freed objects
 func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	os := New()
+	defer os.Destroy()
+
 	allocConfs := os.GetAllocationConfigs()
 	allocConf := allocConfs[indexForType[MutableStruct]()]
 
@@ -235,6 +253,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 // independently allocated references would all point to the same slot.
 func TestFreeThenAllocTwice(t *testing.T) {
 	os := New()
+	defer os.Destroy()
 
 	// Allocate an object
 	r1, o1 := Alloc[MutableStruct](os)
@@ -266,6 +285,8 @@ func TestFreeThenAllocTwice(t *testing.T) {
 
 func TestCheckGenericTypeForPointersInAlloc(t *testing.T) {
 	os := New()
+	defer os.Destroy()
+
 	// If generic type contains pointers, Alloc will panic
 	assert.Panics(t, func() { Alloc[*int](os) })
 
@@ -308,6 +329,8 @@ func TestCannotAllocateVeryBigStruct(t *testing.T) {
 // edge-case bugs for all eternity.
 func TestZeroSizedType_FullSlab(t *testing.T) {
 	os := New()
+	defer os.Destroy()
+
 	allocConfs := os.GetAllocationConfigs()
 	allocConf := allocConfs[indexForType[SizedArrayZero]()]
 

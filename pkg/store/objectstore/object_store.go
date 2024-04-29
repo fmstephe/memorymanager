@@ -220,6 +220,16 @@ func (s *Store) free(idx int, r pointerstore.Reference) {
 	s.sizedStores[idx].Free(r)
 }
 
+func (s *Store) Destroy() error {
+	for i := range s.sizedStores {
+		if err := s.sizedStores[i].Destroy(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s *Store) GetStats() []pointerstore.Stats {
 	sizedStats := make([]pointerstore.Stats, len(s.sizedStores))
 	for i := range s.sizedStores {
