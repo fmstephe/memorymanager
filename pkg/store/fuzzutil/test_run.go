@@ -1,12 +1,14 @@
 package fuzzutil
 
 type TestRun struct {
-	steps []Step
+	steps   []Step
+	cleanup func()
 }
 
-func NewTestRun(bytes []byte, stepMaker func(*ByteConsumer) Step) *TestRun {
+func NewTestRun(bytes []byte, stepMaker func(*ByteConsumer) Step, cleanup func()) *TestRun {
 	tr := &TestRun{
-		steps: make([]Step, 0),
+		steps:   make([]Step, 0),
+		cleanup: cleanup,
 	}
 	byteConsumer := NewByteConsumer(bytes)
 
@@ -19,6 +21,7 @@ func NewTestRun(bytes []byte, stepMaker func(*ByteConsumer) Step) *TestRun {
 
 func (t *TestRun) Run() {
 	//fmt.Printf("\nTesting Run with %d steps\n", len(t.steps))
+	defer t.cleanup()
 	for _, step := range t.steps {
 		step.DoStep()
 	}

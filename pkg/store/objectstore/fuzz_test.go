@@ -36,7 +36,11 @@ func NewTestRun(bytes []byte) *fuzzutil.TestRun {
 		panic("Unreachable")
 	}
 
-	return fuzzutil.NewTestRun(bytes, stepMaker)
+	cleanup := func() {
+		objects.Cleanup()
+	}
+
+	return fuzzutil.NewTestRun(bytes, stepMaker, cleanup)
 }
 
 type Objects struct {
@@ -150,6 +154,9 @@ func (o *Objects) checkObject(index int) {
 	if !reflect.DeepEqual(allocSlice, expected) {
 		panic(fmt.Sprintf("Unequal values found \n\t%v \n\t%v", allocSlice, expected))
 	}
+}
+
+func (o *Objects) Cleanup() {
 }
 
 // Allocate an object

@@ -36,7 +36,7 @@ func NewTestRun(bytes []byte) *fuzzutil.TestRun {
 		panic("Unreachable")
 	}
 
-	return fuzzutil.NewTestRun(bytes, stepMaker)
+	return fuzzutil.NewTestRun(bytes, stepMaker, func() {})
 }
 
 type Objects struct {
