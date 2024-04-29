@@ -68,6 +68,24 @@ func (s *Store) Free(r Reference) {
 	s.frees.Add(1)
 }
 
+func (s *Store) Destroy() error {
+	s.objectsLock.Lock()
+	defer s.objectsLock.Unlock()
+
+	for _, slab := range s.objects {
+		if err := MunmapSlab(slab[0], s.allocConf); err != nil {
+			// This is pretty unrecoverable - so we just give up.
+			// Maybe we should _try_ to unmap the remaining slabs.
+			// I expect that the only useful response to this error
+			// is to exit your application, or in the current
+			// use-case stop fuzzing.
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s *Store) GetStats() Stats {
 	allocs := s.allocs.Load()
 	frees := s.frees.Load()
