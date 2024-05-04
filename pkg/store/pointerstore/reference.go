@@ -40,8 +40,12 @@ func NewReference(pAddress, pMetadata uintptr) Reference {
 	}
 
 	address := uint64(pAddress)
+	// This sets the generation to 0 by clearing the smuggled bits
 	maskedAddress := address & pointerMask
 
+	// Setting the generation 0 shouldn't actually change the address
+	// If there were any 1s in the top part of the address our generation
+	// smuggling system will break this pointer. This is an unrecoverable error.
 	if address != maskedAddress {
 		panic(fmt.Errorf("The raw pointer (%d) uses more than %d bits", address, maskShift))
 	}
