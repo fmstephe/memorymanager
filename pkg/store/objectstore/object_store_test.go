@@ -15,11 +15,10 @@ type MutableStruct struct {
 // We ensure that we allocate so many objects that we will need more than one slab
 // to store all objects.
 func Test_Object_NewModifyGet(t *testing.T) {
-	os := New()
+	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	allocConfs := os.GetAllocationConfigs()
-	allocConf := allocConfs[indexForType[MutableStruct]()]
+	allocConf := ConfForTypeSize[MutableStruct](os)
 
 	// Create all the objects and modify field
 	refs := make([]Reference[MutableStruct], allocConf.ActualObjectsPerSlab*3)
@@ -29,8 +28,7 @@ func Test_Object_NewModifyGet(t *testing.T) {
 		refs[i] = r
 	}
 
-	sizedStats := os.GetStats()
-	stats := sizedStats[indexForType[MutableStruct]()]
+	stats := StatsForTypeSize[MutableStruct](os)
 
 	assert.Equal(t, len(refs), stats.Allocs)
 	assert.Equal(t, len(refs), stats.Live)
@@ -48,11 +46,10 @@ func Test_Object_NewModifyGet(t *testing.T) {
 // We ensure that we allocate so many objects that we will need more than one slab
 // to store all objects.
 func Test_Object_GetModifyGet(t *testing.T) {
-	os := New()
+	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	allocConfs := os.GetAllocationConfigs()
-	allocConf := allocConfs[indexForType[MutableStruct]()]
+	allocConf := ConfForTypeSize[MutableStruct](os)
 
 	// Create all the objects
 	refs := make([]Reference[MutableStruct], allocConf.ActualObjectsPerSlab*3)
@@ -61,8 +58,7 @@ func Test_Object_GetModifyGet(t *testing.T) {
 		refs[i] = r
 	}
 
-	sizedStats := os.GetStats()
-	stats := sizedStats[indexForType[MutableStruct]()]
+	stats := StatsForTypeSize[MutableStruct](os)
 
 	assert.Equal(t, len(refs), stats.Allocs)
 	assert.Equal(t, len(refs), stats.Live)
@@ -84,7 +80,7 @@ func Test_Object_GetModifyGet(t *testing.T) {
 // Demonstrate that we can create an object, then free it. If we try to Get()
 // the freed object ObjectStore panics
 func Test_Object_NewFreeGet_Panic(t *testing.T) {
-	os := New()
+	os := NewSized(1 << 8)
 	defer os.Destroy()
 
 	r, _ := Alloc[MutableStruct](os)
@@ -96,7 +92,7 @@ func Test_Object_NewFreeGet_Panic(t *testing.T) {
 // Demonstrate that we can create an object, then free it. If we try to Free()
 // the freed object ObjectStore panics
 func Test_Object_NewFreeFree_Panic(t *testing.T) {
-	os := New()
+	os := NewSized(1 << 8)
 	defer os.Destroy()
 
 	r, _ := Alloc[MutableStruct](os)
@@ -107,7 +103,7 @@ func Test_Object_NewFreeFree_Panic(t *testing.T) {
 
 // Demonstrate that when we double free a re-allocated object we panic
 func Test_Object_NewFreeAllocFree_Panic(t *testing.T) {
-	os := New()
+	os := NewSized(1 << 8)
 	defer os.Destroy()
 
 	r, _ := Alloc[MutableStruct](os)
@@ -122,7 +118,7 @@ func Test_Object_NewFreeAllocFree_Panic(t *testing.T) {
 // This means if we re-allocate the same slot repeatedly the gen field will
 // eventually overflow and old values will be repeated.
 func Test_Object_NewFree256ReallocFree_NoPanic(t *testing.T) {
-	os := New()
+	os := NewSized(1 << 8)
 	defer os.Destroy()
 
 	r, _ := Alloc[MutableStruct](os)
@@ -143,7 +139,7 @@ func Test_Object_NewFree256ReallocFree_NoPanic(t *testing.T) {
 
 // Demonstrate that when we get a re-allocated object we panic
 func Test_Object_NewFreeAllocGet_Panic(t *testing.T) {
-	os := New()
+	os := NewSized(1 << 8)
 	defer os.Destroy()
 
 	r, _ := Alloc[MutableStruct](os)
@@ -183,8 +179,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	os := New()
 	defer os.Destroy()
 
-	allocConfs := os.GetAllocationConfigs()
-	allocConf := allocConfs[indexForType[MutableStruct]()]
+	allocConf := ConfForTypeSize[MutableStruct](os)
 
 	objectAllocations := int(allocConf.ActualObjectsPerSlab * 3)
 
@@ -196,8 +191,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 		refs[i] = r
 	}
 
-	sizedStats := os.GetStats()
-	stats := sizedStats[indexForType[MutableStruct]()]
+	stats := StatsForTypeSize[MutableStruct](os)
 
 	// We have allocate one batch of objects
 	assert.Equal(t, objectAllocations, stats.Allocs)
@@ -213,8 +207,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 		Free(os, r)
 	}
 
-	sizedStats = os.GetStats()
-	stats = sizedStats[indexForType[MutableStruct]()]
+	stats = StatsForTypeSize[MutableStruct](os)
 
 	// We have allocate one batch of objects
 	assert.Equal(t, objectAllocations, stats.Allocs)
@@ -230,8 +223,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 		Alloc[MutableStruct](os)
 	}
 
-	sizedStats = os.GetStats()
-	stats = sizedStats[indexForType[MutableStruct]()]
+	stats = StatsForTypeSize[MutableStruct](os)
 
 	// We have allocated 2 batches of objects
 	assert.Equal(t, 2*objectAllocations, stats.Allocs)
@@ -331,8 +323,7 @@ func TestZeroSizedType_FullSlab(t *testing.T) {
 	os := New()
 	defer os.Destroy()
 
-	allocConfs := os.GetAllocationConfigs()
-	allocConf := allocConfs[indexForType[SizedArrayZero]()]
+	allocConf := ConfForTypeSize[SizedArrayZero](os)
 
 	lenTotal := 0
 

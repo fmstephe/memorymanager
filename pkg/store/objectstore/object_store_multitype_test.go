@@ -267,8 +267,7 @@ func TestSizedStats(t *testing.T) {
 }
 
 func testSizedStats[T any](t *testing.T, os *Store) {
-	idx := indexForType[T]()
-	expectedStats := os.GetStats()[idx]
+	expectedStats := StatsForTypeSize[T](os)
 
 	r1, _ := Alloc[T](os)
 	r2, _ := Alloc[T](os)
@@ -281,7 +280,10 @@ func testSizedStats[T any](t *testing.T, os *Store) {
 	expectedStats.Frees = 3
 	expectedStats.RawAllocs = 2
 	expectedStats.Reused = 1
-	if sizeForType[T]() < slabSize {
+
+	conf := ConfForTypeSize[T](os)
+
+	if conf.ActualObjectsPerSlab > 1 {
 		// Only expect one slab to be allocated for smaller objects
 		expectedStats.Slabs = 1
 	} else {
@@ -289,7 +291,7 @@ func testSizedStats[T any](t *testing.T, os *Store) {
 		expectedStats.Slabs = 2
 	}
 
-	actualStats := os.GetStats()[idx]
+	actualStats := StatsForTypeSize[T](os)
 
 	assert.Equal(t, expectedStats, actualStats)
 }
@@ -299,11 +301,10 @@ func testSizedStats[T any](t *testing.T, os *Store) {
 // We ensure that we allocate so many objects that we will need more than one slab
 // to store all objects.
 func Test_Object_NewModifyGet_Multitype(t *testing.T) {
-	os := New()
+	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	allocConfs := os.GetAllocationConfigs()
-	allocConf := allocConfs[indexForType[SizedArray0]()]
+	allocConf := ConfForTypeSize[SizedArray0](os)
 	// perform a number of allocations which will force the creation of extra slabs
 	totalAllocations := allocConf.ActualObjectsPerSlab * numberOfTypes * 3
 
@@ -326,11 +327,10 @@ func Test_Object_NewModifyGet_Multitype(t *testing.T) {
 // We ensure that we allocate so many objects that we will need more than one slab
 // to store all objects.
 func Test_Object_GetModifyGet_Multitype(t *testing.T) {
-	os := New()
+	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	allocConfs := os.GetAllocationConfigs()
-	allocConf := allocConfs[indexForType[SizedArray0]()]
+	allocConf := ConfForTypeSize[SizedArray0](os)
 	// perform a number of allocations which will force the creation of extra slabs
 	totalAllocations := allocConf.ActualObjectsPerSlab * numberOfTypes * 3
 

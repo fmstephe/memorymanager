@@ -164,7 +164,7 @@ import (
 	"github.com/fmstephe/location-system/pkg/store/pointerstore"
 )
 
-const slabSize = 1 << 13
+const DefaultSlabSize = 1 << 13
 
 type Store struct {
 	sizedStores []*pointerstore.Store
@@ -172,11 +172,17 @@ type Store struct {
 
 func New() *Store {
 	return &Store{
-		sizedStores: initSizeStore(),
+		sizedStores: initSizeStore(DefaultSlabSize),
 	}
 }
 
-func initSizeStore() []*pointerstore.Store {
+func NewSized(slabSize uint64) *Store {
+	return &Store{
+		sizedStores: initSizeStore(slabSize),
+	}
+}
+
+func initSizeStore(slabSize uint64) []*pointerstore.Store {
 	// We allow allocations up to 48 bits in size
 	//
 	// The upper limit is chosen because (at time of writing) X86 systems
@@ -238,12 +244,24 @@ func (s *Store) GetStats() []pointerstore.Stats {
 	return sizedStats
 }
 
+func StatsForTypeSize[T any](s *Store) pointerstore.Stats {
+	stats := s.GetStats()
+	idx := indexForType[T]()
+	return stats[idx]
+}
+
 func (s *Store) GetAllocationConfigs() []pointerstore.AllocationConfig {
 	sizedAllocConfigs := make([]pointerstore.AllocationConfig, len(s.sizedStores))
 	for i := range s.sizedStores {
 		sizedAllocConfigs[i] = s.sizedStores[i].GetAllocationConfig()
 	}
 	return sizedAllocConfigs
+}
+
+func ConfForTypeSize[T any](s *Store) pointerstore.AllocationConfig {
+	configs := s.GetAllocationConfigs()
+	idx := indexForType[T]()
+	return configs[idx]
 }
 
 func indexForType[T any]() int {

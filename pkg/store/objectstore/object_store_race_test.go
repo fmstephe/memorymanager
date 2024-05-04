@@ -14,7 +14,7 @@ const goroutines = 100
 // Demonstrate that multiple goroutines can alloc/get/free on a shared Store instance
 // This test should be run with -race
 func TestSeparateGoroutines_Race(t *testing.T) {
-	os := New()
+	os := NewSized(1 << 8)
 	defer os.Destroy()
 
 	barrier := sync.WaitGroup{}
@@ -57,7 +57,7 @@ func allocateAndModify(t *testing.T, os *Store, barrier *sync.WaitGroup) {
 func TestAllocAndShare_Race(t *testing.T) {
 	sharedChannel := make(chan Reference[MutableStruct], goroutines*allocsPerGoroutine)
 
-	os := New()
+	os := NewSized(1 << 8)
 	defer os.Destroy()
 
 	barrier := sync.WaitGroup{}
@@ -113,7 +113,7 @@ func allocateAndModifyShared(
 func TestAllocAndShare_Multitype_Race(t *testing.T) {
 	sharedChannel := make(chan *MultitypeAllocation, goroutines*allocsPerGoroutine)
 
-	os := New()
+	os := NewSized(1 << 8)
 	defer os.Destroy()
 
 	barrier := sync.WaitGroup{}
