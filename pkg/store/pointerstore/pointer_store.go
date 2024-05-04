@@ -72,6 +72,10 @@ func (s *Store) Free(r Reference) {
 func (s *Store) Destroy() error {
 	s.objectsLock.Lock()
 	defer s.objectsLock.Unlock()
+	defer func() {
+		s.objects = nil
+		s.metadata = nil
+	}()
 
 	for _, slab := range s.objects {
 		if err := MunmapSlab(slab[0], s.allocConf); err != nil {
