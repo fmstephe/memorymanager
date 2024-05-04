@@ -21,7 +21,7 @@ func Test_Object_NewModifyGet(t *testing.T) {
 	allocConf := ConfForTypeSize[MutableStruct](os)
 
 	// Create all the objects and modify field
-	refs := make([]Reference[MutableStruct], allocConf.ActualObjectsPerSlab*3)
+	refs := make([]Reference[MutableStruct], allocConf.ObjectsPerSlab*3)
 	for i := range refs {
 		r, s := Alloc[MutableStruct](os)
 		s.Field = i
@@ -52,7 +52,7 @@ func Test_Object_GetModifyGet(t *testing.T) {
 	allocConf := ConfForTypeSize[MutableStruct](os)
 
 	// Create all the objects
-	refs := make([]Reference[MutableStruct], allocConf.ActualObjectsPerSlab*3)
+	refs := make([]Reference[MutableStruct], allocConf.ObjectsPerSlab*3)
 	for i := range refs {
 		r, _ := Alloc[MutableStruct](os)
 		refs[i] = r
@@ -181,10 +181,10 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 
 	allocConf := ConfForTypeSize[MutableStruct](os)
 
-	objectAllocations := int(allocConf.ActualObjectsPerSlab * 3)
+	objectAllocations := int(allocConf.ObjectsPerSlab * 3)
 
 	// Create a large number of objects
-	refs := make([]Reference[MutableStruct], allocConf.ActualObjectsPerSlab*3)
+	refs := make([]Reference[MutableStruct], allocConf.ObjectsPerSlab*3)
 
 	for i := range refs {
 		r, _ := Alloc[MutableStruct](os)
@@ -327,7 +327,7 @@ func TestZeroSizedType_FullSlab(t *testing.T) {
 
 	lenTotal := 0
 
-	for range allocConf.ActualObjectsPerSlab * 24 {
+	for range allocConf.ObjectsPerSlab * 24 {
 		_, val := Alloc[SizedArrayZero](os)
 		lenTotal += len(val.Field[:])
 	}

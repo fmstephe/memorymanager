@@ -8,26 +8,31 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func MmapSlab(allocConf AllocationConfig) []uintptr {
-	slabSize := allocConf.ActualSlabSize
-	objectSize := allocConf.ActualObjectSize
-	objectsPerSlab := allocConf.ActualObjectsPerSlab
-
-	data, err := unix.Mmap(-1, 0, int(slabSize), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_ANON|unix.MAP_PRIVATE)
+func MmapSlab(conf AllocationConfig) (objects, metadata []uintptr) {
+	data, err := unix.Mmap(-1, 0, int(conf.TotalSlabSize), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_ANON|unix.MAP_PRIVATE)
 	if err != nil {
-		panic(fmt.Errorf("cannot allocate %d bytes via mmap for %d many objects sized %d %s", slabSize, objectsPerSlab, objectSize, err))
+		panic(fmt.Errorf("cannot allocate %#v via mmap because %s", conf, err))
 	}
 
-	slotPointers := make([]uintptr, objectsPerSlab)
-	for i := range slotPointers {
-		slotPointers[i] = (uintptr)((unsafe.Pointer)(&data[uint64(i)*objectSize]))
+	// Collect pointers to each object allocation slot
+	objects = make([]uintptr, conf.ObjectsPerSlab)
+	for i := range objects {
+		idx := uint64(i) * conf.ObjectSize
+		objects[i] = (uintptr)((unsafe.Pointer)(&data[idx]))
 	}
 
-	return slotPointers
+	// Collect pointers to each metadata slot
+	metadata = make([]uintptr, conf.ObjectsPerSlab)
+	for i := range metadata {
+		idx := conf.TotalObjectSize + (uint64(i) * conf.MetadataSize)
+		metadata[i] = (uintptr)((unsafe.Pointer)(&data[idx]))
+	}
+
+	return objects, metadata
 }
 
 func MunmapSlab(ptr uintptr, allocConf AllocationConfig) error {
-	b := pointerToBytes(ptr, int(allocConf.ActualSlabSize))
+	b := pointerToBytes(ptr, int(allocConf.TotalSlabSize))
 	return unix.Munmap(b)
 }
 

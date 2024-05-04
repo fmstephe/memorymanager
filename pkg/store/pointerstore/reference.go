@@ -16,10 +16,11 @@ const pointerMask = ^genMask
 // pointed to must have the same generation value in order to access/free that
 // object.
 type Reference struct {
-	address uint64
+	address  uint64
+	metadata uint64
 }
 
-const metadataSize = unsafe.Sizeof(Metadata{})
+const metadataSize = unsafe.Sizeof(metadata{})
 
 // If the object's metadata has a non-nil nextFree pointer then the object is
 // currently free. Object's which have never been allocated are implicitly
@@ -28,17 +29,17 @@ const metadataSize = unsafe.Sizeof(Metadata{})
 // An object's metadata has a gen field. Only references with the same gen
 // value can access/free objects they point to. This is a best-effort safety
 // check to try to catch use-after-free type errors.
-type Metadata struct {
+type metadata struct {
 	nextFree Reference
 	gen      uint8
 }
 
-func NewReference(ptr uintptr) Reference {
-	if ptr == (uintptr)(unsafe.Pointer(nil)) {
+func NewReference(pAddress, pMetadata uintptr) Reference {
+	if pAddress == (uintptr)(unsafe.Pointer(nil)) {
 		panic("cannot create new Reference with nil pointer")
 	}
 
-	address := uint64(ptr)
+	address := uint64(pAddress)
 	maskedAddress := address & pointerMask
 
 	if address != maskedAddress {
@@ -48,7 +49,8 @@ func NewReference(ptr uintptr) Reference {
 	// NB: The gen on a brand new Reference is always 0
 	// So we don't set it
 	return Reference{
-		address: maskedAddress,
+		address:  maskedAddress,
+		metadata: uint64(pMetadata),
 	}
 }
 
@@ -104,15 +106,15 @@ func (r *Reference) GetDataPtr() uintptr {
 	if meta.gen != r.GetGen() {
 		panic(fmt.Errorf("Attempt to get value (%d) using stale reference (%d)", meta.gen, r.GetGen()))
 	}
-	return r.getMetadataPtr() + metadataSize
+	return (uintptr)(r.address)
 }
 
 func (r *Reference) getMetadataPtr() uintptr {
-	return (uintptr)(pointerMask & r.address)
+	return (uintptr)(r.metadata)
 }
 
-func (r *Reference) getMetadata() *Metadata {
-	return (*Metadata)(unsafe.Pointer(r.getMetadataPtr()))
+func (r *Reference) getMetadata() *metadata {
+	return (*metadata)(unsafe.Pointer(r.getMetadataPtr()))
 }
 
 func (r *Reference) GetGen() uint8 {

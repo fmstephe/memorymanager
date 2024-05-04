@@ -1,67 +1,53 @@
 package pointerstore
 
-import "github.com/fmstephe/flib/fmath"
+import (
+	"unsafe"
+
+	"github.com/fmstephe/flib/fmath"
+)
 
 type AllocationConfig struct {
-	RequestedObjectSize     uint64
-	RequestedObjectsPerSlab uint64
-	RequestedSlabSize       uint64
-
-	ActualObjectSize     uint64
-	ActualObjectsPerSlab uint64
-	ActualSlabSize       uint64
-}
-
-func NewAllocationConfigByObjects(requestedObjectSize uint64, requestedObjectsPerSlab uint64) AllocationConfig {
-	actualObjectSize, actualObjectsPerSlab, actualSlabSize := allocConfWithObjectsPerSlab(requestedObjectSize, requestedObjectsPerSlab)
-	return AllocationConfig{
-		RequestedObjectSize:     requestedObjectSize,
-		RequestedObjectsPerSlab: requestedObjectsPerSlab,
-		RequestedSlabSize:       0,
-
-		ActualObjectSize:     actualObjectSize,
-		ActualObjectsPerSlab: actualObjectsPerSlab,
-		ActualSlabSize:       actualSlabSize,
-	}
+	RequestedObjectSize uint64
+	RequestedSlabSize   uint64
+	//
+	ObjectsPerSlab    uint64
+	ObjectSize        uint64
+	TotalObjectSize   uint64
+	MetadataSize      uint64
+	TotalMetadataSize uint64
+	TotalSlabSize     uint64
 }
 
 func NewAllocationConfigBySize(requestedObjectSize uint64, requestedSlabSize uint64) AllocationConfig {
-	actualObjectSize, actualObjectsPerSlab, actualSlabSize := allocConfWithSlabSize(requestedObjectSize, requestedSlabSize)
-	return AllocationConfig{
-		RequestedObjectSize:     requestedObjectSize,
-		RequestedObjectsPerSlab: 0,
-		RequestedSlabSize:       requestedSlabSize,
+	objectSize := uint64(fmath.NxtPowerOfTwo(int64(requestedObjectSize)))
 
-		ActualObjectSize:     actualObjectSize,
-		ActualObjectsPerSlab: actualObjectsPerSlab,
-		ActualSlabSize:       actualSlabSize,
-	}
-}
+	totalObjectSize := uint64(fmath.NxtPowerOfTwo(int64(requestedSlabSize)))
 
-func allocConfWithObjectsPerSlab(requestedObjectSize, requestedObjectsPerSlab uint64) (actualObjectSize, actualObjectsPerSlab, actualSlabSize uint64) {
-	// Include the metadata overhead for each object and then round up to power of two
-	actualObjectSize = uint64(fmath.NxtPowerOfTwo(int64(requestedObjectSize) + int64(metadataSize)))
-	// Round the objects count up to a power of two NB: 0 -> 1 with this function
-	actualObjectsPerSlab = uint64(fmath.NxtPowerOfTwo(int64(requestedObjectsPerSlab)))
-
-	actualSlabSize = actualObjectSize * actualObjectsPerSlab
-
-	return actualObjectSize, actualObjectsPerSlab, actualSlabSize
-}
-
-func allocConfWithSlabSize(requestedObjectSize, requestedSlabSize uint64) (actualObjectSize, actualObjectsPerSlab, actualSlabSize uint64) {
-	// Include the metadata overhead for each object and then round up to power of two
-	actualObjectSize = uint64(fmath.NxtPowerOfTwo(int64(requestedObjectSize) + int64(metadataSize)))
-
-	actualSlabSize = uint64(fmath.NxtPowerOfTwo(int64(requestedSlabSize)))
-
-	if actualSlabSize < actualObjectSize {
+	if totalObjectSize < objectSize {
 		// If the slab is too small - we match the object size for one
 		// allocation per slab
-		actualSlabSize = actualObjectSize
+		totalObjectSize = objectSize
 	}
 
-	actualObjectsPerSlab = actualSlabSize / actualObjectSize
+	objectsPerSlab := totalObjectSize / objectSize
 
-	return actualObjectSize, actualObjectsPerSlab, actualSlabSize
+	// TODO have a think about this - we don't strictly _need_ the metadata
+	// to be aligned by a power of 2 (do we?)
+	metadataSize := uint64(fmath.NxtPowerOfTwo(int64(unsafe.Sizeof(metadata{}))))
+
+	totalMetadataSize := metadataSize * objectsPerSlab
+
+	totalSlabSize := totalObjectSize + totalMetadataSize
+
+	return AllocationConfig{
+		RequestedObjectSize: requestedObjectSize,
+		RequestedSlabSize:   requestedSlabSize,
+
+		ObjectsPerSlab:    objectsPerSlab,
+		ObjectSize:        objectSize,
+		TotalObjectSize:   totalObjectSize,
+		MetadataSize:      metadataSize,
+		TotalMetadataSize: totalMetadataSize,
+		TotalSlabSize:     totalSlabSize,
+	}
 }

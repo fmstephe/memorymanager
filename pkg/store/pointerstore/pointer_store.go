@@ -34,6 +34,7 @@ type Store struct {
 	// Allocating to an existing slab with a free slot only needs a read lock
 	// Adding a new slab to objects requires a write lock
 	objectsLock sync.RWMutex
+	metadata    [][]uintptr
 	objects     [][]uintptr
 }
 
@@ -129,8 +130,8 @@ func (s *Store) allocFromFree() (Reference, bool) {
 func (s *Store) allocFromOffset() Reference {
 	allocIdx := s.acquireAllocIdx()
 	// TODO do some power of 2 work here, to eliminate all this division
-	slabIdx := allocIdx / s.allocConf.ActualObjectsPerSlab
-	offsetIdx := allocIdx % s.allocConf.ActualObjectsPerSlab
+	slabIdx := allocIdx / s.allocConf.ObjectsPerSlab
+	offsetIdx := allocIdx % s.allocConf.ObjectsPerSlab
 
 	// Take read lock to access s.objects
 	s.objectsLock.RLock()
@@ -142,10 +143,11 @@ func (s *Store) allocFromOffset() Reference {
 		s.objectsLock.RLock()
 	}
 	obj := s.objects[slabIdx][offsetIdx]
+	meta := s.metadata[slabIdx][offsetIdx]
 	// Release read lock
 	s.objectsLock.RUnlock()
 
-	ref := NewReference(obj)
+	ref := NewReference(obj, meta)
 	return ref
 }
 
@@ -164,8 +166,9 @@ func (s *Store) growObjects(targetLen int) {
 	s.objectsLock.Lock()
 	for len(s.objects) < targetLen {
 		// Create a new slab
-		newSlab := MmapSlab(s.allocConf)
-		s.objects = append(s.objects, newSlab)
+		objects, metadata := MmapSlab(s.allocConf)
+		s.objects = append(s.objects, objects)
+		s.metadata = append(s.metadata, metadata)
 	}
 
 	// Release write lock
