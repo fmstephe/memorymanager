@@ -82,7 +82,7 @@ func TestLinkedList_CommonOperations(t *testing.T) {
 		{"push head 1, 2, 3, remove them all from tail", []ListAction{{pushH, 1, 1, 1}, {pushH, 2, 2, 1}, {pushH, 3, 3, 1}, {removeT, -1, 3, 2}, {removeT, -1, 3, 3}, {removeT, -1, -1, -1}}, []int{}},
 
 		// Push some elements, remove some, add some more
-		{"foo push head 1, 2, 3, remove from tail and the from head, push tail 4,5,6, final result is [2,4,5,6]", []ListAction{{pushH, 1, 1, 1}, {pushH, 2, 2, 1}, {pushH, 3, 3, 1}, {removeT, -1, 3, 2}, {removeH, -1, 2, 2}, {pushT, 4, 2, 4}, {pushT, 5, 2, 5}, {pushT, 6, 2, 6}}, []int{2, 4, 5, 6}},
+		{"push head 1, 2, 3, remove from tail and then from head, push tail 4,5,6, final result is [2,4,5,6]", []ListAction{{pushH, 1, 1, 1}, {pushH, 2, 2, 1}, {pushH, 3, 3, 1}, {removeT, -1, 3, 2}, {removeH, -1, 2, 2}, {pushT, 4, 2, 4}, {pushT, 5, 2, 5}, {pushT, 6, 2, 6}}, []int{2, 4, 5, 6}},
 	} {
 		t.Run(testData.name, func(t *testing.T) {
 			store := New[TestListData]()

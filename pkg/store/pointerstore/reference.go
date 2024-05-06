@@ -110,7 +110,7 @@ func (r *Reference) GetDataPtr() uintptr {
 	if meta.gen != r.GetGen() {
 		panic(fmt.Errorf("Attempt to get value (%d) using stale reference (%d)", meta.gen, r.GetGen()))
 	}
-	return (uintptr)(r.address)
+	return (uintptr)(r.address & pointerMask)
 }
 
 func (r *Reference) getMetadataPtr() uintptr {
