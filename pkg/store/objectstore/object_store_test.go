@@ -243,7 +243,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 // `nextFree` reference in the ObjectStore.  This means that in this case calls
 // to `Alloc()` would allocate the same slot over and over, meaning multiple
 // independently allocated references would all point to the same slot.
-func TestFreeThenAllocTwice(t *testing.T) {
+func Test_Object_FreeThenAllocTwice(t *testing.T) {
 	os := New()
 	defer os.Destroy()
 
@@ -275,7 +275,7 @@ func TestFreeThenAllocTwice(t *testing.T) {
 	assert.Equal(t, 3, o3.Field)
 }
 
-func TestCheckGenericTypeForPointersInAlloc(t *testing.T) {
+func Test_Object_CheckGenericTypeForPointersInAlloc(t *testing.T) {
 	os := New()
 	defer os.Destroy()
 
@@ -286,7 +286,7 @@ func TestCheckGenericTypeForPointersInAlloc(t *testing.T) {
 	assert.NotPanics(t, func() { Alloc[int](os) })
 }
 
-func TestCannotAllocateVeryBigStruct(t *testing.T) {
+func Test_Object_CannotAllocateVeryBigStruct(t *testing.T) {
 	// In principle this code should panic - but Go won't even compile a
 	// type this large.  At the time when this test was written the Store's
 	// allocation limit is larger than what can be allocated by Go natively
@@ -319,7 +319,7 @@ func TestCannotAllocateVeryBigStruct(t *testing.T) {
 // space and some details described above will become out of date. The test
 // will still be useful though. Zero sized types are a likely source of
 // edge-case bugs for all eternity.
-func TestZeroSizedType_FullSlab(t *testing.T) {
+func Test_Object_ZeroSizedType_FullSlab(t *testing.T) {
 	os := New()
 	defer os.Destroy()
 
