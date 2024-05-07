@@ -157,7 +157,6 @@
 package objectstore
 
 import (
-	"fmt"
 	"math/bits"
 	"reflect"
 
@@ -197,29 +196,8 @@ func initSizeStore(slabSize uint64) []*pointerstore.Store {
 	return slabs
 }
 
-func Alloc[T any](s *Store) (Reference[T], *T) {
-	// TODO this is not fast - we _need_ to cache this type data
-	if err := containsNoPointers[T](); err != nil {
-		panic(fmt.Errorf("cannot allocate generic type containing pointers %w", err))
-	}
-
-	idx := indexForType[T]()
-	if idx >= len(s.sizedStores) {
-		panic(fmt.Errorf("Allocation too large at %d", sizeForType[T]()))
-	}
-
-	pRef := s.alloc(idx)
-	oRef := newReference[T](pRef)
-	return oRef, oRef.GetValue()
-}
-
 func (s *Store) alloc(idx int) pointerstore.Reference {
 	return s.sizedStores[idx].Alloc()
-}
-
-func Free[T any](s *Store, r Reference[T]) {
-	idx := indexForType[T]()
-	s.free(idx, r.ref)
 }
 
 func (s *Store) free(idx int, r pointerstore.Reference) {

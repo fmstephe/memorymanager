@@ -1,10 +1,32 @@
 package objectstore
 
 import (
+	"fmt"
 	"unsafe"
 
 	"github.com/fmstephe/location-system/pkg/store/pointerstore"
 )
+
+func Alloc[T any](s *Store) (Reference[T], *T) {
+	// TODO this is not fast - we _need_ to cache this type data
+	if err := containsNoPointers[T](); err != nil {
+		panic(fmt.Errorf("cannot allocate generic type containing pointers %w", err))
+	}
+
+	idx := indexForType[T]()
+	if idx >= len(s.sizedStores) {
+		panic(fmt.Errorf("Allocation too large at %d", sizeForType[T]()))
+	}
+
+	pRef := s.alloc(idx)
+	oRef := newReference[T](pRef)
+	return oRef, oRef.GetValue()
+}
+
+func Free[T any](s *Store, r Reference[T]) {
+	idx := indexForType[T]()
+	s.free(idx, r.ref)
+}
 
 // The address field holds a pointer to an object[O], but also sneaks a
 // generation value in the top 8 bits of the address field.
