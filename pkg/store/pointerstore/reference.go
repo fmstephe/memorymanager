@@ -113,6 +113,12 @@ func (r *Reference) GetDataPtr() uintptr {
 	return (uintptr)(r.address & pointerMask)
 }
 
+// Convenient method to retrieve raw data of an allocation
+func (r *Reference) GetData(size int) []byte {
+	ptr := r.GetDataPtr()
+	return pointerToBytes(ptr, size)
+}
+
 func (r *Reference) getMetadataPtr() uintptr {
 	return (uintptr)(r.metadata)
 }
