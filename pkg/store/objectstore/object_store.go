@@ -245,14 +245,17 @@ func ConfForTypeSize[T any](s *Store) pointerstore.AllocationConfig {
 func indexForType[T any]() int {
 	size := sizeForType[T]()
 
-	if size == 0 {
-		return 0
-	}
-
-	return bits.Len64(uint64(size) - 1)
+	return indexForSize(size)
 }
 
 func sizeForType[T any]() uint64 {
 	t := reflect.TypeFor[T]()
 	return uint64(t.Size())
+}
+
+func indexForSize(size uint64) int {
+	if size == 0 {
+		return 0
+	}
+	return bits.Len64(uint64(size) - 1)
 }
