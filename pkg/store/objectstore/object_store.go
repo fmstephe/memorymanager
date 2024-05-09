@@ -228,6 +228,18 @@ func StatsForTypeSize[T any](s *Store) pointerstore.Stats {
 	return stats[idx]
 }
 
+func StatsForTypeSizeSlice[T any](s *Store, capacity int) pointerstore.Stats {
+	stats := s.GetStats()
+	idx := indexForSlice[T](capacity)
+	return stats[idx]
+}
+
+func StatsForTypeSizeString(s *Store, length int) pointerstore.Stats {
+	stats := s.GetStats()
+	idx := indexForSize(uint64(length))
+	return stats[idx]
+}
+
 func (s *Store) GetAllocationConfigs() []pointerstore.AllocationConfig {
 	sizedAllocConfigs := make([]pointerstore.AllocationConfig, len(s.sizedStores))
 	for i := range s.sizedStores {
@@ -239,6 +251,18 @@ func (s *Store) GetAllocationConfigs() []pointerstore.AllocationConfig {
 func ConfForTypeSize[T any](s *Store) pointerstore.AllocationConfig {
 	configs := s.GetAllocationConfigs()
 	idx := indexForType[T]()
+	return configs[idx]
+}
+
+func ConfForTypeSizeSlice[T any](s *Store, capacity int) pointerstore.AllocationConfig {
+	configs := s.GetAllocationConfigs()
+	idx := indexForSlice[T](capacity)
+	return configs[idx]
+}
+
+func ConfForTypeSizeString(s *Store, length int) pointerstore.AllocationConfig {
+	configs := s.GetAllocationConfigs()
+	idx := indexForSize(uint64(length))
 	return configs[idx]
 }
 
