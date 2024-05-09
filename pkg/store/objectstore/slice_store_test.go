@@ -167,7 +167,7 @@ func Test_Slice_SizedStats(t *testing.T) {
 		(1 << 14) + 1,
 	} {
 		t.Run("", func(t *testing.T) {
-			expectedStats := StatsForTypeSizeSlice[MutableStruct](os, capacity)
+			expectedStats := StatsForSlice[MutableStruct](os, capacity)
 
 			r1, _ := AllocSlice[MutableStruct](os, capacity, capacity)
 			r2, _ := AllocSlice[MutableStruct](os, capacity, capacity)
@@ -181,7 +181,7 @@ func Test_Slice_SizedStats(t *testing.T) {
 			expectedStats.RawAllocs = 2
 			expectedStats.Reused = 1
 
-			conf := ConfForTypeSizeSlice[MutableStruct](os, capacity)
+			conf := ConfForSlice[MutableStruct](os, capacity)
 
 			if conf.ObjectsPerSlab > 1 {
 				// Only expect one slab to be allocated for smaller objects
@@ -191,7 +191,7 @@ func Test_Slice_SizedStats(t *testing.T) {
 				expectedStats.Slabs = 2
 			}
 
-			actualStats := StatsForTypeSizeSlice[MutableStruct](os, capacity)
+			actualStats := StatsForSlice[MutableStruct](os, capacity)
 
 			assert.Equal(t, expectedStats, actualStats, "Bad stats for %d sized slice", capacity)
 		})

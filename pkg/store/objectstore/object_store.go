@@ -222,19 +222,22 @@ func (s *Store) GetStats() []pointerstore.Stats {
 	return sizedStats
 }
 
-func StatsForTypeSize[T any](s *Store) pointerstore.Stats {
+// Returns the stats for the allocation size of type T
+func StatsForType[T any](s *Store) pointerstore.Stats {
 	stats := s.GetStats()
 	idx := indexForType[T]()
 	return stats[idx]
 }
 
-func StatsForTypeSizeSlice[T any](s *Store, capacity int) pointerstore.Stats {
+// Returns the stats for the allocation size of a []T with capacity
+func StatsForSlice[T any](s *Store, capacity int) pointerstore.Stats {
 	stats := s.GetStats()
 	idx := indexForSlice[T](capacity)
 	return stats[idx]
 }
 
-func StatsForTypeSizeString(s *Store, length int) pointerstore.Stats {
+// Returns the stats for the allocations size of a string of length
+func StatsForString(s *Store, length int) pointerstore.Stats {
 	stats := s.GetStats()
 	idx := indexForSize(uint64(length))
 	return stats[idx]
@@ -248,19 +251,22 @@ func (s *Store) GetAllocationConfigs() []pointerstore.AllocationConfig {
 	return sizedAllocConfigs
 }
 
-func ConfForTypeSize[T any](s *Store) pointerstore.AllocationConfig {
+// Returns the allocation config for the allocation size of type T
+func ConfForType[T any](s *Store) pointerstore.AllocationConfig {
 	configs := s.GetAllocationConfigs()
 	idx := indexForType[T]()
 	return configs[idx]
 }
 
-func ConfForTypeSizeSlice[T any](s *Store, capacity int) pointerstore.AllocationConfig {
+// Returns the allocation config for the allocation size of a []T with capacity
+func ConfForSlice[T any](s *Store, capacity int) pointerstore.AllocationConfig {
 	configs := s.GetAllocationConfigs()
 	idx := indexForSlice[T](capacity)
 	return configs[idx]
 }
 
-func ConfForTypeSizeString(s *Store, length int) pointerstore.AllocationConfig {
+// Returns the allocation config for the allocations size of a string of length
+func ConfForString(s *Store, length int) pointerstore.AllocationConfig {
 	configs := s.GetAllocationConfigs()
 	idx := indexForSize(uint64(length))
 	return configs[idx]

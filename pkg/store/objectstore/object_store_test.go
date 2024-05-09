@@ -18,7 +18,7 @@ func Test_Object_NewModifyGet(t *testing.T) {
 	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	allocConf := ConfForTypeSize[MutableStruct](os)
+	allocConf := ConfForType[MutableStruct](os)
 
 	// Create all the objects and modify field
 	refs := make([]Reference[MutableStruct], allocConf.ObjectsPerSlab*3)
@@ -28,7 +28,7 @@ func Test_Object_NewModifyGet(t *testing.T) {
 		refs[i] = r
 	}
 
-	stats := StatsForTypeSize[MutableStruct](os)
+	stats := StatsForType[MutableStruct](os)
 
 	assert.Equal(t, len(refs), stats.Allocs)
 	assert.Equal(t, len(refs), stats.Live)
@@ -49,7 +49,7 @@ func Test_Object_GetModifyGet(t *testing.T) {
 	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	allocConf := ConfForTypeSize[MutableStruct](os)
+	allocConf := ConfForType[MutableStruct](os)
 
 	// Create all the objects
 	refs := make([]Reference[MutableStruct], allocConf.ObjectsPerSlab*3)
@@ -58,7 +58,7 @@ func Test_Object_GetModifyGet(t *testing.T) {
 		refs[i] = r
 	}
 
-	stats := StatsForTypeSize[MutableStruct](os)
+	stats := StatsForType[MutableStruct](os)
 
 	assert.Equal(t, len(refs), stats.Allocs)
 	assert.Equal(t, len(refs), stats.Live)
@@ -179,7 +179,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	os := New()
 	defer os.Destroy()
 
-	allocConf := ConfForTypeSize[MutableStruct](os)
+	allocConf := ConfForType[MutableStruct](os)
 
 	objectAllocations := int(allocConf.ObjectsPerSlab * 3)
 
@@ -191,7 +191,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 		refs[i] = r
 	}
 
-	stats := StatsForTypeSize[MutableStruct](os)
+	stats := StatsForType[MutableStruct](os)
 
 	// We have allocate one batch of objects
 	assert.Equal(t, objectAllocations, stats.Allocs)
@@ -207,7 +207,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 		Free(os, r)
 	}
 
-	stats = StatsForTypeSize[MutableStruct](os)
+	stats = StatsForType[MutableStruct](os)
 
 	// We have allocate one batch of objects
 	assert.Equal(t, objectAllocations, stats.Allocs)
@@ -223,7 +223,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 		Alloc[MutableStruct](os)
 	}
 
-	stats = StatsForTypeSize[MutableStruct](os)
+	stats = StatsForType[MutableStruct](os)
 
 	// We have allocated 2 batches of objects
 	assert.Equal(t, 2*objectAllocations, stats.Allocs)
@@ -323,7 +323,7 @@ func Test_Object_ZeroSizedType_FullSlab(t *testing.T) {
 	os := New()
 	defer os.Destroy()
 
-	allocConf := ConfForTypeSize[SizedArrayZero](os)
+	allocConf := ConfForType[SizedArrayZero](os)
 
 	lenTotal := 0
 

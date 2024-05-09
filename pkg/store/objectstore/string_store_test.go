@@ -164,7 +164,7 @@ func Test_String_SizedStats(t *testing.T) {
 		(1 << 14) + 1,
 	} {
 		t.Run("", func(t *testing.T) {
-			expectedStats := StatsForTypeSizeString(os, length)
+			expectedStats := StatsForString(os, length)
 
 			value := makeSizedString(length)
 
@@ -180,7 +180,7 @@ func Test_String_SizedStats(t *testing.T) {
 			expectedStats.RawAllocs = 2
 			expectedStats.Reused = 1
 
-			conf := ConfForTypeSizeString(os, length)
+			conf := ConfForString(os, length)
 
 			if conf.ObjectsPerSlab > 1 {
 				// Only expect one slab to be allocated for smaller objects
@@ -190,7 +190,7 @@ func Test_String_SizedStats(t *testing.T) {
 				expectedStats.Slabs = 2
 			}
 
-			actualStats := StatsForTypeSizeString(os, length)
+			actualStats := StatsForString(os, length)
 
 			assert.Equal(t, expectedStats, actualStats, "Bad stats for %d sized string", length)
 		})

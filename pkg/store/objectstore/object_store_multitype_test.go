@@ -267,7 +267,7 @@ func TestSizedStats(t *testing.T) {
 }
 
 func testSizedStats[T any](t *testing.T, os *Store) {
-	expectedStats := StatsForTypeSize[T](os)
+	expectedStats := StatsForType[T](os)
 
 	r1, _ := Alloc[T](os)
 	r2, _ := Alloc[T](os)
@@ -281,7 +281,7 @@ func testSizedStats[T any](t *testing.T, os *Store) {
 	expectedStats.RawAllocs = 2
 	expectedStats.Reused = 1
 
-	conf := ConfForTypeSize[T](os)
+	conf := ConfForType[T](os)
 
 	if conf.ObjectsPerSlab > 1 {
 		// Only expect one slab to be allocated for smaller objects
@@ -291,7 +291,7 @@ func testSizedStats[T any](t *testing.T, os *Store) {
 		expectedStats.Slabs = 2
 	}
 
-	actualStats := StatsForTypeSize[T](os)
+	actualStats := StatsForType[T](os)
 
 	assert.Equal(t, expectedStats, actualStats)
 }
@@ -304,7 +304,7 @@ func Test_Object_NewModifyGet_Multitype(t *testing.T) {
 	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	allocConf := ConfForTypeSize[SizedArray0](os)
+	allocConf := ConfForType[SizedArray0](os)
 	// perform a number of allocations which will force the creation of extra slabs
 	totalAllocations := allocConf.ObjectsPerSlab * numberOfTypes * 3
 
@@ -330,7 +330,7 @@ func Test_Object_GetModifyGet_Multitype(t *testing.T) {
 	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	allocConf := ConfForTypeSize[SizedArray0](os)
+	allocConf := ConfForType[SizedArray0](os)
 	// perform a number of allocations which will force the creation of extra slabs
 	totalAllocations := allocConf.ObjectsPerSlab * numberOfTypes * 3
 
