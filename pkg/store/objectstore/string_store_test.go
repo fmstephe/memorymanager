@@ -44,7 +44,7 @@ func Test_String_AllocateAndGet(t *testing.T) {
 		ss.Destroy()
 	}()
 
-	for _, size := range []int{
+	for _, length := range []int{
 		0,
 		1,
 		2,
@@ -60,9 +60,9 @@ func Test_String_AllocateAndGet(t *testing.T) {
 		1 << 14,
 		(1 << 14) + 1,
 	} {
-		t.Run(fmt.Sprintf("Allocate and get %d", size), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Allocate and get %d", length), func(t *testing.T) {
 			// Generate a string of the desired size
-			value := makeSizedString(size)
+			value := makeSizedString(length)
 
 			// Allocate it using the string
 			refString, valueOutString := AllocFromStr(ss, value)
@@ -147,10 +147,10 @@ const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 var strRand = rand.New(rand.NewSource(1))
 
-func makeSizedString(size int) string {
+func makeSizedString(length int) string {
 	builder := strings.Builder{}
-	builder.Grow(size)
-	for range size {
+	builder.Grow(length)
+	for range length {
 		builder.WriteByte(letters[strRand.Intn(len(letters))])
 	}
 	return builder.String()

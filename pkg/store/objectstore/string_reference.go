@@ -32,7 +32,7 @@ func AllocFromBytes(s *Store, bytes []byte) (RefStr, string) {
 }
 
 func FreeStr(s *Store, r RefStr) {
-	idx := indexForSize(uint64(r.size))
+	idx := indexForSize(uint64(r.length))
 	s.free(idx, r.ref)
 }
 
@@ -43,25 +43,25 @@ func FreeStr(s *Store, r RefStr) {
 // pointed to must have the same generation value in order to access/free that
 // object.
 type RefStr struct {
-	size int
-	ref  pointerstore.Reference
+	length int
+	ref    pointerstore.Reference
 }
 
-func newRefStr(size int, ref pointerstore.Reference) RefStr {
+func newRefStr(length int, ref pointerstore.Reference) RefStr {
 	if ref.IsNil() {
 		panic("cannot create new RefStr with nil pointerstore.RefStr")
 	}
 
 	return RefStr{
-		size: size,
-		ref:  ref,
+		length: length,
+		ref:    ref,
 	}
 }
 
 func (r *RefStr) Value() (str string) {
 	stringHeader := (*reflect.StringHeader)(unsafe.Pointer(&str))
 	stringHeader.Data = r.ref.GetDataPtr()
-	stringHeader.Len = r.size
+	stringHeader.Len = r.length
 	return str
 }
 
