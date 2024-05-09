@@ -36,12 +36,9 @@ func indexForSlice[T any](capacity int) int {
 	return indexForSize(sliceSize)
 }
 
-// The address field holds a pointer to an object, but also sneaks a
-// generation value in the top 8 bits of the address field.
-//
-// The generation must be masked out to get a usable pointer value. The object
-// pointed to must have the same generation value in order to access/free that
-// object.
+// A reference to a typed slice
+// length is len() of the slice
+// capacity is cap() of the slice
 type RefSlice[T any] struct {
 	length   int
 	capacity int

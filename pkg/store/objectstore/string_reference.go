@@ -36,12 +36,8 @@ func FreeStr(s *Store, r RefStr) {
 	s.free(idx, r.ref)
 }
 
-// The address field holds a pointer to an object, but also sneaks a
-// generation value in the top 8 bits of the address field.
-//
-// The generation must be masked out to get a usable pointer value. The object
-// pointed to must have the same generation value in order to access/free that
-// object.
+// A reference to a string
+// length is the len() of the string
 type RefStr struct {
 	length int
 	ref    pointerstore.Reference

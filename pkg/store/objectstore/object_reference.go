@@ -28,12 +28,7 @@ func Free[T any](s *Store, r Reference[T]) {
 	s.free(idx, r.ref)
 }
 
-// The address field holds a pointer to an object[O], but also sneaks a
-// generation value in the top 8 bits of the address field.
-//
-// The generation must be masked out to get a usable pointer value. The object
-// pointed to must have the same generation value in order to access/free that
-// object.
+// A reference to a typed object
 type Reference[O any] struct {
 	ref pointerstore.Reference
 }
