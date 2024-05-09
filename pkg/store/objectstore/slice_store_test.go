@@ -145,3 +145,55 @@ func Test_Slice_NewFreeAllocGet_Panic(t *testing.T) {
 
 	assert.Panics(t, func() { r.Value() })
 }
+
+// These tests are a bit fragile, as we have to _carefully_ only allocate
+// objects of each size class only once. Because we track the number of slabs
+// allocated as well as raw/reused allocations asserting the correct metrics
+// quickly becomes difficult when we exercise the same size class multiple
+// times.
+func Test_Slice_SizedStats(t *testing.T) {
+	os := New()
+	defer os.Destroy()
+
+	for _, capacity := range []int{
+		0,
+		1 << 1,
+		1 << 2,
+		1 << 5,
+		(1 << 5) + 1,
+		1 << 9,
+		(1 << 9) + 1,
+		1 << 14,
+		(1 << 14) + 1,
+	} {
+		t.Run("", func(t *testing.T) {
+			expectedStats := StatsForTypeSizeSlice[MutableStruct](os, capacity)
+
+			r1, _ := AllocSlice[MutableStruct](os, capacity, capacity)
+			r2, _ := AllocSlice[MutableStruct](os, capacity, capacity)
+			FreeSlice[MutableStruct](os, r1)
+			r3, _ := AllocSlice[MutableStruct](os, capacity, capacity)
+			FreeSlice[MutableStruct](os, r2)
+			FreeSlice[MutableStruct](os, r3)
+
+			expectedStats.Allocs = 3
+			expectedStats.Frees = 3
+			expectedStats.RawAllocs = 2
+			expectedStats.Reused = 1
+
+			conf := ConfForTypeSizeSlice[MutableStruct](os, capacity)
+
+			if conf.ObjectsPerSlab > 1 {
+				// Only expect one slab to be allocated for smaller objects
+				expectedStats.Slabs = 1
+			} else {
+				// Larger objects will require a slab per allocation
+				expectedStats.Slabs = 2
+			}
+
+			actualStats := StatsForTypeSizeSlice[MutableStruct](os, capacity)
+
+			assert.Equal(t, expectedStats, actualStats, "Bad stats for %d sized slice", capacity)
+		})
+	}
+}

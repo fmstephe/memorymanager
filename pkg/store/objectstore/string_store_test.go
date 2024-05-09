@@ -143,6 +143,60 @@ func Test_String_NewFreeAllocGet_Panic(t *testing.T) {
 	assert.Panics(t, func() { r.Value() })
 }
 
+// These tests are a bit fragile, as we have to _carefully_ only allocate
+// objects of each size class only once. Because we track the number of slabs
+// allocated as well as raw/reused allocations asserting the correct metrics
+// quickly becomes difficult when we exercise the same size class multiple
+// times.
+func Test_String_SizedStats(t *testing.T) {
+	os := New()
+	defer os.Destroy()
+
+	for _, length := range []int{
+		0,
+		1 << 1,
+		1 << 2,
+		1 << 5,
+		(1 << 5) + 1,
+		1 << 9,
+		(1 << 9) + 1,
+		1 << 14,
+		(1 << 14) + 1,
+	} {
+		t.Run("", func(t *testing.T) {
+			expectedStats := StatsForTypeSizeString(os, length)
+
+			value := makeSizedString(length)
+
+			r1, _ := AllocFromStr(os, value)
+			r2, _ := AllocFromStr(os, value)
+			FreeStr(os, r1)
+			r3, _ := AllocFromStr(os, value)
+			FreeStr(os, r2)
+			FreeStr(os, r3)
+
+			expectedStats.Allocs = 3
+			expectedStats.Frees = 3
+			expectedStats.RawAllocs = 2
+			expectedStats.Reused = 1
+
+			conf := ConfForTypeSizeString(os, length)
+
+			if conf.ObjectsPerSlab > 1 {
+				// Only expect one slab to be allocated for smaller objects
+				expectedStats.Slabs = 1
+			} else {
+				// Larger objects will require a slab per allocation
+				expectedStats.Slabs = 2
+			}
+
+			actualStats := StatsForTypeSizeString(os, length)
+
+			assert.Equal(t, expectedStats, actualStats, "Bad stats for %d sized string", length)
+		})
+	}
+}
+
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 var strRand = rand.New(rand.NewSource(1))

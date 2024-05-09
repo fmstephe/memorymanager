@@ -26,8 +26,7 @@ func AllocSlice[T any](s *Store, length, capacity int) (RefSlice[T], []T) {
 }
 
 func FreeSlice[T any](s *Store, r RefSlice[T]) {
-	// TODO this is broken - but the tests don't notice.
-	idx := indexForSize(uint64(r.length))
+	idx := indexForSlice[T](r.capacity)
 	s.free(idx, r.ref)
 }
 
