@@ -6,7 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/fmstephe/flib/funsafe"
-	"github.com/fmstephe/location-system/pkg/store/pointerstore"
+	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
 )
 
 func AllocFromStr(s *Store, str string) (RefStr, string) {

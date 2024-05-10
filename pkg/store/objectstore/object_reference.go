@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/fmstephe/location-system/pkg/store/pointerstore"
+	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
 )
 
 func Alloc[T any](s *Store) (Reference[T], *T) {

@@ -160,7 +160,7 @@ import (
 	"math/bits"
 	"reflect"
 
-	"github.com/fmstephe/location-system/pkg/store/pointerstore"
+	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
 )
 
 const DefaultSlabSize = 1 << 13

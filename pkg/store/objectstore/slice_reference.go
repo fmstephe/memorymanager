@@ -6,7 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/fmstephe/flib/fmath"
-	"github.com/fmstephe/location-system/pkg/store/pointerstore"
+	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
 )
 
 func AllocSlice[T any](s *Store, length, capacity int) (RefSlice[T], []T) {
