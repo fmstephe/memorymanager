@@ -9,11 +9,11 @@ import (
 	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
 )
 
-func AllocFromStr(s *Store, str string) (RefStr, string) {
-	return AllocFromBytes(s, funsafe.StringToBytes(str))
+func AllocStringFromString(s *Store, str string) (RefString, string) {
+	return AllocStringFromBytes(s, funsafe.StringToBytes(str))
 }
 
-func AllocFromBytes(s *Store, bytes []byte) (RefStr, string) {
+func AllocStringFromBytes(s *Store, bytes []byte) (RefString, string) {
 	idx := indexForSize(uint64(len(bytes)))
 	if idx >= len(s.sizedStores) {
 		panic(fmt.Errorf("Allocation too large at %d", len(bytes)))
@@ -31,40 +31,40 @@ func AllocFromBytes(s *Store, bytes []byte) (RefStr, string) {
 	return oRef, oRef.Value()
 }
 
-func FreeStr(s *Store, r RefStr) {
+func FreeStr(s *Store, r RefString) {
 	idx := indexForSize(uint64(r.length))
 	s.free(idx, r.ref)
 }
 
 // A reference to a string
 // length is the len() of the string
-type RefStr struct {
+type RefString struct {
 	length int
 	ref    pointerstore.Reference
 }
 
-func newRefStr(length int, ref pointerstore.Reference) RefStr {
+func newRefStr(length int, ref pointerstore.Reference) RefString {
 	if ref.IsNil() {
 		panic("cannot create new RefStr with nil pointerstore.RefStr")
 	}
 
-	return RefStr{
+	return RefString{
 		length: length,
 		ref:    ref,
 	}
 }
 
-func (r *RefStr) Value() (str string) {
+func (r *RefString) Value() (str string) {
 	stringHeader := (*reflect.StringHeader)(unsafe.Pointer(&str))
 	stringHeader.Data = r.ref.GetDataPtr()
 	stringHeader.Len = r.length
 	return str
 }
 
-func (r *RefStr) IsNil() bool {
+func (r *RefString) IsNil() bool {
 	return r.ref.IsNil()
 }
 
-func (r *RefStr) gen() uint8 {
+func (r *RefString) gen() uint8 {
 	return r.ref.GetGen()
 }
