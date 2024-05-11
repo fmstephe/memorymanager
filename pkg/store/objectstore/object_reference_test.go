@@ -21,9 +21,9 @@ func Test_Object_NewModifyGet(t *testing.T) {
 	allocConf := ConfForType[MutableStruct](os)
 
 	// Create all the objects and modify field
-	refs := make([]Reference[MutableStruct], allocConf.ObjectsPerSlab*3)
+	refs := make([]RefObject[MutableStruct], allocConf.ObjectsPerSlab*3)
 	for i := range refs {
-		r, s := Alloc[MutableStruct](os)
+		r, s := AllocObject[MutableStruct](os)
 		s.Field = i
 		refs[i] = r
 	}
@@ -52,9 +52,9 @@ func Test_Object_GetModifyGet(t *testing.T) {
 	allocConf := ConfForType[MutableStruct](os)
 
 	// Create all the objects
-	refs := make([]Reference[MutableStruct], allocConf.ObjectsPerSlab*3)
+	refs := make([]RefObject[MutableStruct], allocConf.ObjectsPerSlab*3)
 	for i := range refs {
-		r, _ := Alloc[MutableStruct](os)
+		r, _ := AllocObject[MutableStruct](os)
 		refs[i] = r
 	}
 
@@ -83,8 +83,8 @@ func Test_Object_NewFreeGet_Panic(t *testing.T) {
 	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	r, _ := Alloc[MutableStruct](os)
-	Free(os, r)
+	r, _ := AllocObject[MutableStruct](os)
+	FreeObject(os, r)
 
 	assert.Panics(t, func() { r.GetValue() })
 }
@@ -95,10 +95,10 @@ func Test_Object_NewFreeFree_Panic(t *testing.T) {
 	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	r, _ := Alloc[MutableStruct](os)
-	Free(os, r)
+	r, _ := AllocObject[MutableStruct](os)
+	FreeObject(os, r)
 
-	assert.Panics(t, func() { Free(os, r) })
+	assert.Panics(t, func() { FreeObject(os, r) })
 }
 
 // Demonstrate that when we double free a re-allocated object we panic
@@ -106,12 +106,12 @@ func Test_Object_NewFreeAllocFree_Panic(t *testing.T) {
 	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	r, _ := Alloc[MutableStruct](os)
-	Free(os, r)
+	r, _ := AllocObject[MutableStruct](os)
+	FreeObject(os, r)
 	// This will re-allocate the just-freed object
-	_, _ = Alloc[MutableStruct](os)
+	_, _ = AllocObject[MutableStruct](os)
 
-	assert.Panics(t, func() { Free(os, r) })
+	assert.Panics(t, func() { FreeObject(os, r) })
 }
 
 // Demonstrate that the gen check on Free suffers from the ABA problem.
@@ -121,20 +121,20 @@ func Test_Object_NewFree256ReallocFree_NoPanic(t *testing.T) {
 	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	r, _ := Alloc[MutableStruct](os)
+	r, _ := AllocObject[MutableStruct](os)
 	oldGen := r.ref.GetGen()
-	Free(os, r)
+	FreeObject(os, r)
 
 	// Keep allocating and free the slot until the gen overflows back to
 	// the oldGen value
-	temp, _ := Alloc[MutableStruct](os)
+	temp, _ := AllocObject[MutableStruct](os)
 	for temp.ref.GetGen() != oldGen {
 		// This will re-allocate the just-freed object
-		Free(os, temp)
-		temp, _ = Alloc[MutableStruct](os)
+		FreeObject(os, temp)
+		temp, _ = AllocObject[MutableStruct](os)
 	}
 
-	assert.NotPanics(t, func() { Free(os, r) })
+	assert.NotPanics(t, func() { FreeObject(os, r) })
 }
 
 // Demonstrate that when we get a re-allocated object we panic
@@ -142,10 +142,10 @@ func Test_Object_NewFreeAllocGet_Panic(t *testing.T) {
 	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	r, _ := Alloc[MutableStruct](os)
-	Free(os, r)
+	r, _ := AllocObject[MutableStruct](os)
+	FreeObject(os, r)
 	// This will re-allocate the just-freed object
-	_, _ = Alloc[MutableStruct](os)
+	_, _ = AllocObject[MutableStruct](os)
 
 	assert.Panics(t, func() { r.GetValue() })
 }
@@ -157,17 +157,17 @@ func Test_Object_NewFree256ReallocGet_NoPanic(t *testing.T) {
 	os := New()
 	defer os.Destroy()
 
-	r, _ := Alloc[MutableStruct](os)
+	r, _ := AllocObject[MutableStruct](os)
 	oldGen := r.ref.GetGen()
-	Free(os, r)
+	FreeObject(os, r)
 
 	// Keep allocating and free the slot until the gen overflows back to
 	// the oldGen value
-	temp, _ := Alloc[MutableStruct](os)
+	temp, _ := AllocObject[MutableStruct](os)
 	for temp.ref.GetGen() != oldGen {
 		// This will re-allocate the just-freed object
-		Free(os, temp)
-		temp, _ = Alloc[MutableStruct](os)
+		FreeObject(os, temp)
+		temp, _ = AllocObject[MutableStruct](os)
 	}
 
 	assert.NotPanics(t, func() { r.GetValue() })
@@ -184,10 +184,10 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	objectAllocations := int(allocConf.ObjectsPerSlab * 3)
 
 	// Create a large number of objects
-	refs := make([]Reference[MutableStruct], allocConf.ObjectsPerSlab*3)
+	refs := make([]RefObject[MutableStruct], allocConf.ObjectsPerSlab*3)
 
 	for i := range refs {
-		r, _ := Alloc[MutableStruct](os)
+		r, _ := AllocObject[MutableStruct](os)
 		refs[i] = r
 	}
 
@@ -204,7 +204,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 
 	// Free all of those objects
 	for _, r := range refs {
-		Free(os, r)
+		FreeObject(os, r)
 	}
 
 	stats = StatsForType[MutableStruct](os)
@@ -220,7 +220,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 
 	// Allocate the same number of objects again
 	for range refs {
-		Alloc[MutableStruct](os)
+		AllocObject[MutableStruct](os)
 	}
 
 	stats = StatsForType[MutableStruct](os)
@@ -248,21 +248,21 @@ func Test_Object_FreeThenAllocTwice(t *testing.T) {
 	defer os.Destroy()
 
 	// Allocate an object
-	r1, o1 := Alloc[MutableStruct](os)
+	r1, o1 := AllocObject[MutableStruct](os)
 	o1.Field = 1
 	// This is an original object - gen is 0
 	assert.Equal(t, byte(0), r1.ref.GetGen())
 	// Free it
-	Free(os, r1)
+	FreeObject(os, r1)
 
 	// Allocate another - this should reuse o1
-	r2, o2 := Alloc[MutableStruct](os)
+	r2, o2 := AllocObject[MutableStruct](os)
 	o2.Field = 2
 	// This object is re-allocated - gen is 1
 	assert.Equal(t, byte(1), r2.ref.GetGen())
 
 	// Allocate a third, this should be a non-recycled allocation
-	r3, o3 := Alloc[MutableStruct](os)
+	r3, o3 := AllocObject[MutableStruct](os)
 	// This is an original object - gen is 0
 	assert.Equal(t, byte(0), r3.ref.GetGen())
 	o3.Field = 3
@@ -280,10 +280,10 @@ func Test_Object_CheckGenericTypeForPointersInAlloc(t *testing.T) {
 	defer os.Destroy()
 
 	// If generic type contains pointers, Alloc will panic
-	assert.Panics(t, func() { Alloc[*int](os) })
+	assert.Panics(t, func() { AllocObject[*int](os) })
 
 	// If generic type does not contain pointers, Alloc will not panic
-	assert.NotPanics(t, func() { Alloc[int](os) })
+	assert.NotPanics(t, func() { AllocObject[int](os) })
 }
 
 func Test_Object_CannotAllocateVeryBigStruct(t *testing.T) {
@@ -328,7 +328,7 @@ func Test_Object_ZeroSizedType_FullSlab(t *testing.T) {
 	lenTotal := 0
 
 	for range allocConf.ObjectsPerSlab * 24 {
-		_, val := Alloc[SizedArrayZero](os)
+		_, val := AllocObject[SizedArrayZero](os)
 		lenTotal += len(val.Field[:])
 	}
 

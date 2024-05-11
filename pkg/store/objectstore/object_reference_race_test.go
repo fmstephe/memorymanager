@@ -36,16 +36,16 @@ func TestSeparateGoroutines_Race(t *testing.T) {
 
 func allocateAndModify(t *testing.T, os *Store, barrier *sync.WaitGroup) {
 	barrier.Wait()
-	refs := []Reference[MutableStruct]{}
+	refs := []RefObject[MutableStruct]{}
 	for i := 0; i < allocsPerGoroutine; i++ {
-		ref, v := Alloc[MutableStruct](os)
+		ref, v := AllocObject[MutableStruct](os)
 		refs = append(refs, ref)
 		v.Field = i
 	}
 	for i, ref := range refs {
 		v := ref.GetValue()
 		assert.Equal(t, v.Field, i)
-		Free(os, ref)
+		FreeObject(os, ref)
 	}
 }
 
@@ -55,7 +55,7 @@ func allocateAndModify(t *testing.T, os *Store, barrier *sync.WaitGroup) {
 // We test that the shared total is what we expect.
 // This test should be run with -race
 func TestAllocAndShare_Race(t *testing.T) {
-	sharedChannel := make(chan Reference[MutableStruct], goroutines*allocsPerGoroutine)
+	sharedChannel := make(chan RefObject[MutableStruct], goroutines*allocsPerGoroutine)
 
 	os := NewSized(1 << 8)
 	defer os.Destroy()
@@ -86,13 +86,13 @@ func allocateAndModifyShared(
 	t *testing.T,
 	os *Store,
 	barrier *sync.WaitGroup,
-	sharedChan chan Reference[MutableStruct],
+	sharedChan chan RefObject[MutableStruct],
 	total *atomic.Uint64,
 ) {
 	barrier.Wait()
 
 	for i := 0; i < allocsPerGoroutine; i++ {
-		ref, v := Alloc[MutableStruct](os)
+		ref, v := AllocObject[MutableStruct](os)
 		v.Field = i
 		sharedChan <- ref
 	}
@@ -101,7 +101,7 @@ func allocateAndModifyShared(
 		ref := <-sharedChan
 		v := ref.GetValue()
 		total.Add(uint64(v.Field))
-		Free(os, ref)
+		FreeObject(os, ref)
 	}
 }
 

@@ -72,43 +72,43 @@ type MultitypeAllocation struct {
 func (a *MultitypeAllocation) getSlice() []byte {
 	ref := a.ref
 	switch t := ref.(type) {
-	case Reference[SizedArrayZero]:
+	case RefObject[SizedArrayZero]:
 		v := t.GetValue()
 		return v.Field[:]
-	case Reference[SizedArray0]:
+	case RefObject[SizedArray0]:
 		v := t.GetValue()
 		return v.Field[:]
-	case Reference[SizedArray1]:
+	case RefObject[SizedArray1]:
 		v := t.GetValue()
 		return v.Field[:]
-	case Reference[SizedArray2]:
+	case RefObject[SizedArray2]:
 		v := t.GetValue()
 		return v.Field[:]
-	case Reference[SizedArray5Small]:
+	case RefObject[SizedArray5Small]:
 		v := t.GetValue()
 		return v.Field[:]
-	case Reference[SizedArray5]:
+	case RefObject[SizedArray5]:
 		v := t.GetValue()
 		return v.Field[:]
-	case Reference[SizedArray5Large]:
+	case RefObject[SizedArray5Large]:
 		v := t.GetValue()
 		return v.Field[:]
-	case Reference[SizedArray9Small]:
+	case RefObject[SizedArray9Small]:
 		v := t.GetValue()
 		return v.Field[:]
-	case Reference[SizedArray9]:
+	case RefObject[SizedArray9]:
 		v := t.GetValue()
 		return v.Field[:]
-	case Reference[SizedArray9Large]:
+	case RefObject[SizedArray9Large]:
 		v := t.GetValue()
 		return v.Field[:]
-	case Reference[SizedArray14Small]:
+	case RefObject[SizedArray14Small]:
 		v := t.GetValue()
 		return v.Field[:]
-	case Reference[SizedArray14]:
+	case RefObject[SizedArray14]:
 		v := t.GetValue()
 		return v.Field[:]
-	case Reference[SizedArray14Large]:
+	case RefObject[SizedArray14Large]:
 		v := t.GetValue()
 		return v.Field[:]
 	default:
@@ -119,32 +119,32 @@ func (a *MultitypeAllocation) getSlice() []byte {
 func (a *MultitypeAllocation) free(s *Store) {
 	ref := a.ref
 	switch t := ref.(type) {
-	case Reference[SizedArrayZero]:
-		Free[SizedArrayZero](s, t)
-	case Reference[SizedArray0]:
-		Free[SizedArray0](s, t)
-	case Reference[SizedArray1]:
-		Free[SizedArray1](s, t)
-	case Reference[SizedArray2]:
-		Free[SizedArray2](s, t)
-	case Reference[SizedArray5Small]:
-		Free[SizedArray5Small](s, t)
-	case Reference[SizedArray5]:
-		Free[SizedArray5](s, t)
-	case Reference[SizedArray5Large]:
-		Free[SizedArray5Large](s, t)
-	case Reference[SizedArray9Small]:
-		Free[SizedArray9Small](s, t)
-	case Reference[SizedArray9]:
-		Free[SizedArray9](s, t)
-	case Reference[SizedArray9Large]:
-		Free[SizedArray9Large](s, t)
-	case Reference[SizedArray14Small]:
-		Free[SizedArray14Small](s, t)
-	case Reference[SizedArray14]:
-		Free[SizedArray14](s, t)
-	case Reference[SizedArray14Large]:
-		Free[SizedArray14Large](s, t)
+	case RefObject[SizedArrayZero]:
+		FreeObject[SizedArrayZero](s, t)
+	case RefObject[SizedArray0]:
+		FreeObject[SizedArray0](s, t)
+	case RefObject[SizedArray1]:
+		FreeObject[SizedArray1](s, t)
+	case RefObject[SizedArray2]:
+		FreeObject[SizedArray2](s, t)
+	case RefObject[SizedArray5Small]:
+		FreeObject[SizedArray5Small](s, t)
+	case RefObject[SizedArray5]:
+		FreeObject[SizedArray5](s, t)
+	case RefObject[SizedArray5Large]:
+		FreeObject[SizedArray5Large](s, t)
+	case RefObject[SizedArray9Small]:
+		FreeObject[SizedArray9Small](s, t)
+	case RefObject[SizedArray9]:
+		FreeObject[SizedArray9](s, t)
+	case RefObject[SizedArray9Large]:
+		FreeObject[SizedArray9Large](s, t)
+	case RefObject[SizedArray14Small]:
+		FreeObject[SizedArray14Small](s, t)
+	case RefObject[SizedArray14]:
+		FreeObject[SizedArray14](s, t)
+	case RefObject[SizedArray14Large]:
+		FreeObject[SizedArray14Large](s, t)
 	default:
 		panic(fmt.Errorf("Bad type %+v", t))
 	}
@@ -154,67 +154,67 @@ func multitypeAllocFunc(selector int) func(*Store) *MultitypeAllocation {
 	switch selector % numberOfTypes {
 	case 0:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArrayZero](os)
+			r, _ := AllocObject[SizedArrayZero](os)
 			return &MultitypeAllocation{r}
 		}
 	case 1:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray0](os)
+			r, _ := AllocObject[SizedArray0](os)
 			return &MultitypeAllocation{r}
 		}
 	case 2:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray1](os)
+			r, _ := AllocObject[SizedArray1](os)
 			return &MultitypeAllocation{r}
 		}
 	case 3:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray2](os)
+			r, _ := AllocObject[SizedArray2](os)
 			return &MultitypeAllocation{r}
 		}
 	case 4:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray5Small](os)
+			r, _ := AllocObject[SizedArray5Small](os)
 			return &MultitypeAllocation{r}
 		}
 	case 5:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray5](os)
+			r, _ := AllocObject[SizedArray5](os)
 			return &MultitypeAllocation{r}
 		}
 	case 6:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray5Large](os)
+			r, _ := AllocObject[SizedArray5Large](os)
 			return &MultitypeAllocation{r}
 		}
 	case 7:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray9Small](os)
+			r, _ := AllocObject[SizedArray9Small](os)
 			return &MultitypeAllocation{r}
 		}
 	case 8:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray9](os)
+			r, _ := AllocObject[SizedArray9](os)
 			return &MultitypeAllocation{r}
 		}
 	case 9:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray9Large](os)
+			r, _ := AllocObject[SizedArray9Large](os)
 			return &MultitypeAllocation{r}
 		}
 	case 10:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray14Small](os)
+			r, _ := AllocObject[SizedArray14Small](os)
 			return &MultitypeAllocation{r}
 		}
 	case 11:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray14](os)
+			r, _ := AllocObject[SizedArray14](os)
 			return &MultitypeAllocation{r}
 		}
 	case 12:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := Alloc[SizedArray14Large](os)
+			r, _ := AllocObject[SizedArray14Large](os)
 			return &MultitypeAllocation{r}
 		}
 	default:
@@ -269,12 +269,12 @@ func TestSizedStats(t *testing.T) {
 func testSizedStats[T any](t *testing.T, os *Store) {
 	expectedStats := StatsForType[T](os)
 
-	r1, _ := Alloc[T](os)
-	r2, _ := Alloc[T](os)
-	Free[T](os, r1)
-	r3, _ := Alloc[T](os)
-	Free[T](os, r2)
-	Free[T](os, r3)
+	r1, _ := AllocObject[T](os)
+	r2, _ := AllocObject[T](os)
+	FreeObject[T](os, r1)
+	r3, _ := AllocObject[T](os)
+	FreeObject[T](os, r2)
+	FreeObject[T](os, r3)
 
 	expectedStats.Allocs = 3
 	expectedStats.Frees = 3

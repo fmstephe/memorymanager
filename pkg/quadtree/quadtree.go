@@ -9,7 +9,7 @@ import (
 // This struct is the exported root of a quad tree
 type Tree[T any] struct {
 	store         *nodeStore[T]
-	treeReference objectstore.Reference[node[T]]
+	treeReference objectstore.RefObject[node[T]]
 	view          View
 }
 

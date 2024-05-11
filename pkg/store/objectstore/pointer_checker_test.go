@@ -17,7 +17,7 @@ type badStruct struct {
 }
 
 type stringSmugglerStruct struct {
-	reference Reference[string]
+	reference RefObject[string]
 }
 
 type manyPointers struct {
@@ -72,7 +72,7 @@ type deepGoodStruct struct {
 type goodStruct struct {
 	intField       int
 	floatField     float64
-	referenceField Reference[goodStruct]
+	referenceField RefObject[goodStruct]
 }
 
 func TestGoodTypes(t *testing.T) {

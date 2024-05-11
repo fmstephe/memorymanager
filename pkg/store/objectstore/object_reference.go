@@ -7,7 +7,7 @@ import (
 	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
 )
 
-func Alloc[T any](s *Store) (Reference[T], *T) {
+func AllocObject[T any](s *Store) (RefObject[T], *T) {
 	// TODO this is not fast - we _need_ to cache this type data
 	if err := containsNoPointers[T](); err != nil {
 		panic(fmt.Errorf("cannot allocate generic type containing pointers %w", err))
@@ -19,38 +19,38 @@ func Alloc[T any](s *Store) (Reference[T], *T) {
 	}
 
 	pRef := s.alloc(idx)
-	oRef := newReference[T](pRef)
+	oRef := newRefObject[T](pRef)
 	return oRef, oRef.GetValue()
 }
 
-func Free[T any](s *Store, r Reference[T]) {
+func FreeObject[T any](s *Store, r RefObject[T]) {
 	idx := indexForType[T]()
 	s.free(idx, r.ref)
 }
 
 // A reference to a typed object
-type Reference[O any] struct {
+type RefObject[T any] struct {
 	ref pointerstore.Reference
 }
 
-func newReference[O any](ref pointerstore.Reference) Reference[O] {
+func newRefObject[T any](ref pointerstore.Reference) RefObject[T] {
 	if ref.IsNil() {
 		panic("cannot create new Reference with nil pointerstore.Reference")
 	}
 
-	return Reference[O]{
+	return RefObject[T]{
 		ref: ref,
 	}
 }
 
-func (r *Reference[O]) GetValue() *O {
-	return (*O)((unsafe.Pointer)(r.ref.GetDataPtr()))
+func (r *RefObject[T]) GetValue() *T {
+	return (*T)((unsafe.Pointer)(r.ref.GetDataPtr()))
 }
 
-func (r *Reference[O]) getGen() uint8 {
+func (r *RefObject[T]) getGen() uint8 {
 	return r.ref.GetGen()
 }
 
-func (r *Reference[O]) IsNil() bool {
+func (r *RefObject[T]) IsNil() bool {
 	return r.ref.IsNil()
 }

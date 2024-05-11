@@ -17,15 +17,15 @@ func newTreeStore[T any]() *nodeStore[T] {
 	}
 }
 
-func (s *nodeStore[T]) allocNode(view View) (objectstore.Reference[node[T]], *node[T]) {
-	r, newNode := objectstore.Alloc[node[T]](s.nodes)
+func (s *nodeStore[T]) allocNode(view View) (objectstore.RefObject[node[T]], *node[T]) {
+	r, newNode := objectstore.AllocObject[node[T]](s.nodes)
 	newNode.view = view
 	newNode.isLeaf = false
 	return r, newNode
 }
 
-func (s *nodeStore[T]) allocLeaf(view View) objectstore.Reference[node[T]] {
-	r, newLeaf := objectstore.Alloc[node[T]](s.nodes)
+func (s *nodeStore[T]) allocLeaf(view View) objectstore.RefObject[node[T]] {
+	r, newLeaf := objectstore.AllocObject[node[T]](s.nodes)
 	newLeaf.view = view
 	newLeaf.isLeaf = true
 	return r
