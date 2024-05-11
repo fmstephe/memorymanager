@@ -8,12 +8,12 @@ import (
 	"strconv"
 
 	"github.com/fmstephe/location-system/pkg/quadtree"
-	"github.com/fmstephe/location-system/pkg/store/bytestore"
+	"github.com/fmstephe/location-system/pkg/store/objectstore"
 )
 
 type ParcelHandler struct {
-	byteStore *bytestore.Store
-	tree      *quadtree.Tree[bytestore.Reference]
+	byteStore *objectstore.Store
+	tree      *quadtree.Tree[objectstore.RefSlice[byte]]
 }
 
 func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {
@@ -67,13 +67,13 @@ func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		for _, view := range views {
 			count := s.tree.Count(view)
 			fmt.Printf("split view %v - %d\n", view, count)
-			s.tree.Survey(view, surveyFunc(w, s.byteStore, 1))
+			s.tree.Survey(view, surveyFunc(w, 1))
 		}
 	} else {
 		w.Write(startComplete)
 		w.Write(startArray)
 		fmt.Printf("total survey - %d\n", count)
-		s.tree.Survey(view, surveyFunc(w, s.byteStore, 0))
+		s.tree.Survey(view, surveyFunc(w, 0))
 	}
 
 	w.Write(endArray)
@@ -90,9 +90,9 @@ var endArray = []byte(`null]`)
 var comma = []byte(`,`)
 var end = []byte(`}`)
 
-func surveyFunc(w http.ResponseWriter, byteStore *bytestore.Store, limit int) func(_, _ float64, br *bytestore.Reference) bool {
-	refSet := map[bytestore.Reference]struct{}{}
-	return func(_, _ float64, br *bytestore.Reference) bool {
+func surveyFunc(w http.ResponseWriter, limit int) func(_, _ float64, br *objectstore.RefSlice[byte]) bool {
+	refSet := map[objectstore.RefSlice[byte]]struct{}{}
+	return func(_, _ float64, br *objectstore.RefSlice[byte]) bool {
 		if _, ok := refSet[*br]; ok {
 			// We've already seen this reference, don't write it out again
 			return true
@@ -105,7 +105,7 @@ func surveyFunc(w http.ResponseWriter, byteStore *bytestore.Store, limit int) fu
 			return false
 		}
 
-		bytes := byteStore.Get(*br)
+		bytes := (*br).Value()
 
 		_, err := w.Write(bytes)
 		if err != nil {

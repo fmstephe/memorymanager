@@ -11,7 +11,7 @@ import (
 
 	"github.com/fmstephe/location-system/pkg/lds/lds_csv"
 	"github.com/fmstephe/location-system/pkg/quadtree"
-	"github.com/fmstephe/location-system/pkg/store/bytestore"
+	"github.com/fmstephe/location-system/pkg/store/objectstore"
 )
 
 var (
@@ -50,9 +50,9 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func fillTree(parcelChan chan lds_csv.CSVParcelData) (*quadtree.Tree[bytestore.Reference], *bytestore.Store) {
-	byteStore := bytestore.New()
-	tree := quadtree.NewTree[bytestore.Reference](quadtree.NewLongLatView())
+func fillTree(parcelChan chan lds_csv.CSVParcelData) (*quadtree.Tree[objectstore.RefSlice[byte]], *objectstore.Store) {
+	byteStore := objectstore.New()
+	tree := quadtree.NewTree[objectstore.RefSlice[byte]](quadtree.NewLongLatView())
 
 	count := 0
 	errCount := 0
@@ -74,7 +74,7 @@ func fillTree(parcelChan chan lds_csv.CSVParcelData) (*quadtree.Tree[bytestore.R
 				errCount++
 				continue
 			}
-			or, buffer := byteStore.Alloc(uint32(len(bytes)))
+			or, buffer := objectstore.AllocSlice[byte](byteStore, len(bytes), len(bytes))
 			copy(buffer, bytes)
 
 			if err := tree.Insert(northLong, westLat, or); err != nil {
