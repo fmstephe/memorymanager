@@ -122,13 +122,13 @@ func Test_Object_NewFree256ReallocFree_NoPanic(t *testing.T) {
 	defer os.Destroy()
 
 	r, _ := AllocObject[MutableStruct](os)
-	oldGen := r.ref.GetGen()
+	oldGen := r.ref.Gen()
 	FreeObject(os, r)
 
 	// Keep allocating and free the slot until the gen overflows back to
 	// the oldGen value
 	temp, _ := AllocObject[MutableStruct](os)
-	for temp.ref.GetGen() != oldGen {
+	for temp.ref.Gen() != oldGen {
 		// This will re-allocate the just-freed object
 		FreeObject(os, temp)
 		temp, _ = AllocObject[MutableStruct](os)
@@ -158,13 +158,13 @@ func Test_Object_NewFree256ReallocGet_NoPanic(t *testing.T) {
 	defer os.Destroy()
 
 	r, _ := AllocObject[MutableStruct](os)
-	oldGen := r.ref.GetGen()
+	oldGen := r.ref.Gen()
 	FreeObject(os, r)
 
 	// Keep allocating and free the slot until the gen overflows back to
 	// the oldGen value
 	temp, _ := AllocObject[MutableStruct](os)
-	for temp.ref.GetGen() != oldGen {
+	for temp.ref.Gen() != oldGen {
 		// This will re-allocate the just-freed object
 		FreeObject(os, temp)
 		temp, _ = AllocObject[MutableStruct](os)
@@ -251,7 +251,7 @@ func Test_Object_FreeThenAllocTwice(t *testing.T) {
 	r1, o1 := AllocObject[MutableStruct](os)
 	o1.Field = 1
 	// This is an original object - gen is 0
-	assert.Equal(t, byte(0), r1.ref.GetGen())
+	assert.Equal(t, byte(0), r1.ref.Gen())
 	// Free it
 	FreeObject(os, r1)
 
@@ -259,12 +259,12 @@ func Test_Object_FreeThenAllocTwice(t *testing.T) {
 	r2, o2 := AllocObject[MutableStruct](os)
 	o2.Field = 2
 	// This object is re-allocated - gen is 1
-	assert.Equal(t, byte(1), r2.ref.GetGen())
+	assert.Equal(t, byte(1), r2.ref.Gen())
 
 	// Allocate a third, this should be a non-recycled allocation
 	r3, o3 := AllocObject[MutableStruct](os)
 	// This is an original object - gen is 0
-	assert.Equal(t, byte(0), r3.ref.GetGen())
+	assert.Equal(t, byte(0), r3.ref.Gen())
 	o3.Field = 3
 
 	// Assert that the references point to distinct memory locations

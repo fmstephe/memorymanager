@@ -44,11 +44,7 @@ func newRefObject[T any](ref pointerstore.Reference) RefObject[T] {
 }
 
 func (r *RefObject[T]) GetValue() *T {
-	return (*T)((unsafe.Pointer)(r.ref.GetDataPtr()))
-}
-
-func (r *RefObject[T]) getGen() uint8 {
-	return r.ref.GetGen()
+	return (*T)((unsafe.Pointer)(r.ref.DataPtr()))
 }
 
 func (r *RefObject[T]) IsNil() bool {

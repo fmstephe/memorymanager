@@ -16,8 +16,8 @@ const pointerMask = ^genMask
 // pointed to must have the same generation value in order to access/free that
 // object.
 type Reference struct {
-	address  uint64
-	metadata uint64
+	dataAddress uint64
+	metaAddress uint64
 }
 
 const metadataSize = unsafe.Sizeof(metadata{})
@@ -53,14 +53,14 @@ func NewReference(pAddress, pMetadata uintptr) Reference {
 	// NB: The gen on a brand new Reference is always 0
 	// So we don't set it
 	return Reference{
-		address:  maskedAddress,
-		metadata: uint64(pMetadata),
+		dataAddress: maskedAddress,
+		metaAddress: uint64(pMetadata),
 	}
 }
 
 func (r *Reference) AllocFromFree() (nextFree Reference) {
 	// Grab the object for the slot and nil out the slot's nextFree pointer
-	obj := r.getMetadata()
+	obj := r.metadata()
 	nextFree = obj.nextFree
 	obj.nextFree = Reference{}
 
@@ -79,14 +79,14 @@ func (r *Reference) AllocFromFree() (nextFree Reference) {
 }
 
 func (r *Reference) Free(oldFree Reference) {
-	meta := r.getMetadata()
+	meta := r.metadata()
 
 	if !meta.nextFree.IsNil() {
 		panic(fmt.Errorf("attempted to Free freed allocation %v", r))
 	}
 
-	if meta.gen != r.GetGen() {
-		panic(fmt.Errorf("Attempt to free allocation (%d) using stale reference (%d)", meta.gen, r.GetGen()))
+	if meta.gen != r.Gen() {
+		panic(fmt.Errorf("Attempt to free allocation (%d) using stale reference (%d)", meta.gen, r.Gen()))
 	}
 
 	if oldFree.IsNil() {
@@ -97,40 +97,40 @@ func (r *Reference) Free(oldFree Reference) {
 }
 
 func (r *Reference) IsNil() bool {
-	return r.getMetadataPtr() == 0
+	return r.metadataPtr() == 0
 }
 
-func (r *Reference) GetDataPtr() uintptr {
-	meta := r.getMetadata()
+func (r *Reference) DataPtr() uintptr {
+	meta := r.metadata()
 
 	if !meta.nextFree.IsNil() {
 		panic(fmt.Errorf("attempted to get freed allocation %v", r))
 	}
 
-	if meta.gen != r.GetGen() {
-		panic(fmt.Errorf("Attempt to get value (%d) using stale reference (%d)", meta.gen, r.GetGen()))
+	if meta.gen != r.Gen() {
+		panic(fmt.Errorf("Attempt to get value (%d) using stale reference (%d)", meta.gen, r.Gen()))
 	}
-	return (uintptr)(r.address & pointerMask)
+	return (uintptr)(r.dataAddress & pointerMask)
 }
 
 // Convenient method to retrieve raw data of an allocation
-func (r *Reference) GetData(size int) []byte {
-	ptr := r.GetDataPtr()
+func (r *Reference) Bytes(size int) []byte {
+	ptr := r.DataPtr()
 	return pointerToBytes(ptr, size)
 }
 
-func (r *Reference) getMetadataPtr() uintptr {
-	return (uintptr)(r.metadata)
+func (r *Reference) metadataPtr() uintptr {
+	return (uintptr)(r.metaAddress)
 }
 
-func (r *Reference) getMetadata() *metadata {
-	return (*metadata)(unsafe.Pointer(r.getMetadataPtr()))
+func (r *Reference) metadata() *metadata {
+	return (*metadata)(unsafe.Pointer(r.metadataPtr()))
 }
 
-func (r *Reference) GetGen() uint8 {
-	return (uint8)((r.address & genMask) >> maskShift)
+func (r *Reference) Gen() uint8 {
+	return (uint8)((r.dataAddress & genMask) >> maskShift)
 }
 
 func (r *Reference) setGen(gen uint8) {
-	r.address = (r.address & pointerMask) | (uint64(gen) << maskShift)
+	r.dataAddress = (r.dataAddress & pointerMask) | (uint64(gen) << maskShift)
 }

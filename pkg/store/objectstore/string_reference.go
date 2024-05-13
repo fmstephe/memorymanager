@@ -23,9 +23,9 @@ func AllocStringFromBytes(s *Store, bytes []byte) (RefString, string) {
 	pRef := s.alloc(idx)
 	oRef := newRefStr(len(bytes), pRef)
 
-	// Copy the string across to the allocated string
-	data := oRef.ref.GetData(len(bytes))
-	copy(data, bytes)
+	// Copy the byte data across to the allocated string
+	allocBytes := oRef.ref.Bytes(len(bytes))
+	copy(allocBytes, bytes)
 
 	// Return the string-ref and string value
 	return oRef, oRef.Value()
@@ -56,15 +56,11 @@ func newRefStr(length int, ref pointerstore.Reference) RefString {
 
 func (r *RefString) Value() (str string) {
 	stringHeader := (*reflect.StringHeader)(unsafe.Pointer(&str))
-	stringHeader.Data = r.ref.GetDataPtr()
+	stringHeader.Data = r.ref.DataPtr()
 	stringHeader.Len = r.length
 	return str
 }
 
 func (r *RefString) IsNil() bool {
 	return r.ref.IsNil()
-}
-
-func (r *RefString) gen() uint8 {
-	return r.ref.GetGen()
 }

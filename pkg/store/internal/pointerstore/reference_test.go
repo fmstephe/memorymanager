@@ -26,11 +26,11 @@ func TestIsNotNil(t *testing.T) {
 		// The object is not nil
 		assert.False(t, r.IsNil())
 		// Data pointer points to the correct location
-		assert.Equal(t, objects[i], r.GetDataPtr())
+		assert.Equal(t, objects[i], r.DataPtr())
 		// Metadata pointer points to the correct location
-		assert.Equal(t, metadata[i], r.getMetadataPtr())
+		assert.Equal(t, metadata[i], r.metadataPtr())
 		// Generation of a new Reference is always 0
-		assert.Equal(t, uint8(0), r.GetGen())
+		assert.Equal(t, uint8(0), r.Gen())
 	}
 }
 
@@ -53,15 +53,15 @@ func TestGenerationDoesNotAppearInOtherFields(t *testing.T) {
 	objects, metadatas := MmapSlab(allocConfig)
 
 	r := NewReference(objects[0], metadatas[0])
-	dataPtr := r.GetDataPtr()
-	metaPtr := r.getMetadataPtr()
-	metadata := r.getMetadata()
+	dataPtr := r.DataPtr()
+	metaPtr := r.metadataPtr()
+	metadata := r.metadata()
 
 	gen := uint8(255)
 	metadata.gen = gen
 	r.setGen(gen)
 
-	assert.Equal(t, dataPtr, r.GetDataPtr())
-	assert.Equal(t, metaPtr, r.getMetadataPtr())
-	assert.Equal(t, gen, r.GetGen())
+	assert.Equal(t, dataPtr, r.DataPtr())
+	assert.Equal(t, metaPtr, r.metadataPtr())
+	assert.Equal(t, gen, r.Gen())
 }

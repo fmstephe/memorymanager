@@ -59,7 +59,7 @@ func newRefSlice[T any](length, capacity int, ref pointerstore.Reference) RefSli
 
 func (r *RefSlice[T]) Value() (slice []T) {
 	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&slice))
-	sliceHeader.Data = r.ref.GetDataPtr()
+	sliceHeader.Data = r.ref.DataPtr()
 	sliceHeader.Len = r.length
 	sliceHeader.Cap = r.capacity
 	return slice
@@ -67,8 +67,4 @@ func (r *RefSlice[T]) Value() (slice []T) {
 
 func (r *RefSlice[T]) IsNil() bool {
 	return r.ref.IsNil()
-}
-
-func (r *RefSlice[T]) gen() uint8 {
-	return r.ref.GetGen()
 }
