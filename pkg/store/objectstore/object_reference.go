@@ -30,10 +30,10 @@ func FreeObject[T any](s *Store, r RefObject[T]) {
 
 // A reference to a typed object
 type RefObject[T any] struct {
-	ref pointerstore.Reference
+	ref pointerstore.RefPointer
 }
 
-func newRefObject[T any](ref pointerstore.Reference) RefObject[T] {
+func newRefObject[T any](ref pointerstore.RefPointer) RefObject[T] {
 	if ref.IsNil() {
 		panic("cannot create new Reference with nil pointerstore.Reference")
 	}

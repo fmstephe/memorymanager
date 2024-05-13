@@ -42,10 +42,10 @@ func indexForSlice[T any](capacity int) int {
 type RefSlice[T any] struct {
 	length   int
 	capacity int
-	ref      pointerstore.Reference
+	ref      pointerstore.RefPointer
 }
 
-func newRefSlice[T any](length, capacity int, ref pointerstore.Reference) RefSlice[T] {
+func newRefSlice[T any](length, capacity int, ref pointerstore.RefPointer) RefSlice[T] {
 	if ref.IsNil() {
 		panic("cannot create new RefSlice with nil pointerstore.RefSlice")
 	}

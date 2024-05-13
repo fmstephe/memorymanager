@@ -196,11 +196,11 @@ func initSizeStore(slabSize uint64) []*pointerstore.Store {
 	return slabs
 }
 
-func (s *Store) alloc(idx int) pointerstore.Reference {
+func (s *Store) alloc(idx int) pointerstore.RefPointer {
 	return s.sizedStores[idx].Alloc()
 }
 
-func (s *Store) free(idx int, r pointerstore.Reference) {
+func (s *Store) free(idx int, r pointerstore.RefPointer) {
 	s.sizedStores[idx].Free(r)
 }
 

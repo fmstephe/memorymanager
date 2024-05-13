@@ -28,7 +28,7 @@ type Store struct {
 
 	// freeRWLock protects rootFree
 	freeLock sync.Mutex
-	rootFree Reference
+	rootFree RefPointer
 
 	// objectsLock protects objects
 	// Allocating to an existing slab with a free slot only needs a read lock
@@ -47,7 +47,7 @@ func New(allocConf AllocConfig) *Store {
 	}
 }
 
-func (s *Store) Alloc() Reference {
+func (s *Store) Alloc() RefPointer {
 	s.allocs.Add(1)
 
 	if r, ok := s.allocFromFree(); ok {
@@ -59,7 +59,7 @@ func (s *Store) Alloc() Reference {
 	return s.allocFromOffset()
 }
 
-func (s *Store) Free(r Reference) {
+func (s *Store) Free(r RefPointer) {
 	s.freeLock.Lock()
 	defer s.freeLock.Unlock()
 
@@ -115,13 +115,13 @@ func (s *Store) AllocConfig() AllocConfig {
 	return s.allocConf
 }
 
-func (s *Store) allocFromFree() (Reference, bool) {
+func (s *Store) allocFromFree() (RefPointer, bool) {
 	s.freeLock.Lock()
 	defer s.freeLock.Unlock()
 
 	// No free objects available - allocFromFree failed
 	if s.rootFree.IsNil() {
-		return Reference{}, false
+		return RefPointer{}, false
 	}
 
 	// Get pointer to the next available freed slot
@@ -131,7 +131,7 @@ func (s *Store) allocFromFree() (Reference, bool) {
 	return alloc, true
 }
 
-func (s *Store) allocFromOffset() Reference {
+func (s *Store) allocFromOffset() RefPointer {
 	allocIdx := s.acquireAllocIdx()
 	// TODO do some power of 2 work here, to eliminate all this division
 	slabIdx := allocIdx / s.allocConf.ObjectsPerSlab

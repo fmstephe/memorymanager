@@ -40,10 +40,10 @@ func FreeStr(s *Store, r RefString) {
 // length is the len() of the string
 type RefString struct {
 	length int
-	ref    pointerstore.Reference
+	ref    pointerstore.RefPointer
 }
 
-func newRefStr(length int, ref pointerstore.Reference) RefString {
+func newRefStr(length int, ref pointerstore.RefPointer) RefString {
 	if ref.IsNil() {
 		panic("cannot create new RefStr with nil pointerstore.RefStr")
 	}

@@ -8,7 +8,7 @@ import (
 
 // Zero value of Reference returns true for IsNil()
 func TestIsNil(t *testing.T) {
-	r := Reference{}
+	r := RefPointer{}
 	assert.True(t, r.IsNil())
 }
 
