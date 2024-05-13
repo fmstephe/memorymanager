@@ -36,7 +36,7 @@ func Test_Object_NewModifyGet(t *testing.T) {
 
 	// Assert that all of the modifications are visible
 	for i, r := range refs {
-		s := r.GetValue()
+		s := r.Value()
 		assert.Equal(t, i, s.Field)
 	}
 }
@@ -66,13 +66,13 @@ func Test_Object_GetModifyGet(t *testing.T) {
 
 	// Get each object and modify field
 	for i, r := range refs {
-		s := r.GetValue()
+		s := r.Value()
 		s.Field = i * 2
 	}
 
 	// Assert that all of the modifications are visible
 	for i, r := range refs {
-		s := r.GetValue()
+		s := r.Value()
 		assert.Equal(t, i*2, s.Field)
 	}
 }
@@ -86,7 +86,7 @@ func Test_Object_NewFreeGet_Panic(t *testing.T) {
 	r, _ := AllocObject[MutableStruct](os)
 	FreeObject(os, r)
 
-	assert.Panics(t, func() { r.GetValue() })
+	assert.Panics(t, func() { r.Value() })
 }
 
 // Demonstrate that we can create an object, then free it. If we try to Free()
@@ -147,7 +147,7 @@ func Test_Object_NewFreeAllocGet_Panic(t *testing.T) {
 	// This will re-allocate the just-freed object
 	_, _ = AllocObject[MutableStruct](os)
 
-	assert.Panics(t, func() { r.GetValue() })
+	assert.Panics(t, func() { r.Value() })
 }
 
 // Demonstrate that the gen check on Free suffers from the ABA problem.
@@ -170,7 +170,7 @@ func Test_Object_NewFree256ReallocGet_NoPanic(t *testing.T) {
 		temp, _ = AllocObject[MutableStruct](os)
 	}
 
-	assert.NotPanics(t, func() { r.GetValue() })
+	assert.NotPanics(t, func() { r.Value() })
 }
 
 // Demonstrate that if we create a large number of objects, then free them,
@@ -268,7 +268,7 @@ func Test_Object_FreeThenAllocTwice(t *testing.T) {
 	o3.Field = 3
 
 	// Assert that the references point to distinct memory locations
-	assert.NotEqual(t, r2.GetValue(), r3.GetValue())
+	assert.NotEqual(t, r2.Value(), r3.Value())
 
 	// Assert that our allocations are independent of each other
 	assert.Equal(t, 2, o2.Field)

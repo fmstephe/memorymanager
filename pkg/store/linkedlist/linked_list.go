@@ -88,8 +88,8 @@ func (l *List[O]) pushTail(store *Store[O], newR objectstore.RefObject[node[O]],
 	}
 
 	// Get the first and last nodes in the linked list
-	firstNode := firstR.GetValue()
-	lastNode := firstNode.prev.GetValue()
+	firstNode := firstR.Value()
+	lastNode := firstNode.prev.Value()
 
 	// Make the last node point to the new node
 	lastNode.next = newR
@@ -103,15 +103,15 @@ func (l *List[O]) pushTail(store *Store[O], newR objectstore.RefObject[node[O]],
 func (l *List[O]) PeakHead(store *Store[O]) *O {
 	firstR := l.getReference()
 
-	firstNode := firstR.GetValue()
+	firstNode := firstR.Value()
 	return firstNode.getData()
 }
 
 func (l *List[O]) PeakTail(store *Store[O]) *O {
 	firstR := l.getReference()
 
-	firstNode := firstR.GetValue()
-	lastNode := firstNode.prev.GetValue()
+	firstNode := firstR.Value()
+	lastNode := firstNode.prev.Value()
 	return lastNode.getData()
 }
 
@@ -121,12 +121,12 @@ func (l *List[O]) RemoveHead(store *Store[O]) {
 
 func (l *List[O]) RemoveTail(store *Store[O]) {
 	ref := l.getReference()
-	origin := ref.GetValue()
+	origin := ref.Value()
 	l.remove(store, origin.prev)
 }
 
 func (l *List[O]) remove(store *Store[O], r objectstore.RefObject[node[O]]) {
-	n := r.GetValue()
+	n := r.Value()
 	if n.prev == r && n.next == r {
 		// There is only one element in this list, now we empty it
 		*l = List[O]{}
@@ -137,8 +137,8 @@ func (l *List[O]) remove(store *Store[O], r objectstore.RefObject[node[O]]) {
 	}
 
 	// Connect the previous and next nodes to each other
-	prev := n.prev.GetValue()
-	next := n.next.GetValue()
+	prev := n.prev.Value()
+	next := n.next.Value()
 	prev.next = n.next
 	next.prev = n.prev
 
@@ -166,15 +166,15 @@ func (l *List[O]) Append(store *Store[O], attach List[O]) {
 
 	// Get nodes in this linked list
 	lR := l.getReference()
-	lElem := lR.GetValue()
+	lElem := lR.Value()
 	lPrev := lElem.prev
-	lPrevElem := lPrev.GetValue()
+	lPrevElem := lPrev.Value()
 
 	// Get nodes in the attaching linked list
 	attachR := attach.getReference()
-	attachElem := attachR.GetValue()
+	attachElem := attachR.Value()
 	attachPrev := attachElem.prev
-	attachPrevElem := attachPrev.GetValue()
+	attachPrevElem := attachPrev.Value()
 
 	// Connect end of h linked list to the start of attach linked list
 	lPrevElem.next = attachR
@@ -204,7 +204,7 @@ func (l *List[O]) Survey(store *Store[O], fun func(o *O) bool) bool {
 	origin := l.getReference()
 	current := origin
 	for {
-		n := current.GetValue()
+		n := current.Value()
 		if !fun(n.getData()) {
 			return false
 		}
@@ -245,7 +245,7 @@ func (l *List[O]) Filter(store *Store[O], pred func(o *O) bool) {
 
 	current := origin
 	for {
-		n := current.GetValue()
+		n := current.Value()
 
 		// Test if node should be filtered
 		if pred(n.getData()) {
@@ -274,8 +274,8 @@ func (l *List[O]) Filter(store *Store[O], pred func(o *O) bool) {
 		}
 
 		// Link prev and next together
-		prevE := n.prev.GetValue()
-		nextE := n.next.GetValue()
+		prevE := n.prev.Value()
+		nextE := n.next.Value()
 		prevE.next = n.next
 		nextE.prev = n.prev
 

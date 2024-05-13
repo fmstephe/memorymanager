@@ -97,7 +97,7 @@ func (n *node[T]) insert(x, y float64, list linkedlist.List[T], store *nodeStore
 
 	// Node is internal - find correct subtree to insert into
 	for i := range n.children {
-		childNode := n.children[i].GetValue()
+		childNode := n.children[i].Value()
 		if childNode.view.containsPoint(x, y) {
 			childNode.insert(x, y, list, store)
 			return
@@ -123,7 +123,7 @@ func (n *node[T]) convertToInternal(store *nodeStore[T]) {
 		y := p.y
 		list := p.list
 		for i := range n.children {
-			childNode := n.children[i].GetValue()
+			childNode := n.children[i].Value()
 			if childNode.view.containsPoint(x, y) {
 				childNode.insert(x, y, list, store)
 				break
@@ -149,7 +149,7 @@ func (n *node[T]) survey(view View, fun func(x, y float64, data *T) bool, store 
 
 	// Survey each subtree
 	for _, r := range n.children {
-		st := r.GetValue()
+		st := r.Value()
 		if view.overlaps(st.view) {
 			if !st.survey(view, fun, store) {
 				return false
@@ -182,7 +182,7 @@ func (n *node[T]) count(view View, store *nodeStore[T]) int64 {
 	// Collect the count of the subtrees
 	counted := int64(0)
 	for _, r := range n.children {
-		st := r.GetValue()
+		st := r.Value()
 		if view.overlaps(st.view) {
 			counted += st.count(view, store)
 		}

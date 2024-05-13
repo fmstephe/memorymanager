@@ -32,20 +32,20 @@ func (r *Tree[T]) Insert(x, y float64, data T) error {
 		return fmt.Errorf("cannot insert x(%f) y(%f) into view %s", x, y, r.view)
 	}
 	list := r.store.newList(data)
-	st := r.treeReference.GetValue()
+	st := r.treeReference.Value()
 	st.insert(x, y, list, r.store)
 	return nil
 }
 
 // Applies fun to every element occurring within view in this tree
 func (r *Tree[T]) Survey(view View, fun func(x, y float64, data *T) bool) {
-	st := r.treeReference.GetValue()
+	st := r.treeReference.Value()
 	st.survey(view, fun, r.store)
 }
 
 // Applies fun to every element occurring within view in this tree
 func (r *Tree[T]) Count(view View) int64 {
-	st := r.treeReference.GetValue()
+	st := r.treeReference.Value()
 	return st.count(view, r.store)
 }
 
@@ -55,6 +55,6 @@ func (r *Tree[T]) View() View {
 }
 
 func (r *Tree[T]) String() string {
-	st := r.treeReference.GetValue()
+	st := r.treeReference.Value()
 	return st.String()
 }

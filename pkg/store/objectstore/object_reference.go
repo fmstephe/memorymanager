@@ -20,7 +20,7 @@ func AllocObject[T any](s *Store) (RefObject[T], *T) {
 
 	pRef := s.alloc(idx)
 	oRef := newRefObject[T](pRef)
-	return oRef, oRef.GetValue()
+	return oRef, oRef.Value()
 }
 
 func FreeObject[T any](s *Store, r RefObject[T]) {
@@ -43,7 +43,7 @@ func newRefObject[T any](ref pointerstore.Reference) RefObject[T] {
 	}
 }
 
-func (r *RefObject[T]) GetValue() *T {
+func (r *RefObject[T]) Value() *T {
 	return (*T)((unsafe.Pointer)(r.ref.DataPtr()))
 }
 

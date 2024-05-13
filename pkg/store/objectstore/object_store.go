@@ -9,7 +9,7 @@
 // will alloc/free only int values.
 //
 // Each allocated object has a corresponding Reference which acts like a
-// conventional pointer to retrieve the allocated object Reference.GetValue()
+// conventional pointer to retrieve the allocated object Reference.Value()
 // e.g.
 //
 //	store := objectstore.New[int]()
@@ -17,7 +17,7 @@
 //	var i1 *int
 //	ref, i1 = store.Alloc()
 //	var i2 *int
-//	i2 = ref.GetValue()
+//	i2 = ref.Value()
 //	if i1 == i2 {
 //	  println("This is correct, i1 and i2 are pointers to the same int")
 //	}
@@ -32,10 +32,10 @@
 //	// You must never user i1 or ref again
 //
 // A best effort has been made to panic if an object is freed twice or if a
-// freed object is accessed using Reference.GetValue(). However, it isn't
+// freed object is accessed using Reference.Value(). However, it isn't
 // guaranteed that these calls will panic. For example if an object is freed
 // the next call to Alloc() may reuse that freed object and future calls to
-// Reference.GetValue() and Free() will operate on the re-allocated object and
+// Reference.Value() and Free() will operate on the re-allocated object and
 // not panic. So this behaviour cannot be relied on.
 //
 // References can be kept and stored in arbitrary datastructures, which can
@@ -125,13 +125,13 @@
 //
 // For example it is safe to Alloc() new objects and publish References to
 // those objects on a channel and have other goroutines read from that channel
-// and call Reference.GetValue() on those References.
+// and call Reference.Value() on those References.
 //
 // 3: Independent Read Safety
 //
 // For a given set of live objects, previously allocated with a happens-before
 // barrier between the allocator and readers, all objects can be read freely.
-// Calling Reference.GetValue() and performing arbitrary reads of the retrieved
+// Calling Reference.Value() and performing arbitrary reads of the retrieved
 // objects from multiple goroutines with no other concurrency control code will
 // work without data races.
 //
@@ -152,7 +152,7 @@
 // a single goroutine.
 //
 // If we call Free() on a Reference while another goroutine is calling
-// Reference.GetValue() this is a data race. This will have unpredictable
+// Reference.Value() this is a data race. This will have unpredictable
 // behaviour, and is never safe.
 package objectstore
 

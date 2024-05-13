@@ -73,43 +73,43 @@ func (a *MultitypeAllocation) getSlice() []byte {
 	ref := a.ref
 	switch t := ref.(type) {
 	case RefObject[SizedArrayZero]:
-		v := t.GetValue()
+		v := t.Value()
 		return v.Field[:]
 	case RefObject[SizedArray0]:
-		v := t.GetValue()
+		v := t.Value()
 		return v.Field[:]
 	case RefObject[SizedArray1]:
-		v := t.GetValue()
+		v := t.Value()
 		return v.Field[:]
 	case RefObject[SizedArray2]:
-		v := t.GetValue()
+		v := t.Value()
 		return v.Field[:]
 	case RefObject[SizedArray5Small]:
-		v := t.GetValue()
+		v := t.Value()
 		return v.Field[:]
 	case RefObject[SizedArray5]:
-		v := t.GetValue()
+		v := t.Value()
 		return v.Field[:]
 	case RefObject[SizedArray5Large]:
-		v := t.GetValue()
+		v := t.Value()
 		return v.Field[:]
 	case RefObject[SizedArray9Small]:
-		v := t.GetValue()
+		v := t.Value()
 		return v.Field[:]
 	case RefObject[SizedArray9]:
-		v := t.GetValue()
+		v := t.Value()
 		return v.Field[:]
 	case RefObject[SizedArray9Large]:
-		v := t.GetValue()
+		v := t.Value()
 		return v.Field[:]
 	case RefObject[SizedArray14Small]:
-		v := t.GetValue()
+		v := t.Value()
 		return v.Field[:]
 	case RefObject[SizedArray14]:
-		v := t.GetValue()
+		v := t.Value()
 		return v.Field[:]
 	case RefObject[SizedArray14Large]:
-		v := t.GetValue()
+		v := t.Value()
 		return v.Field[:]
 	default:
 		panic(fmt.Errorf("Bad type %+v", t))

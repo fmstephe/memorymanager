@@ -43,7 +43,7 @@ func allocateAndModify(t *testing.T, os *Store, barrier *sync.WaitGroup) {
 		v.Field = i
 	}
 	for i, ref := range refs {
-		v := ref.GetValue()
+		v := ref.Value()
 		assert.Equal(t, v.Field, i)
 		FreeObject(os, ref)
 	}
@@ -99,7 +99,7 @@ func allocateAndModifyShared(
 
 	for i := 0; i < allocsPerGoroutine; i++ {
 		ref := <-sharedChan
-		v := ref.GetValue()
+		v := ref.Value()
 		total.Add(uint64(v.Field))
 		FreeObject(os, ref)
 	}
