@@ -10,7 +10,7 @@ const genMask = uint64(0xFF << maskShift)
 const pointerMask = ^genMask
 
 // The address field holds a pointer to an object, but also sneaks a
-// generation value in the top 8 bits of the address field.
+// generation value in the top 8 bits of the metaAddress field.
 //
 // The generation must be masked out to get a usable pointer value. The object
 // pointed to must have the same generation value in order to access/free that
@@ -120,7 +120,7 @@ func (r *RefPointer) Bytes(size int) []byte {
 }
 
 func (r *RefPointer) metadataPtr() uintptr {
-	return (uintptr)(r.metaAddress)
+	return (uintptr)(r.metaAddress & pointerMask)
 }
 
 func (r *RefPointer) metadata() *metadata {
@@ -128,9 +128,9 @@ func (r *RefPointer) metadata() *metadata {
 }
 
 func (r *RefPointer) Gen() uint8 {
-	return (uint8)((r.dataAddress & genMask) >> maskShift)
+	return (uint8)((r.metaAddress & genMask) >> maskShift)
 }
 
 func (r *RefPointer) setGen(gen uint8) {
-	r.dataAddress = (r.dataAddress & pointerMask) | (uint64(gen) << maskShift)
+	r.metaAddress = (r.metaAddress & pointerMask) | (uint64(gen) << maskShift)
 }
