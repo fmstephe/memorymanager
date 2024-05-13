@@ -190,7 +190,7 @@ func initSizeStore(slabSize uint64) []*pointerstore.Store {
 	slabs := make([]*pointerstore.Store, 48)
 
 	for i := range slabs {
-		slabs[i] = pointerstore.New(pointerstore.NewAllocationConfigBySize(1<<i, slabSize))
+		slabs[i] = pointerstore.New(pointerstore.NewAllocConfigBySize(1<<i, slabSize))
 	}
 
 	return slabs
@@ -214,60 +214,60 @@ func (s *Store) Destroy() error {
 	return nil
 }
 
-func (s *Store) GetStats() []pointerstore.Stats {
+func (s *Store) Stats() []pointerstore.Stats {
 	sizedStats := make([]pointerstore.Stats, len(s.sizedStores))
 	for i := range s.sizedStores {
-		sizedStats[i] = s.sizedStores[i].GetStats()
+		sizedStats[i] = s.sizedStores[i].Stats()
 	}
 	return sizedStats
 }
 
 // Returns the stats for the allocation size of type T
 func StatsForType[T any](s *Store) pointerstore.Stats {
-	stats := s.GetStats()
+	stats := s.Stats()
 	idx := indexForType[T]()
 	return stats[idx]
 }
 
 // Returns the stats for the allocation size of a []T with capacity
 func StatsForSlice[T any](s *Store, capacity int) pointerstore.Stats {
-	stats := s.GetStats()
+	stats := s.Stats()
 	idx := indexForSlice[T](capacity)
 	return stats[idx]
 }
 
 // Returns the stats for the allocations size of a string of length
 func StatsForString(s *Store, length int) pointerstore.Stats {
-	stats := s.GetStats()
+	stats := s.Stats()
 	idx := indexForSize(uint64(length))
 	return stats[idx]
 }
 
-func (s *Store) GetAllocationConfigs() []pointerstore.AllocationConfig {
-	sizedAllocConfigs := make([]pointerstore.AllocationConfig, len(s.sizedStores))
+func (s *Store) AllocConfigs() []pointerstore.AllocConfig {
+	sizedAllocConfigs := make([]pointerstore.AllocConfig, len(s.sizedStores))
 	for i := range s.sizedStores {
-		sizedAllocConfigs[i] = s.sizedStores[i].GetAllocationConfig()
+		sizedAllocConfigs[i] = s.sizedStores[i].AllocConfig()
 	}
 	return sizedAllocConfigs
 }
 
 // Returns the allocation config for the allocation size of type T
-func ConfForType[T any](s *Store) pointerstore.AllocationConfig {
-	configs := s.GetAllocationConfigs()
+func ConfForType[T any](s *Store) pointerstore.AllocConfig {
+	configs := s.AllocConfigs()
 	idx := indexForType[T]()
 	return configs[idx]
 }
 
 // Returns the allocation config for the allocation size of a []T with capacity
-func ConfForSlice[T any](s *Store, capacity int) pointerstore.AllocationConfig {
-	configs := s.GetAllocationConfigs()
+func ConfForSlice[T any](s *Store, capacity int) pointerstore.AllocConfig {
+	configs := s.AllocConfigs()
 	idx := indexForSlice[T](capacity)
 	return configs[idx]
 }
 
 // Returns the allocation config for the allocations size of a string of length
-func ConfForString(s *Store, length int) pointerstore.AllocationConfig {
-	configs := s.GetAllocationConfigs()
+func ConfForString(s *Store, length int) pointerstore.AllocConfig {
+	configs := s.AllocConfigs()
 	idx := indexForSize(uint64(length))
 	return configs[idx]
 }

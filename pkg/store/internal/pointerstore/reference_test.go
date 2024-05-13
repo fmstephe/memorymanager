@@ -19,7 +19,7 @@ func TestNewReferenceWithNilPanics(t *testing.T) {
 
 // Demonstrate that a pointer with any non-0 field is not nil
 func TestIsNotNil(t *testing.T) {
-	allocConfig := NewAllocationConfigBySize(8, 32*8)
+	allocConfig := NewAllocConfigBySize(8, 32*8)
 	objects, metadata := MmapSlab(allocConfig)
 	for i := range objects {
 		r := NewReference(objects[i], metadata[i])
@@ -49,7 +49,7 @@ func TestIsNotNil(t *testing.T) {
 // generation tag out of wherever we've hidden it (at time of writing it's
 // hidden in the top 8 bits of the object address pointer).
 func TestGenerationDoesNotAppearInOtherFields(t *testing.T) {
-	allocConfig := NewAllocationConfigBySize(8, 32*8)
+	allocConfig := NewAllocConfigBySize(8, 32*8)
 	objects, metadatas := MmapSlab(allocConfig)
 
 	r := NewReference(objects[0], metadatas[0])

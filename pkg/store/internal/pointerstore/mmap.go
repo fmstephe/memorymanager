@@ -8,7 +8,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func MmapSlab(conf AllocationConfig) (objects, metadata []uintptr) {
+func MmapSlab(conf AllocConfig) (objects, metadata []uintptr) {
 	data, err := unix.Mmap(-1, 0, int(conf.TotalSlabSize), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_ANON|unix.MAP_PRIVATE)
 	if err != nil {
 		panic(fmt.Errorf("cannot allocate %#v via mmap because %s", conf, err))
@@ -31,7 +31,7 @@ func MmapSlab(conf AllocationConfig) (objects, metadata []uintptr) {
 	return objects, metadata
 }
 
-func MunmapSlab(ptr uintptr, allocConf AllocationConfig) error {
+func MunmapSlab(ptr uintptr, allocConf AllocConfig) error {
 	b := pointerToBytes(ptr, int(allocConf.TotalSlabSize))
 	return unix.Munmap(b)
 }

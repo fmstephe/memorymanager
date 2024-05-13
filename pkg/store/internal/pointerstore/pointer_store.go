@@ -16,7 +16,7 @@ type Stats struct {
 
 type Store struct {
 	// Immutable fields
-	allocConf AllocationConfig
+	allocConf AllocConfig
 
 	// Accounting fields
 	allocs atomic.Uint64
@@ -38,7 +38,7 @@ type Store struct {
 	objects     [][]uintptr
 }
 
-func New(allocConf AllocationConfig) *Store {
+func New(allocConf AllocConfig) *Store {
 	objects := [][]uintptr{}
 	return &Store{
 		allocConf: allocConf,
@@ -91,7 +91,7 @@ func (s *Store) Destroy() error {
 	return nil
 }
 
-func (s *Store) GetStats() Stats {
+func (s *Store) Stats() Stats {
 	allocs := s.allocs.Load()
 	frees := s.frees.Load()
 	reused := s.reused.Load()
@@ -111,7 +111,7 @@ func (s *Store) GetStats() Stats {
 	}
 }
 
-func (s *Store) GetAllocationConfig() AllocationConfig {
+func (s *Store) AllocConfig() AllocConfig {
 	return s.allocConf
 }
 

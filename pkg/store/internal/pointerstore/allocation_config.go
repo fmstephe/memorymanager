@@ -6,7 +6,7 @@ import (
 	"github.com/fmstephe/flib/fmath"
 )
 
-type AllocationConfig struct {
+type AllocConfig struct {
 	RequestedObjectSize uint64
 	RequestedSlabSize   uint64
 	//
@@ -18,7 +18,7 @@ type AllocationConfig struct {
 	TotalSlabSize     uint64
 }
 
-func NewAllocationConfigBySize(requestedObjectSize uint64, requestedSlabSize uint64) AllocationConfig {
+func NewAllocConfigBySize(requestedObjectSize uint64, requestedSlabSize uint64) AllocConfig {
 	objectSize := uint64(fmath.NxtPowerOfTwo(int64(requestedObjectSize)))
 
 	totalObjectSize := uint64(fmath.NxtPowerOfTwo(int64(requestedSlabSize)))
@@ -39,7 +39,7 @@ func NewAllocationConfigBySize(requestedObjectSize uint64, requestedSlabSize uin
 
 	totalSlabSize := totalObjectSize + totalMetadataSize
 
-	return AllocationConfig{
+	return AllocConfig{
 		RequestedObjectSize: requestedObjectSize,
 		RequestedSlabSize:   requestedSlabSize,
 
