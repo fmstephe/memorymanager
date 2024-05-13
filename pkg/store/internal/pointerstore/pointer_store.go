@@ -39,11 +39,11 @@ type Store struct {
 }
 
 func New(allocConf AllocConfig) *Store {
-	objects := [][]uintptr{}
 	return &Store{
 		allocConf: allocConf,
 		allocIdx:  atomic.Uint64{},
-		objects:   objects,
+		objects:   [][]uintptr{},
+		metadata:  [][]uintptr{},
 	}
 }
 
