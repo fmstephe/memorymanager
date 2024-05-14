@@ -2,6 +2,7 @@ package objectstore
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"unsafe"
 
@@ -23,6 +24,51 @@ func AllocSlice[T any](s *Store, length, capacity int) (RefSlice[T], []T) {
 	pRef := s.alloc(idx)
 	sRef := newRefSlice[T](length, capacity, pRef)
 	return sRef, sRef.Value()
+}
+
+// The reference 'into' is no longer valid after this function returns.
+// The returned reference should be used instead.
+func Append[T any](s *Store, into RefSlice[T], value T) (newRef RefSlice[T]) {
+	// Ensure we have enough capacity to append into
+	//
+	// TODO there is a missing optimisation in the code below. If the
+	// capacity of the slice is smaller than the allocation slot then the
+	// capacity can be enlarged without allocating a new slot for the
+	// slice. We'll do this in the future.
+	if into.capacity > into.length {
+		// There is room to append value _without_ allocating new
+		// memory
+		newRef = into
+	} else {
+		// We need to reallocate and copy to slice to make room for the
+		// additional value
+		nextCapacity := int(fmath.NxtPowerOfTwo(int64(into.capacity + 1)))
+
+		// Check nextCapacity for overflow.  On a 64 bit machine we run
+		// out of memory long before running out of bits, on 32 bit
+		// machine we would basically be about to allocate half of the
+		// available memory available.
+		if nextCapacity < into.capacity {
+			// We just overflowed capacity, try to set it to the
+			// largest value available
+			nextCapacity = math.MaxInt
+			if nextCapacity == into.capacity {
+				// The previous capacity was the largest
+				// possible
+				panic(fmt.Errorf("Cannot grow slice beyond %d", math.MaxInt))
+			}
+		}
+
+		newRef, _ = AllocSlice[T](s, into.length, nextCapacity)
+		copy(newRef.Value(), into.Value())
+		FreeSlice[T](s, into)
+	}
+
+	// We have the capacity available, append the element
+	slice := newRef.Value()
+	slice = append(slice, value)
+	newRef.length++
+	return newRef
 }
 
 func FreeSlice[T any](s *Store, r RefSlice[T]) {

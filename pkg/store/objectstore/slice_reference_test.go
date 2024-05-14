@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/fmstephe/flib/fmath"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Test that when we allocate a slice, the correct value is stored and
@@ -195,5 +197,91 @@ func Test_Slice_SizedStats(t *testing.T) {
 
 			assert.Equal(t, expectedStats, actualStats, "Bad stats for %d sized slice", capacity)
 		})
+	}
+}
+
+func Test_Slice_AppendInsufficientCapacity(t *testing.T) {
+	os := New()
+	defer os.Destroy()
+
+	for _, length := range []int{
+		0,
+		1,
+		2,
+		3,
+		1 << 1,
+		1 << 2,
+		(1 << 5) - 1,
+		1 << 5,
+		(1 << 5) + 1,
+		(1 << 9) - 1,
+		1 << 9,
+		(1 << 9) + 1,
+		(1 << 14) - 1,
+		1 << 14,
+		(1 << 14) + 1,
+	} {
+		refInit, initSlice := AllocSlice[int](os, length, length)
+		require.Equal(t, length, len(initSlice))
+		require.Equal(t, length, cap(initSlice))
+
+		const appendValue = 99
+
+		refAppend := Append[int](os, refInit, appendValue)
+
+		// Assert that refAppend contains the new value
+		appendSlice := refAppend.Value()
+		require.Equal(t, length+1, len(appendSlice))
+		require.Equal(t, int(fmath.NxtPowerOfTwo(int64(length+1))), cap(appendSlice))
+		require.Equal(t, appendValue, appendSlice[len(appendSlice)-1])
+
+		// Show that refInit has been freed
+		require.Panics(t, func() { refInit.Value() })
+	}
+}
+
+func Test_Slice_AppendSufficientCapacity(t *testing.T) {
+	os := New()
+	defer os.Destroy()
+
+	for _, length := range []int{
+		0,
+		1,
+		2,
+		3,
+		1 << 1,
+		1 << 2,
+		(1 << 5) - 1,
+		1 << 5,
+		(1 << 5) + 1,
+		(1 << 9) - 1,
+		1 << 9,
+		(1 << 9) + 1,
+		(1 << 14) - 1,
+		1 << 14,
+		(1 << 14) + 1,
+	} {
+		// Test with a range off spare slice capacity
+		for _, extraCapacity := range []int{1, 2, 5, 7, 16} {
+			capacity := length + extraCapacity
+
+			refInit, initSlice := AllocSlice[int](os, length, capacity)
+			// Assert the allocated slice works properly
+			require.Equal(t, length, len(initSlice))
+			require.Equal(t, capacity, cap(initSlice))
+
+			const appendValue = 99
+
+			refAppend := Append[int](os, refInit, appendValue)
+
+			// Assert that refAppend contains the new value
+			appendSlice := refAppend.Value()
+			require.Equal(t, length+1, len(appendSlice))
+			require.Equal(t, capacity, cap(appendSlice))
+			require.Equal(t, appendValue, appendSlice[len(appendSlice)-1])
+
+			// Show that refInit has not been freed
+			require.NotPanics(t, func() { refInit.Value() })
+		}
 	}
 }
