@@ -39,6 +39,17 @@ func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
 	return newRef
 }
 
+func AppendSlice[T any](s *Store, into RefSlice[T], fromSlice []T) RefSlice[T] {
+	newRef := ensureCapacity(s, into, len(fromSlice))
+
+	// We have the capacity available, append the element
+	intoSlice := newRef.Value()
+	intoSlice = append(intoSlice, fromSlice...)
+	newRef.length += len(fromSlice)
+
+	return newRef
+}
+
 func ensureCapacity[T any](s *Store, r RefSlice[T], increase int) RefSlice[T] {
 	newLength := r.length + increase
 
