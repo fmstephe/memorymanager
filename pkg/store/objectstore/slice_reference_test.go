@@ -200,7 +200,7 @@ func Test_Slice_SizedStats(t *testing.T) {
 	}
 }
 
-func Test_Slice_AppendInsufficientCapacity(t *testing.T) {
+func Test_Slice_Append(t *testing.T) {
 	os := New()
 	defer os.Destroy()
 
@@ -209,8 +209,13 @@ func Test_Slice_AppendInsufficientCapacity(t *testing.T) {
 		1,
 		2,
 		3,
-		1 << 1,
-		1 << 2,
+		4,
+		5,
+		6,
+		7,
+		8,
+		9,
+		10,
 		(1 << 5) - 1,
 		1 << 5,
 		(1 << 5) + 1,
@@ -221,67 +226,49 @@ func Test_Slice_AppendInsufficientCapacity(t *testing.T) {
 		1 << 14,
 		(1 << 14) + 1,
 	} {
-		refInit, initSlice := AllocSlice[int](os, length, length)
-		require.Equal(t, length, len(initSlice))
-		require.Equal(t, length, cap(initSlice))
+		for _, extraCapacity := range []int{0, 1, 2, 5, 7, 16} {
+			t.Run(fmt.Sprintf("length %d extra capacity %d", length, extraCapacity), func(t *testing.T) {
+				const initValue = 33
+				const appendValue = 99
 
-		const appendValue = 99
+				capacity := length + extraCapacity
 
-		refAppend := Append[int](os, refInit, appendValue)
+				refInit, initSlice := AllocSlice[int](os, length, capacity)
+				// Assert the allocated slice works properly
+				require.Equal(t, length, len(initSlice))
+				require.Equal(t, capacity, cap(initSlice))
 
-		// Assert that refAppend contains the new value
-		appendSlice := refAppend.Value()
-		require.Equal(t, length+1, len(appendSlice))
-		require.Equal(t, int(fmath.NxtPowerOfTwo(int64(length+1))), cap(appendSlice))
-		require.Equal(t, appendValue, appendSlice[len(appendSlice)-1])
+				expectedSlice := make([]int, length, capacity)
+				for i := range initSlice {
+					initSlice[i] = initValue
+					expectedSlice[i] = initValue
+				}
 
-		// Show that refInit has been freed
-		require.Panics(t, func() { refInit.Value() })
-	}
-}
+				refAppend := Append[int](os, refInit, appendValue)
+				expectedSlice = append(expectedSlice, appendValue)
 
-func Test_Slice_AppendSufficientCapacity(t *testing.T) {
-	os := New()
-	defer os.Destroy()
+				// Assert that refAppend contains the new value
+				appendSlice := refAppend.Value()
+				require.Equal(t, len(expectedSlice), len(appendSlice))
+				require.Equal(t, expectedSlice, appendSlice)
 
-	for _, length := range []int{
-		0,
-		1,
-		2,
-		3,
-		1 << 1,
-		1 << 2,
-		(1 << 5) - 1,
-		1 << 5,
-		(1 << 5) + 1,
-		(1 << 9) - 1,
-		1 << 9,
-		(1 << 9) + 1,
-		(1 << 14) - 1,
-		1 << 14,
-		(1 << 14) + 1,
-	} {
-		// Test with a range off spare slice capacity
-		for _, extraCapacity := range []int{1, 2, 5, 7, 16} {
-			capacity := length + extraCapacity
-
-			refInit, initSlice := AllocSlice[int](os, length, capacity)
-			// Assert the allocated slice works properly
-			require.Equal(t, length, len(initSlice))
-			require.Equal(t, capacity, cap(initSlice))
-
-			const appendValue = 99
-
-			refAppend := Append[int](os, refInit, appendValue)
-
-			// Assert that refAppend contains the new value
-			appendSlice := refAppend.Value()
-			require.Equal(t, length+1, len(appendSlice))
-			require.Equal(t, capacity, cap(appendSlice))
-			require.Equal(t, appendValue, appendSlice[len(appendSlice)-1])
-
-			// Show that refInit has not been freed
-			require.NotPanics(t, func() { refInit.Value() })
+				if extraCapacity == 0 {
+					// If the original capacity was not
+					// enough to include the new value, we
+					// grow the slice to the next power of
+					// 2
+					require.Equal(t, int(fmath.NxtPowerOfTwo(int64(length+1))), cap(appendSlice))
+					// Show that refInit has been freed
+					require.Panics(t, func() { refInit.Value() })
+				} else {
+					// If the original capacity was enough
+					// to include the new value, we don't
+					// change it
+					require.Equal(t, capacity, cap(appendSlice))
+					// Show that refInit has not been freed
+					require.NotPanics(t, func() { refInit.Value() })
+				}
+			})
 		}
 	}
 }
