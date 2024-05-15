@@ -26,8 +26,9 @@ func AllocSlice[T any](s *Store, length, capacity int) (RefSlice[T], []T) {
 	return sRef, sRef.Value()
 }
 
-// The reference 'into' is no longer valid after this function returns.
-// The returned reference should be used instead.
+// Append the value onto the end of the slice 'into'.  The reference 'into' is
+// no longer valid after this function returns.  The returned reference should
+// be used instead.
 func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
 	newRef := ensureCapacity(s, into, 1)
 
@@ -39,6 +40,9 @@ func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
 	return newRef
 }
 
+// Append all of the values in 'fromSlice' to the end of the slice 'into'.  The
+// reference 'into' is no longer valid after this function returns.  The
+// returned reference should be used instead.
 func AppendSlice[T any](s *Store, into RefSlice[T], fromSlice []T) RefSlice[T] {
 	newRef := ensureCapacity(s, into, len(fromSlice))
 
@@ -75,7 +79,7 @@ func ensureCapacity[T any](s *Store, r RefSlice[T], increase int) RefSlice[T] {
 	}
 
 	// We need to reallocate and copy to slice to make room for the
-	// additional value
+	// additional element(s)
 	//
 	// Check nextCapacity for overflow.  On a 64 bit machine we run
 	// out of memory long before running out of bits, on 32 bit
