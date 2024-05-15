@@ -65,3 +65,26 @@ func TestGenerationDoesNotAppearInOtherFields(t *testing.T) {
 	assert.Equal(t, metaPtr, r.metadataPtr())
 	assert.Equal(t, gen, r.Gen())
 }
+
+func TestRealloc(t *testing.T) {
+	allocConfig := NewAllocConfigBySize(8, 32*8)
+	objects, metadatas := MmapSlab(allocConfig)
+
+	r1 := NewReference(objects[0], metadatas[0])
+	dataPtr := r1.DataPtr()
+	metaPtr := r1.metadataPtr()
+	gen := r1.Gen()
+
+	r2 := r1.Realloc()
+
+	// Assert that the data/metadata pointed to by r1 and r2 is the same
+	assert.Equal(t, dataPtr, r2.DataPtr())
+	assert.Equal(t, metaPtr, r2.metadataPtr())
+
+	// Assert that r2 has a different generation than r1
+	assert.NotEqual(t, gen, r2.Gen())
+
+	// Assert that r1 is no longer valid, but r2 is valid
+	assert.Panics(t, func() { r1.DataPtr() })
+	assert.NotPanics(t, func() { r2.DataPtr() })
+}

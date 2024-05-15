@@ -59,10 +59,10 @@ func NewReference(pAddress, pMetadata uintptr) RefPointer {
 }
 
 func (r *RefPointer) AllocFromFree() (nextFree RefPointer) {
-	// Grab the object for the slot and nil out the slot's nextFree pointer
-	obj := r.metadata()
-	nextFree = obj.nextFree
-	obj.nextFree = RefPointer{}
+	// Grab the nextFree reference, and nil it for this metadata
+	meta := r.metadata()
+	nextFree = meta.nextFree
+	meta.nextFree = RefPointer{}
 
 	// If the nextFree pointer points back to this Reference, then there
 	// are no more freed slots available
@@ -72,8 +72,8 @@ func (r *RefPointer) AllocFromFree() (nextFree RefPointer) {
 
 	// Increment the generation for the object and set that generation in
 	// the Reference
-	obj.gen++
-	r.setGen(obj.gen)
+	meta.gen++
+	r.setGen(meta.gen)
 
 	return nextFree
 }
@@ -133,4 +133,15 @@ func (r *RefPointer) Gen() uint8 {
 
 func (r *RefPointer) setGen(gen uint8) {
 	r.metaAddress = (r.metaAddress & pointerMask) | (uint64(gen) << maskShift)
+}
+
+// This method re-allocates the memory location. When this method returns r
+// will no longer be a valid reference.  The reference returned _will_ be a
+// valid reference to the same location.
+func (r *RefPointer) Realloc() RefPointer {
+	newRef := *r
+	meta := r.metadata()
+	meta.gen++
+	newRef.setGen(meta.gen)
+	return newRef
 }
