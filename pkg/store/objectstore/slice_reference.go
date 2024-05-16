@@ -10,6 +10,7 @@ import (
 	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
 )
 
+// Allocates a new empty slice with the desired length and capacity
 func AllocSlice[T any](s *Store, length, capacity int) (RefSlice[T], []T) {
 	// TODO this is not fast - we _need_ to cache this type data
 	if err := containsNoPointers[T](); err != nil {
@@ -24,6 +25,23 @@ func AllocSlice[T any](s *Store, length, capacity int) (RefSlice[T], []T) {
 	pRef := s.alloc(idx)
 	sRef := newRefSlice[T](length, capacity, pRef)
 	return sRef, sRef.Value()
+}
+
+// Allocates a new slice which contains the elements of slices concatenated together
+func ConcatSlices[T any](s *Store, slices ...[]T) (RefSlice[T], []T) {
+	totalLength := 0
+	for _, slice := range slices {
+		totalLength += len(slice)
+	}
+
+	r, newSlice := AllocSlice[T](s, totalLength, totalLength)
+
+	newSlice = newSlice[:0]
+	for _, slice := range slices {
+		newSlice = append(newSlice, slice...)
+	}
+
+	return r, newSlice
 }
 
 // Append the value onto the end of the slice 'into'.  The reference 'into' is

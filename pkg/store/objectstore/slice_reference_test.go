@@ -350,3 +350,62 @@ func Test_Slice_AppendSlice(t *testing.T) {
 		}
 	}
 }
+
+func Test_Slice_ConcatSlices(t *testing.T) {
+	os := New()
+	defer os.Destroy()
+
+	for _, testCase := range []struct {
+		slices [][]byte
+	}{
+		// Empty cases
+		{nil},
+		{[][]byte{}},
+		// Single slice cases
+		{[][]byte{
+			[]byte{1},
+		}},
+		{[][]byte{
+			[]byte{1, 2},
+		}},
+		{[][]byte{
+			[]byte{1, 2, 3},
+		}},
+		{[][]byte{
+			[]byte{1, 2, 3, 4},
+		}},
+		// Multi slice cases
+		{[][]byte{
+			[]byte{1, 2},
+			[]byte{1},
+		}},
+		{[][]byte{
+			[]byte{1},
+			[]byte{1, 2, 3},
+			[]byte{1, 2},
+		}},
+		{[][]byte{
+			[]byte{1},
+			[]byte{1, 2, 3},
+			[]byte{1, 2},
+			[]byte{1, 2, 3, 4},
+		}},
+		{[][]byte{
+			[]byte{1},
+			[]byte{1, 2, 3},
+			[]byte{1, 2},
+			[]byte{1, 2, 3, 4, 5},
+			[]byte{1, 2, 3, 4},
+		}},
+	} {
+		expectedSlice := []byte{}
+		for _, slice := range testCase.slices {
+			expectedSlice = append(expectedSlice, slice...)
+		}
+
+		r, resultSlice := ConcatSlices[byte](os, testCase.slices...)
+
+		assert.Equal(t, expectedSlice, resultSlice)
+		assert.Equal(t, expectedSlice, r.Value())
+	}
+}
