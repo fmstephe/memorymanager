@@ -226,47 +226,41 @@ func Test_Slice_Append(t *testing.T) {
 		1 << 14,
 		(1 << 14) + 1,
 	} {
-		for _, extraCapacity := range []int{0, 1, 2, 5, 7, 16, 100} {
+		for _, extraCapacity := range []int{0, 1, 2, 3, 4, 5, 6, 7, 16, 100} {
 			t.Run(fmt.Sprintf("length %d extra capacity %d", length, extraCapacity), func(t *testing.T) {
-				const initValue = 33
-				const appendValue = 99
+				const initValue = 0x11
+				const appendValue = 0x22
 
 				capacity := length + extraCapacity
 
-				refInit, initSlice := AllocSlice[byte](os, length, capacity)
+				refInit, initSlice := AllocSlice[int64](os, length, capacity)
 				// Assert the allocated slice works properly
 				require.Equal(t, length, len(initSlice))
 				require.Equal(t, capacity, cap(initSlice))
 
-				expectedSlice := make([]byte, length, capacity)
+				expectedSlice := make([]int64, length, capacity)
 				for i := range initSlice {
 					initSlice[i] = initValue
 					expectedSlice[i] = initValue
 				}
 
-				refAppend := Append[byte](os, refInit, appendValue)
+				refAppend := Append[int64](os, refInit, appendValue)
 				expectedSlice = append(expectedSlice, appendValue)
 
-				// Assert that refAppend contains the new value
 				resultSlice := refAppend.Value()
 				require.Equal(t, len(expectedSlice), len(resultSlice))
+				// If the existing capacity is enough, it is
+				// unchanged. If the capacity is not enough we
+				// round up to a power of two which is large
+				// enough
+				requiredCapacity := int(fmath.NxtPowerOfTwo(int64(length + 1)))
+				require.Equal(t, max(capacity, requiredCapacity), cap(resultSlice))
+
+				// Assert the contents of the slice is correct
 				require.Equal(t, expectedSlice, resultSlice)
 
 				// Assert that the original reference has been invalidated
 				require.Panics(t, func() { refInit.Value() })
-
-				if extraCapacity == 0 {
-					// If the original capacity was not
-					// enough to include the new value, we
-					// grow the slice to the next power of
-					// 2
-					require.Equal(t, int(fmath.NxtPowerOfTwo(int64(length+1))), cap(resultSlice))
-				} else {
-					// If the original capacity was enough
-					// to include the new value, we don't
-					// change it
-					require.Equal(t, capacity, cap(resultSlice))
-				}
 			})
 		}
 	}
@@ -298,53 +292,57 @@ func Test_Slice_AppendSlice(t *testing.T) {
 		1 << 14,
 		(1 << 14) + 1,
 	} {
-		for _, extraCapacity := range []int{0, 1, 2, 5, 7, 16, 100} {
-			for _, appendSize := range []int{0, 1, 2, 5, 7, 16, 100} {
+		for _, extraCapacity := range []int{0, 1, 2, 3, 4, 5, 7, 16, 100} {
+			for _, appendSize := range []int{0, 1, 2, 3, 4, 5, 7, 16, 100} {
 				t.Run(fmt.Sprintf("length %d append %d extra capacity %d", length, appendSize, extraCapacity), func(t *testing.T) {
-					const initValue = 33
-					const appendValue = 99
+					const initValue = 0x11
+					const appendValue = 0x22
 
 					capacity := length + extraCapacity
 
-					refInit, initSlice := AllocSlice[byte](os, length, capacity)
+					refInit, initSlice := AllocSlice[int64](os, length, capacity)
 					// Assert the allocated slice works properly
 					require.Equal(t, length, len(initSlice))
 					require.Equal(t, capacity, cap(initSlice))
 
-					appendSlice := make([]byte, appendSize)
+					appendSlice := make([]int64, appendSize)
 					for i := range appendSlice {
 						appendSlice[i] = appendValue
 					}
 
-					expectedSlice := make([]byte, length, capacity)
+					expectedSlice := make([]int64, length, capacity)
 					for i := range initSlice {
 						initSlice[i] = initValue
 						expectedSlice[i] = initValue
 					}
 
-					refResult := AppendSlice[byte](os, refInit, appendSlice)
+					refResult := AppendSlice[int64](os, refInit, appendSlice)
 					expectedSlice = append(expectedSlice, appendSlice...)
 
 					// Assert that refAppend contains the new value
 					resultSlice := refResult.Value()
 					require.Equal(t, len(expectedSlice), len(resultSlice))
+
+					requiredCapacity := int(fmath.NxtPowerOfTwo(int64(length + appendSize)))
+					switch {
+					case appendSize == 0 && capacity == 0:
+						// If the capacity is 0, and we don't append anything
+						// then the capacity remains 0.
+						require.Equal(t, 0, cap(resultSlice))
+					case capacity < requiredCapacity:
+						// The capacity will be grown to the required capacity for the append
+						require.Equal(t, requiredCapacity, cap(resultSlice))
+					case capacity >= requiredCapacity:
+						// The capacity of the slice is
+						// strictly larger than needed
+						// for the append. Capacity is
+						// unchanged.
+						require.Equal(t, capacity, cap(resultSlice))
+					}
 					require.Equal(t, expectedSlice, resultSlice)
 
 					// Assert that the original reference has been invalidated
 					require.Panics(t, func() { refInit.Value() })
-
-					if extraCapacity < appendSize {
-						// If the original capacity was not
-						// enough to include the new value, we
-						// grow the slice to the next power of
-						// 2
-						require.Equal(t, int(fmath.NxtPowerOfTwo(int64(length+appendSize))), cap(resultSlice), "%v", resultSlice)
-					} else {
-						// If the original capacity was enough
-						// to include the new value, we don't
-						// change it
-						require.Equal(t, capacity, cap(resultSlice))
-					}
 				})
 			}
 		}
@@ -356,54 +354,54 @@ func Test_Slice_ConcatSlices(t *testing.T) {
 	defer os.Destroy()
 
 	for _, testCase := range []struct {
-		slices [][]byte
+		slices [][]int64
 	}{
 		// Empty cases
 		{nil},
-		{[][]byte{}},
+		{[][]int64{}},
 		// Single slice cases
-		{[][]byte{
-			[]byte{1},
+		{[][]int64{
+			[]int64{1},
 		}},
-		{[][]byte{
-			[]byte{1, 2},
+		{[][]int64{
+			[]int64{1, 2},
 		}},
-		{[][]byte{
-			[]byte{1, 2, 3},
+		{[][]int64{
+			[]int64{1, 2, 3},
 		}},
-		{[][]byte{
-			[]byte{1, 2, 3, 4},
+		{[][]int64{
+			[]int64{1, 2, 3, 4},
 		}},
 		// Multi slice cases
-		{[][]byte{
-			[]byte{1, 2},
-			[]byte{1},
+		{[][]int64{
+			[]int64{1, 2},
+			[]int64{1},
 		}},
-		{[][]byte{
-			[]byte{1},
-			[]byte{1, 2, 3},
-			[]byte{1, 2},
+		{[][]int64{
+			[]int64{1},
+			[]int64{1, 2, 3},
+			[]int64{1, 2},
 		}},
-		{[][]byte{
-			[]byte{1},
-			[]byte{1, 2, 3},
-			[]byte{1, 2},
-			[]byte{1, 2, 3, 4},
+		{[][]int64{
+			[]int64{1},
+			[]int64{1, 2, 3},
+			[]int64{1, 2},
+			[]int64{1, 2, 3, 4},
 		}},
-		{[][]byte{
-			[]byte{1},
-			[]byte{1, 2, 3},
-			[]byte{1, 2},
-			[]byte{1, 2, 3, 4, 5},
-			[]byte{1, 2, 3, 4},
+		{[][]int64{
+			[]int64{1},
+			[]int64{1, 2, 3},
+			[]int64{1, 2},
+			[]int64{1, 2, 3, 4, 5},
+			[]int64{1, 2, 3, 4},
 		}},
 	} {
-		expectedSlice := []byte{}
+		expectedSlice := []int64{}
 		for _, slice := range testCase.slices {
 			expectedSlice = append(expectedSlice, slice...)
 		}
 
-		r, resultSlice := ConcatSlices[byte](os, testCase.slices...)
+		r, resultSlice := ConcatSlices[int64](os, testCase.slices...)
 
 		assert.Equal(t, expectedSlice, resultSlice)
 		assert.Equal(t, expectedSlice, r.Value())

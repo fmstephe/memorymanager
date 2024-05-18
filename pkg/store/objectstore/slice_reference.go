@@ -2,7 +2,7 @@ package objectstore
 
 import (
 	"fmt"
-	"math"
+	"math/bits"
 	"reflect"
 	"unsafe"
 
@@ -10,7 +10,7 @@ import (
 	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
 )
 
-// Allocates a new empty slice with the desired length and capacity
+// Allocates a new slice with the desired length and capacity
 func AllocSlice[T any](s *Store, length, capacity int) (RefSlice[T], []T) {
 	// TODO this is not fast - we _need_ to cache this type data
 	if err := containsNoPointers[T](); err != nil {
@@ -48,9 +48,17 @@ func ConcatSlices[T any](s *Store, slices ...[]T) (RefSlice[T], []T) {
 // no longer valid after this function returns.  The returned reference should
 // be used instead.
 func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
-	newRef := ensureCapacity(s, into, 1)
+	capacitySize := into.capacitySize()
+	lengthSize := into.lengthSize()
+	appendSize := sizeForType[T]()
+
+	newSize := capacityForLength(lengthSize+appendSize, capacitySize)
+
+	pRef := resizeAndInvalidate(s, into.ref, capacitySize, newSize)
 
 	// We have the capacity available, append the element
+	// TODO sizeForType() is a power of two - devision can be eliminated
+	newRef := newRefSlice[T](into.length, int(newSize/sizeForType[T]()), pRef)
 	slice := newRef.Value()
 	slice = append(slice, value)
 	newRef.length++
@@ -62,61 +70,21 @@ func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
 // reference 'into' is no longer valid after this function returns.  The
 // returned reference should be used instead.
 func AppendSlice[T any](s *Store, into RefSlice[T], fromSlice []T) RefSlice[T] {
-	newRef := ensureCapacity(s, into, len(fromSlice))
+	capacitySize := into.capacitySize()
+	lengthSize := into.lengthSize()
+	appendSize := uint64(len(fromSlice)) * sizeForType[T]()
 
-	// We have the capacity available, append the element
+	newCapacitySize := capacityForLength(lengthSize+appendSize, capacitySize)
+
+	pRef := resizeAndInvalidate(s, into.ref, capacitySize, newCapacitySize)
+
+	// We have the capacity available, append the slice
+	// TODO sizeForType() is a power of two - devision can be eliminated
+	newRef := newRefSlice[T](into.length, int(newCapacitySize/sizeForType[T]()), pRef)
 	intoSlice := newRef.Value()
 	intoSlice = append(intoSlice, fromSlice...)
 	newRef.length += len(fromSlice)
 
-	return newRef
-}
-
-func ensureCapacity[T any](s *Store, r RefSlice[T], increase int) RefSlice[T] {
-	newLength := r.length + increase
-
-	// Ensure we have enough capacity to append into
-	if r.capacity >= newLength {
-		// There is room to append value _without_ allocating new
-		// memory
-		return r.realloc()
-	}
-
-	// Determine the new capacity for this slice
-	// Right now we just grow the slice by powers of two
-	// NB: Go doesn't do this - so maybe this is too aggressive
-	newCapacity := int(fmath.NxtPowerOfTwo(int64(newLength)))
-
-	// Check if the current allocation slot has enough space for the new
-	// capacity. If it does, then we just re-alloc the current reference
-	// and grow the slice in-place
-	if indexForSlice[T](r.capacity) == indexForSlice[T](newCapacity) {
-		newRef := r.realloc()
-		newRef.capacity = newCapacity
-		return newRef
-	}
-
-	// We need to reallocate and copy to slice to make room for the
-	// additional element(s)
-	//
-	// Check nextCapacity for overflow.  On a 64 bit machine we run
-	// out of memory long before running out of bits, on 32 bit
-	// machine we would basically be about to allocate half of the
-	// available memory available.
-	if newCapacity < r.capacity {
-		// We just overflowed capacity, try to set it to the
-		// largest value available
-		newCapacity = math.MaxInt
-		if newCapacity == r.capacity {
-			// The previous capacity was the largest
-			// possible
-			panic(fmt.Errorf("Cannot grow slice beyond %d", math.MaxInt))
-		}
-	}
-
-	newRef, newSlice := AllocSlice[T](s, r.length, newCapacity)
-	copy(newSlice, r.Value())
-	FreeSlice[T](s, r)
 	return newRef
 }
 
@@ -170,4 +138,23 @@ func (r *RefSlice[T]) realloc() RefSlice[T] {
 	// Reallocate it's pointer reference
 	newRef.ref = newRef.ref.Realloc()
 	return newRef
+}
+
+func (r *RefSlice[T]) capacitySize() uint64 {
+	return sizeForType[T]() * uint64(r.capacity)
+}
+
+func (r *RefSlice[T]) lengthSize() uint64 {
+	return sizeForType[T]() * uint64(r.length)
+}
+
+func capacityForLength(lengthSize, capacitySize uint64) uint64 {
+	// Get the power of two value that holds lengthSize
+	// NB: If lengthSize is 0, capForLength will also be 0
+	capForLength := uint64(1 << bits.Len64(lengthSize-1))
+
+	// If the original capacity is larger than the capacity needed for the
+	// length We keep the original capacity. We don't want to shrink a
+	// slice just because it doesn't _yet_ have enough data in it.
+	return max(capForLength, capacitySize)
 }
