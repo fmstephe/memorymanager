@@ -9,7 +9,7 @@ import (
 
 // If we add/remove types for testing, update this number (or find a better way
 // to manage this)
-const numberOfTypes = 13
+const numberOfTypes = 15
 
 // A range of differently sized structs.
 
@@ -25,8 +25,16 @@ type SizedArray1 struct {
 	Field [1 << 1]byte
 }
 
+type SizedArray2Small struct {
+	Field [(1 << 2) - 1]byte
+}
+
 type SizedArray2 struct {
 	Field [1 << 2]byte
+}
+
+type SizedArray2Large struct {
+	Field [(1 << 2) + 1]byte
 }
 
 type SizedArray5Small struct {
@@ -81,7 +89,13 @@ func (a *MultitypeAllocation) getSlice() []byte {
 	case RefObject[SizedArray1]:
 		v := t.Value()
 		return v.Field[:]
+	case RefObject[SizedArray2Small]:
+		v := t.Value()
+		return v.Field[:]
 	case RefObject[SizedArray2]:
+		v := t.Value()
+		return v.Field[:]
+	case RefObject[SizedArray2Large]:
 		v := t.Value()
 		return v.Field[:]
 	case RefObject[SizedArray5Small]:
@@ -125,8 +139,12 @@ func (a *MultitypeAllocation) free(s *Store) {
 		FreeObject[SizedArray0](s, t)
 	case RefObject[SizedArray1]:
 		FreeObject[SizedArray1](s, t)
+	case RefObject[SizedArray2Small]:
+		FreeObject[SizedArray2Small](s, t)
 	case RefObject[SizedArray2]:
 		FreeObject[SizedArray2](s, t)
+	case RefObject[SizedArray2Large]:
+		FreeObject[SizedArray2Large](s, t)
 	case RefObject[SizedArray5Small]:
 		FreeObject[SizedArray5Small](s, t)
 	case RefObject[SizedArray5]:
@@ -169,50 +187,60 @@ func multitypeAllocFunc(selector int) func(*Store) *MultitypeAllocation {
 		}
 	case 3:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := AllocObject[SizedArray2](os)
+			r, _ := AllocObject[SizedArray2Small](os)
 			return &MultitypeAllocation{r}
 		}
 	case 4:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := AllocObject[SizedArray5Small](os)
+			r, _ := AllocObject[SizedArray2](os)
 			return &MultitypeAllocation{r}
 		}
 	case 5:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := AllocObject[SizedArray5](os)
+			r, _ := AllocObject[SizedArray2Large](os)
 			return &MultitypeAllocation{r}
 		}
 	case 6:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := AllocObject[SizedArray5Large](os)
+			r, _ := AllocObject[SizedArray5Small](os)
 			return &MultitypeAllocation{r}
 		}
 	case 7:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := AllocObject[SizedArray9Small](os)
+			r, _ := AllocObject[SizedArray5](os)
 			return &MultitypeAllocation{r}
 		}
 	case 8:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := AllocObject[SizedArray9](os)
+			r, _ := AllocObject[SizedArray5Large](os)
 			return &MultitypeAllocation{r}
 		}
 	case 9:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := AllocObject[SizedArray9Large](os)
+			r, _ := AllocObject[SizedArray9Small](os)
 			return &MultitypeAllocation{r}
 		}
 	case 10:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := AllocObject[SizedArray14Small](os)
+			r, _ := AllocObject[SizedArray9](os)
 			return &MultitypeAllocation{r}
 		}
 	case 11:
 		return func(os *Store) *MultitypeAllocation {
-			r, _ := AllocObject[SizedArray14](os)
+			r, _ := AllocObject[SizedArray9Large](os)
 			return &MultitypeAllocation{r}
 		}
 	case 12:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := AllocObject[SizedArray14Small](os)
+			return &MultitypeAllocation{r}
+		}
+	case 13:
+		return func(os *Store) *MultitypeAllocation {
+			r, _ := AllocObject[SizedArray14](os)
+			return &MultitypeAllocation{r}
+		}
+	case 14:
 		return func(os *Store) *MultitypeAllocation {
 			r, _ := AllocObject[SizedArray14Large](os)
 			return &MultitypeAllocation{r}
@@ -234,7 +262,9 @@ func TestIndexForType(t *testing.T) {
 	assert.Equal(t, 0, indexForType[SizedArrayZero](), "SizedArray0 %d", sizeForType[SizedArray0]())
 	assert.Equal(t, 0, indexForType[SizedArray0](), "SizedArray0 %d", sizeForType[SizedArray0]())
 	assert.Equal(t, 1, indexForType[SizedArray1](), "SizedArray1 %d", sizeForType[SizedArray1]())
+	assert.Equal(t, 2, indexForType[SizedArray2Small](), "SizedArray2 %d", sizeForType[SizedArray2]())
 	assert.Equal(t, 2, indexForType[SizedArray2](), "SizedArray2 %d", sizeForType[SizedArray2]())
+	assert.Equal(t, 3, indexForType[SizedArray2Large](), "SizedArray2 %d", sizeForType[SizedArray2]())
 	assert.Equal(t, 5, indexForType[SizedArray5Small](), "SizedArray5Small %d", sizeForType[SizedArray5Small]())
 	assert.Equal(t, 5, indexForType[SizedArray5](), "SizedArray5 %d", sizeForType[SizedArray5]())
 	assert.Equal(t, 6, indexForType[SizedArray5Large](), "SizedArray5Large %d", sizeForType[SizedArray5Large]())
@@ -258,6 +288,7 @@ func TestSizedStats(t *testing.T) {
 	testSizedStats[SizedArrayZero](t, os)
 	testSizedStats[SizedArray1](t, os)
 	testSizedStats[SizedArray2](t, os)
+	testSizedStats[SizedArray2Large](t, os)
 	testSizedStats[SizedArray5](t, os)
 	testSizedStats[SizedArray5Large](t, os)
 	testSizedStats[SizedArray9](t, os)

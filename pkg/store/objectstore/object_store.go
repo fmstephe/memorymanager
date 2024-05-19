@@ -292,7 +292,6 @@ func resizeAndInvalidate(s *Store, oldRef pointerstore.RefPointer, oldSize, newS
 
 	s.free(oldIdx, oldRef)
 	return newRef
-
 }
 
 func indexForType[T any]() int {
