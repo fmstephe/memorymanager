@@ -157,9 +157,6 @@
 package objectstore
 
 import (
-	"math/bits"
-	"reflect"
-
 	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
 )
 
@@ -292,22 +289,4 @@ func resizeAndInvalidate(s *Store, oldRef pointerstore.RefPointer, oldSize, newS
 
 	s.free(oldIdx, oldRef)
 	return newRef
-}
-
-func indexForType[T any]() int {
-	size := sizeForType[T]()
-
-	return indexForSize(size)
-}
-
-func sizeForType[T any]() uint64 {
-	t := reflect.TypeFor[T]()
-	return uint64(t.Size())
-}
-
-func indexForSize(size uint64) int {
-	if size == 0 {
-		return 0
-	}
-	return bits.Len64(uint64(size) - 1)
 }
