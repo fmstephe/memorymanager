@@ -230,7 +230,27 @@ func Test_Slice_Append(t *testing.T) {
 		(1 << 14) + 1,
 	} {
 		for _, extraCapacity := range []int{0, 1, 2, 3, 4, 5, 6, 7, 16, 100} {
-			doSliceAppendTest[int64](t, os, length, extraCapacity, func() int64 { return 0x11 }, func() int64 { return 0x22 })
+			doSliceAppendTest[int64](
+				t,
+				os,
+				length,
+				extraCapacity,
+				func() int64 { return 0x11 },
+				func() int64 { return 0x22 })
+			doSliceAppendTest[SizedArray0](
+				t,
+				os,
+				length,
+				extraCapacity,
+				func() SizedArray0 { return SizedArray0{[1]byte{0x11}} },
+				func() SizedArray0 { return SizedArray0{[1]byte{0x22}} })
+			doSliceAppendTest[SizedArray2Small](
+				t,
+				os,
+				length,
+				extraCapacity,
+				func() SizedArray2Small { return SizedArray2Small{[3]byte{0x11, 0x11, 0x11}} },
+				func() SizedArray2Small { return SizedArray2Small{[3]byte{0x22, 0x22, 0x22}} })
 		}
 	}
 }
