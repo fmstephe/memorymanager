@@ -9,10 +9,12 @@ import (
 	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
 )
 
+// Allocates a new string copied from str
 func AllocStringFromString(s *Store, str string) (RefString, string) {
 	return AllocStringFromBytes(s, funsafe.StringToBytes(str))
 }
 
+// Allocates a new string copied from bytes
 func AllocStringFromBytes(s *Store, bytes []byte) (RefString, string) {
 	idx := indexForSize(uint64(len(bytes)))
 	if idx >= len(s.sizedStores) {
@@ -21,14 +23,37 @@ func AllocStringFromBytes(s *Store, bytes []byte) (RefString, string) {
 
 	// Allocate the string
 	pRef := s.alloc(idx)
-	oRef := newRefStr(len(bytes), pRef)
+	sRef := newRefStr(len(bytes), pRef)
 
 	// Copy the byte data across to the allocated string
-	allocBytes := oRef.ref.Bytes(len(bytes))
+	allocBytes := sRef.ref.Bytes(len(bytes))
 	copy(allocBytes, bytes)
 
 	// Return the string-ref and string value
-	return oRef, oRef.Value()
+	return sRef, sRef.Value()
+}
+
+// Allocates a new string which contains the elements of strs concatenated together
+func ConcatStrings(s *Store, strs ...string) (RefString, string) {
+	// Calculate the total string size needed
+	totalLength := 0
+	for _, str := range strs {
+		totalLength += len(str)
+	}
+
+	// Allocate the string
+	idx := indexForSize(uint64(totalLength))
+	pRef := s.alloc(idx)
+	sRef := newRefStr(totalLength, pRef)
+
+	// Copy the byte data across to the allocated string
+	allocBytes := sRef.ref.Bytes(totalLength)
+	allocBytes = allocBytes[:0]
+	for _, str := range strs[:len(strs)] {
+		allocBytes = append(allocBytes, str...)
+	}
+
+	return sRef, sRef.Value()
 }
 
 func FreeStr(s *Store, r RefString) {

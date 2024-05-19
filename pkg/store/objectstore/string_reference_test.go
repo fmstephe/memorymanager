@@ -197,6 +197,65 @@ func Test_String_SizedStats(t *testing.T) {
 	}
 }
 
+func Test_String_ConcatStrings(t *testing.T) {
+	os := New()
+	defer os.Destroy()
+
+	for _, testCase := range []struct {
+		strs []string
+	}{
+		// Empty cases
+		{nil},
+		{[]string{}},
+		// Single string cases
+		{[]string{
+			"1",
+		}},
+		{[]string{
+			"1, 2",
+		}},
+		{[]string{
+			"1, 2, 3",
+		}},
+		{[]string{
+			"1, 2, 3, 4",
+		}},
+		// Multi slice cases
+		{[]string{
+			"1, 2",
+			"1",
+		}},
+		{[]string{
+			"1",
+			"1, 2, 3",
+			"1, 2",
+		}},
+		{[]string{
+			"1",
+			"1, 2, 3",
+			"1, 2",
+			"1, 2, 3, 4",
+		}},
+		{[]string{
+			"1",
+			"1, 2, 3",
+			"1, 2",
+			"1, 2, 3, 4, 5",
+			"1, 2, 3, 4",
+		}},
+	} {
+		expectedString := ""
+		for _, str := range testCase.strs {
+			expectedString += str
+		}
+
+		r, resultString := ConcatStrings(os, testCase.strs...)
+
+		assert.Equal(t, expectedString, resultString)
+		assert.Equal(t, expectedString, r.Value())
+	}
+}
+
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 var strRand = rand.New(rand.NewSource(1))
