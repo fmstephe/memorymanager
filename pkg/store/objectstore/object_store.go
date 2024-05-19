@@ -268,25 +268,3 @@ func ConfForString(s *Store, length int) pointerstore.AllocConfig {
 	idx := indexForSize(uint64(length))
 	return configs[idx]
 }
-
-func resizeAndInvalidate(s *Store, oldRef pointerstore.RefPointer, oldSize, newSize uint64) pointerstore.RefPointer {
-	// There is a critical assumption made here, which is that the oldSize
-	// value accurately indicates the index the allocation was made in
-	oldIdx := indexForSize(oldSize)
-	newIdx := indexForSize(newSize)
-	// Check if the current allocation slot has enough space for the new
-	// capacity. If it does, then we just re-alloc the current reference
-	if newIdx <= oldIdx {
-		return oldRef.Realloc()
-	}
-
-	newRef := s.alloc(newIdx)
-
-	// Copy the content of the old allocation into the new
-	oldValue := oldRef.Bytes(int(oldSize))
-	newValue := newRef.Bytes(int(oldSize))
-	copy(newValue, oldValue)
-
-	s.free(oldIdx, oldRef)
-	return newRef
-}

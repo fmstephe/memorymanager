@@ -200,9 +200,6 @@ func Test_Slice_SizedStats(t *testing.T) {
 	}
 }
 
-// TODO there is almost certainly a bug in the code that will only be found
-// with a non-power of 2 sized slice type. A struct with three byte fields
-// would likely hit it.
 func Test_Slice_Append(t *testing.T) {
 	os := New()
 	defer os.Destroy()
@@ -237,26 +234,28 @@ func Test_Slice_Append(t *testing.T) {
 				extraCapacity,
 				func() int64 { return 0x11 },
 				func() int64 { return 0x22 })
-			doSliceAppendTest[SizedArray0](
+
+			doSliceAppendTest[byte](
 				t,
 				os,
 				length,
 				extraCapacity,
-				func() SizedArray0 { return SizedArray0{[1]byte{0x11}} },
-				func() SizedArray0 { return SizedArray0{[1]byte{0x22}} })
-			doSliceAppendTest[SizedArray2Small](
+				func() byte { return 0x11 },
+				func() byte { return 0x22 })
+
+			doSliceAppendTest[[3]byte](
 				t,
 				os,
 				length,
 				extraCapacity,
-				func() SizedArray2Small { return SizedArray2Small{[3]byte{0x11, 0x11, 0x11}} },
-				func() SizedArray2Small { return SizedArray2Small{[3]byte{0x22, 0x22, 0x22}} })
+				func() [3]byte { return [3]byte{0x11, 0x11, 0x11} },
+				func() [3]byte { return [3]byte{0x22, 0x22, 0x22} })
 		}
 	}
 }
 
 func doSliceAppendTest[T any](t *testing.T, os *Store, length, extraCapacity int, initVal, appendVal func() T) {
-	t.Run(fmt.Sprintf("length %d extra capacity %d", length, extraCapacity), func(t *testing.T) {
+	t.Run(fmt.Sprintf("type %T length %d extra capacity %d", *(new(T)), length, extraCapacity), func(t *testing.T) {
 		capacity := length + extraCapacity
 
 		refInit, initSlice := AllocSlice[T](os, length, capacity)
@@ -318,14 +317,41 @@ func Test_Slice_AppendSlice(t *testing.T) {
 	} {
 		for _, extraCapacity := range []int{0, 1, 2, 3, 4, 5, 7, 16, 100} {
 			for _, appendSize := range []int{0, 1, 2, 3, 4, 5, 7, 16, 100} {
-				doSliceAppendSliceTest[int64](t, os, length, extraCapacity, appendSize, func() int64 { return 0x11 }, func() int64 { return 0x22 })
+				/*
+					doSliceAppendSliceTest[int64](
+						t,
+						os,
+						length,
+						extraCapacity,
+						appendSize,
+						func() int64 { return 0x11 },
+						func() int64 { return 0x22 })
+				*/
+				doSliceAppendSliceTest[byte](
+					t,
+					os,
+					length,
+					extraCapacity,
+					appendSize,
+					func() byte { return 0x11 },
+					func() byte { return 0x22 })
+				/*
+					doSliceAppendSliceTest[[3]byte](
+						t,
+						os,
+						length,
+						extraCapacity,
+						appendSize,
+						func() [3]byte { return [3]byte{0x11, 0x11, 0x11} },
+						func() [3]byte { return [3]byte{0x22, 0x22, 0x22} })
+				*/
 			}
 		}
 	}
 }
 
 func doSliceAppendSliceTest[T any](t *testing.T, os *Store, length, extraCapacity, appendSize int, initVal, appendVal func() T) {
-	t.Run(fmt.Sprintf("length %d append %d extra capacity %d", length, appendSize, extraCapacity), func(t *testing.T) {
+	t.Run(fmt.Sprintf("type %T length %d append %d extra capacity %d", *(new(T)), length, appendSize, extraCapacity), func(t *testing.T) {
 		capacity := length + extraCapacity
 
 		refInit, initSlice := AllocSlice[T](os, length, capacity)

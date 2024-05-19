@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/fmstephe/flib/fmath"
 	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
 )
 
@@ -48,17 +47,10 @@ func ConcatSlices[T any](s *Store, slices ...[]T) (RefSlice[T], []T) {
 // no longer valid after this function returns.  The returned reference should
 // be used instead.
 func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
-	capacitySize := into.capacitySize()
-	lengthSize := into.lengthSize()
-	appendSize := sizeForType[T]()
-
-	newSize := capacityForLength(lengthSize+appendSize, capacitySize)
-
-	pRef := resizeAndInvalidate(s, into.ref, capacitySize, newSize)
+	pRef, newCapacity := resizeAndInvalidateTyped[T](s, into.ref, into.capacity, into.length+1)
 
 	// We have the capacity available, append the element
-	// TODO sizeForType() is a power of two - devision can be eliminated
-	newRef := newRefSlice[T](into.length, int(newSize/sizeForType[T]()), pRef)
+	newRef := newRefSlice[T](into.length, newCapacity, pRef)
 	slice := newRef.Value()
 	slice = append(slice, value)
 	newRef.length++
@@ -70,17 +62,10 @@ func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
 // reference 'into' is no longer valid after this function returns.  The
 // returned reference should be used instead.
 func AppendSlice[T any](s *Store, into RefSlice[T], fromSlice []T) RefSlice[T] {
-	capacitySize := into.capacitySize()
-	lengthSize := into.lengthSize()
-	appendSize := uint64(len(fromSlice)) * sizeForType[T]()
-
-	newCapacitySize := capacityForLength(lengthSize+appendSize, capacitySize)
-
-	pRef := resizeAndInvalidate(s, into.ref, capacitySize, newCapacitySize)
+	pRef, newCapacity := resizeAndInvalidateTyped[T](s, into.ref, into.capacity, into.length+len(fromSlice))
 
 	// We have the capacity available, append the slice
-	// TODO sizeForType() is a power of two - devision can be eliminated
-	newRef := newRefSlice[T](into.length, int(newCapacitySize/sizeForType[T]()), pRef)
+	newRef := newRefSlice[T](into.length, newCapacity, pRef)
 	intoSlice := newRef.Value()
 	intoSlice = append(intoSlice, fromSlice...)
 	newRef.length += len(fromSlice)
@@ -94,8 +79,7 @@ func FreeSlice[T any](s *Store, r RefSlice[T]) {
 }
 
 func indexForSlice[T any](capacity int) int {
-	typeSize := uint64(fmath.NxtPowerOfTwo(int64(sizeForType[T]())))
-	sliceSize := uint64(capacity) * typeSize
+	sliceSize := sizeForSlice[T](capacity)
 	return indexForSize(sliceSize)
 }
 
@@ -140,14 +124,6 @@ func (r *RefSlice[T]) realloc() RefSlice[T] {
 	return newRef
 }
 
-func (r *RefSlice[T]) capacitySize() uint64 {
-	return sizeForType[T]() * uint64(r.capacity)
-}
-
-func (r *RefSlice[T]) lengthSize() uint64 {
-	return sizeForType[T]() * uint64(r.length)
-}
-
 func capacityForLength(lengthSize, capacitySize uint64) uint64 {
 	// Get the power of two value that holds lengthSize
 	// NB: If lengthSize is 0, capForLength will also be 0
@@ -157,4 +133,29 @@ func capacityForLength(lengthSize, capacitySize uint64) uint64 {
 	// length We keep the original capacity. We don't want to shrink a
 	// slice just because it doesn't _yet_ have enough data in it.
 	return max(capForLength, capacitySize)
+}
+
+func resizeAndInvalidateTyped[T any](s *Store, oldRef pointerstore.RefPointer, oldCapacity, newLength int) (newRef pointerstore.RefPointer, newCapacity int) {
+	// There is a critical assumption made here, which is that the oldSize
+	// value accurately indicates the index the allocation was made in
+	oldCapacitySize := int(sizeForSlice[T](oldCapacity))
+	newCapacity = max(oldCapacity, sliceCapacityFromSize[T](sizeForSlice[T](newLength)))
+	oldIdx := indexForSlice[T](oldCapacity)
+	newIdx := indexForSlice[T](newLength)
+
+	// Check if the current allocation slot has enough space for the new
+	// capacity. If it does, then we just re-alloc the current reference
+	if newIdx <= oldIdx {
+		return oldRef.Realloc(), newCapacity
+	}
+
+	newRef = s.alloc(newIdx)
+
+	// Copy the content of the old allocation into the new
+	oldValue := oldRef.Bytes(oldCapacitySize)
+	newValue := newRef.Bytes(oldCapacitySize)
+	copy(newValue, oldValue)
+
+	s.free(oldIdx, oldRef)
+	return newRef, newCapacity
 }
