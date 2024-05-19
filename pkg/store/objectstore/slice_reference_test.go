@@ -200,6 +200,9 @@ func Test_Slice_SizedStats(t *testing.T) {
 	}
 }
 
+// TODO there is almost certainly a bug in the code that will only be found
+// with a non-power of 2 sized slice type. A struct with three byte fields
+// would likely hit it.
 func Test_Slice_Append(t *testing.T) {
 	os := New()
 	defer os.Destroy()
@@ -227,43 +230,44 @@ func Test_Slice_Append(t *testing.T) {
 		(1 << 14) + 1,
 	} {
 		for _, extraCapacity := range []int{0, 1, 2, 3, 4, 5, 6, 7, 16, 100} {
-			t.Run(fmt.Sprintf("length %d extra capacity %d", length, extraCapacity), func(t *testing.T) {
-				const initValue = 0x11
-				const appendValue = 0x22
-
-				capacity := length + extraCapacity
-
-				refInit, initSlice := AllocSlice[int64](os, length, capacity)
-				// Assert the allocated slice works properly
-				require.Equal(t, length, len(initSlice))
-				require.Equal(t, capacity, cap(initSlice))
-
-				expectedSlice := make([]int64, length, capacity)
-				for i := range initSlice {
-					initSlice[i] = initValue
-					expectedSlice[i] = initValue
-				}
-
-				refAppend := Append[int64](os, refInit, appendValue)
-				expectedSlice = append(expectedSlice, appendValue)
-
-				resultSlice := refAppend.Value()
-				require.Equal(t, len(expectedSlice), len(resultSlice))
-				// If the existing capacity is enough, it is
-				// unchanged. If the capacity is not enough we
-				// round up to a power of two which is large
-				// enough
-				requiredCapacity := int(fmath.NxtPowerOfTwo(int64(length + 1)))
-				require.Equal(t, max(capacity, requiredCapacity), cap(resultSlice))
-
-				// Assert the contents of the slice is correct
-				require.Equal(t, expectedSlice, resultSlice)
-
-				// Assert that the original reference has been invalidated
-				require.Panics(t, func() { refInit.Value() })
-			})
+			doSliceAppendTest[int64](t, os, length, extraCapacity, func() int64 { return 0x11 }, func() int64 { return 0x22 })
 		}
 	}
+}
+
+func doSliceAppendTest[T any](t *testing.T, os *Store, length, extraCapacity int, initVal, appendVal func() T) {
+	t.Run(fmt.Sprintf("length %d extra capacity %d", length, extraCapacity), func(t *testing.T) {
+		capacity := length + extraCapacity
+
+		refInit, initSlice := AllocSlice[T](os, length, capacity)
+		// Assert the allocated slice works properly
+		require.Equal(t, length, len(initSlice))
+		require.Equal(t, capacity, cap(initSlice))
+
+		expectedSlice := make([]T, length, capacity)
+		for i := range initSlice {
+			initSlice[i] = initVal()
+			expectedSlice[i] = initVal()
+		}
+
+		refAppend := Append[T](os, refInit, appendVal())
+		expectedSlice = append(expectedSlice, appendVal())
+
+		resultSlice := refAppend.Value()
+		require.Equal(t, len(expectedSlice), len(resultSlice))
+		// If the existing capacity is enough, it is
+		// unchanged. If the capacity is not enough we
+		// round up to a power of two which is large
+		// enough
+		requiredCapacity := int(fmath.NxtPowerOfTwo(int64(length + 1)))
+		require.Equal(t, max(capacity, requiredCapacity), cap(resultSlice))
+
+		// Assert the contents of the slice is correct
+		require.Equal(t, expectedSlice, resultSlice)
+
+		// Assert that the original reference has been invalidated
+		require.Panics(t, func() { refInit.Value() })
+	})
 }
 
 func Test_Slice_AppendSlice(t *testing.T) {
@@ -294,59 +298,60 @@ func Test_Slice_AppendSlice(t *testing.T) {
 	} {
 		for _, extraCapacity := range []int{0, 1, 2, 3, 4, 5, 7, 16, 100} {
 			for _, appendSize := range []int{0, 1, 2, 3, 4, 5, 7, 16, 100} {
-				t.Run(fmt.Sprintf("length %d append %d extra capacity %d", length, appendSize, extraCapacity), func(t *testing.T) {
-					const initValue = 0x11
-					const appendValue = 0x22
-
-					capacity := length + extraCapacity
-
-					refInit, initSlice := AllocSlice[int64](os, length, capacity)
-					// Assert the allocated slice works properly
-					require.Equal(t, length, len(initSlice))
-					require.Equal(t, capacity, cap(initSlice))
-
-					appendSlice := make([]int64, appendSize)
-					for i := range appendSlice {
-						appendSlice[i] = appendValue
-					}
-
-					expectedSlice := make([]int64, length, capacity)
-					for i := range initSlice {
-						initSlice[i] = initValue
-						expectedSlice[i] = initValue
-					}
-
-					refResult := AppendSlice[int64](os, refInit, appendSlice)
-					expectedSlice = append(expectedSlice, appendSlice...)
-
-					// Assert that refAppend contains the new value
-					resultSlice := refResult.Value()
-					require.Equal(t, len(expectedSlice), len(resultSlice))
-
-					requiredCapacity := int(fmath.NxtPowerOfTwo(int64(length + appendSize)))
-					switch {
-					case appendSize == 0 && capacity == 0:
-						// If the capacity is 0, and we don't append anything
-						// then the capacity remains 0.
-						require.Equal(t, 0, cap(resultSlice))
-					case capacity < requiredCapacity:
-						// The capacity will be grown to the required capacity for the append
-						require.Equal(t, requiredCapacity, cap(resultSlice))
-					case capacity >= requiredCapacity:
-						// The capacity of the slice is
-						// strictly larger than needed
-						// for the append. Capacity is
-						// unchanged.
-						require.Equal(t, capacity, cap(resultSlice))
-					}
-					require.Equal(t, expectedSlice, resultSlice)
-
-					// Assert that the original reference has been invalidated
-					require.Panics(t, func() { refInit.Value() })
-				})
+				doSliceAppendSliceTest[int64](t, os, length, extraCapacity, appendSize, func() int64 { return 0x11 }, func() int64 { return 0x22 })
 			}
 		}
 	}
+}
+
+func doSliceAppendSliceTest[T any](t *testing.T, os *Store, length, extraCapacity, appendSize int, initVal, appendVal func() T) {
+	t.Run(fmt.Sprintf("length %d append %d extra capacity %d", length, appendSize, extraCapacity), func(t *testing.T) {
+		capacity := length + extraCapacity
+
+		refInit, initSlice := AllocSlice[T](os, length, capacity)
+		// Assert the allocated slice works properly
+		require.Equal(t, length, len(initSlice))
+		require.Equal(t, capacity, cap(initSlice))
+
+		appendSlice := make([]T, appendSize)
+		for i := range appendSlice {
+			appendSlice[i] = appendVal()
+		}
+
+		expectedSlice := make([]T, length, capacity)
+		for i := range initSlice {
+			initSlice[i] = initVal()
+			expectedSlice[i] = initVal()
+		}
+
+		refResult := AppendSlice[T](os, refInit, appendSlice)
+		expectedSlice = append(expectedSlice, appendSlice...)
+
+		// Assert that refAppend contains the new value
+		resultSlice := refResult.Value()
+		require.Equal(t, len(expectedSlice), len(resultSlice))
+
+		requiredCapacity := int(fmath.NxtPowerOfTwo(int64(length + appendSize)))
+		switch {
+		case appendSize == 0 && capacity == 0:
+			// If the capacity is 0, and we don't append anything
+			// then the capacity remains 0.
+			require.Equal(t, 0, cap(resultSlice))
+		case capacity < requiredCapacity:
+			// The capacity will be grown to the required capacity for the append
+			require.Equal(t, requiredCapacity, cap(resultSlice))
+		case capacity >= requiredCapacity:
+			// The capacity of the slice is
+			// strictly larger than needed
+			// for the append. Capacity is
+			// unchanged.
+			require.Equal(t, capacity, cap(resultSlice))
+		}
+		require.Equal(t, expectedSlice, resultSlice)
+
+		// Assert that the original reference has been invalidated
+		require.Panics(t, func() { refInit.Value() })
+	})
 }
 
 func Test_Slice_ConcatSlices(t *testing.T) {
