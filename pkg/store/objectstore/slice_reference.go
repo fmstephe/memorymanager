@@ -16,7 +16,7 @@ func AllocSlice[T any](s *Store, length, requestedCapacity int) (RefSlice[T], []
 	}
 
 	// Round the requested capacity up to a power of 2
-	actualCapacity := sliceCapacity(requestedCapacity)
+	actualCapacity := capacityForSlice(requestedCapacity)
 
 	idx := indexForSlice[T](actualCapacity)
 	if idx >= len(s.sizedStores) {
@@ -122,7 +122,7 @@ func (r *RefSlice[T]) realloc() RefSlice[T] {
 }
 
 func resizeAndInvalidate[T any](s *Store, oldRef pointerstore.RefPointer, oldCapacity, newLength int) (newRef pointerstore.RefPointer, newCapacity int) {
-	newCapacity = sliceCapacity(newLength)
+	newCapacity = capacityForSlice(newLength)
 
 	// Check if the current allocation slot has enough space for the new
 	// capacity. If it does, then we just re-alloc the current reference

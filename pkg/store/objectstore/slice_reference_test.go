@@ -21,7 +21,7 @@ func Test_Slice_AllocateModifyAndGet(t *testing.T) {
 
 	// Assert that the len and cap are as expected
 	assert.Equal(t, 10, len(value))
-	assert.Equal(t, sliceCapacity(20), cap(value))
+	assert.Equal(t, capacityForSlice(20), cap(value))
 
 	// Mutate the elements of the slice, and the copied slice
 	for i := range value {
@@ -67,7 +67,7 @@ func Test_Slice_AllocateModifyAndGet_ManySizes(t *testing.T) {
 
 			// Assert that the len and cap are as expected
 			assert.Equal(t, length, len(value))
-			assert.Equal(t, sliceCapacity(length), cap(value))
+			assert.Equal(t, capacityForSlice(length), cap(value))
 
 			// Mutate the elements of the slice, and the copied slice
 			for i := range value {
@@ -278,7 +278,7 @@ func doSliceAppendTest[T any](t *testing.T, os *Store, length, extraCapacity int
 		refInit, initSlice := AllocSlice[T](os, length, capacity)
 		// Assert the allocated slice works properly
 		require.Equal(t, length, len(initSlice))
-		initCapacity := sliceCapacity(capacity)
+		initCapacity := capacityForSlice(capacity)
 		require.Equal(t, initCapacity, cap(initSlice))
 
 		expectedSlice := make([]T, length, capacity)
@@ -296,7 +296,7 @@ func doSliceAppendTest[T any](t *testing.T, os *Store, length, extraCapacity int
 		// unchanged. If the capacity is not enough we
 		// round up to a power of two which is large
 		// enough
-		expectedCapacity := max(initCapacity, sliceCapacity(length+1))
+		expectedCapacity := max(initCapacity, capacityForSlice(length+1))
 		require.Equal(t, expectedCapacity, cap(resultSlice))
 
 		// Assert the contents of the slice is correct
@@ -389,7 +389,7 @@ func doSliceAppendSliceTest[T any](t *testing.T, os *Store, length, extraCapacit
 		capacity := length + extraCapacity
 
 		refInit, initSlice := AllocSlice[T](os, length, capacity)
-		initCapacity := sliceCapacity(capacity)
+		initCapacity := capacityForSlice(capacity)
 		// Assert the allocated slice works properly
 		require.Equal(t, length, len(initSlice))
 		require.Equal(t, initCapacity, cap(initSlice))
@@ -412,7 +412,7 @@ func doSliceAppendSliceTest[T any](t *testing.T, os *Store, length, extraCapacit
 		resultSlice := refResult.Value()
 		require.Equal(t, len(expectedSlice), len(resultSlice))
 
-		expectedCapacity := max(initCapacity, sliceCapacity(length+appendSize))
+		expectedCapacity := max(initCapacity, capacityForSlice(length+appendSize))
 		require.Equal(t, expectedCapacity, cap(resultSlice))
 
 		require.Equal(t, expectedSlice, resultSlice)

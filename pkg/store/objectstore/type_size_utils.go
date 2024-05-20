@@ -20,8 +20,8 @@ func sizeForSlice[T any](capacity int) uint64 {
 	return nextPowerOfTwo(tSize * uint64(capacity))
 }
 
-func sliceCapacity(capacity int) int {
-	return int(nextPowerOfTwo(uint64(capacity)))
+func capacityForSlice(requestedCapacity int) int {
+	return int(nextPowerOfTwo(uint64(requestedCapacity)))
 }
 
 func indexForSlice[T any](capacity int) int {
