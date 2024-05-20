@@ -10,19 +10,22 @@ import (
 )
 
 // Allocates a new slice with the desired length and capacity
-func AllocSlice[T any](s *Store, length, capacity int) (RefSlice[T], []T) {
+func AllocSlice[T any](s *Store, length, requestedCapacity int) (RefSlice[T], []T) {
 	// TODO this is not fast - we _need_ to cache this type data
 	if err := containsNoPointers[T](); err != nil {
 		panic(fmt.Errorf("cannot allocate generic type containing pointers %w", err))
 	}
 
-	idx := indexForSlice[T](capacity)
+	// Round the requested capacity up to a power of 2
+	actualCapacity := sliceCapacity(requestedCapacity)
+
+	idx := indexForSlice[T](actualCapacity)
 	if idx >= len(s.sizedStores) {
 		panic(fmt.Errorf("Allocation too large at %d", sizeForType[T]()))
 	}
 
 	pRef := s.alloc(idx)
-	sRef := newRefSlice[T](length, capacity, pRef)
+	sRef := newRefSlice[T](length, actualCapacity, pRef)
 	return sRef, sRef.Value()
 }
 
@@ -78,11 +81,6 @@ func FreeSlice[T any](s *Store, r RefSlice[T]) {
 	s.free(idx, r.ref)
 }
 
-func indexForSlice[T any](capacity int) int {
-	sliceSize := sizeForSlice[T](capacity)
-	return indexForSize(sliceSize)
-}
-
 // A reference to a typed slice
 // length is len() of the slice
 // capacity is cap() of the slice
@@ -136,26 +134,25 @@ func capacityForLength(lengthSize, capacitySize uint64) uint64 {
 }
 
 func resizeAndInvalidateTyped[T any](s *Store, oldRef pointerstore.RefPointer, oldCapacity, newLength int) (newRef pointerstore.RefPointer, newCapacity int) {
-	// There is a critical assumption made here, which is that the oldSize
-	// value accurately indicates the index the allocation was made in
-	oldCapacitySize := int(sizeForSlice[T](oldCapacity))
-	newCapacity = max(oldCapacity, sliceCapacityFromSize[T](sizeForSlice[T](newLength)))
-	oldIdx := indexForSlice[T](oldCapacity)
-	newIdx := indexForSlice[T](newLength)
+	newCapacity = sliceCapacity(newLength)
 
 	// Check if the current allocation slot has enough space for the new
 	// capacity. If it does, then we just re-alloc the current reference
-	if newIdx <= oldIdx {
-		return oldRef.Realloc(), newCapacity
+	if newCapacity <= oldCapacity {
+		return oldRef.Realloc(), oldCapacity
 	}
 
+	newIdx := indexForSlice[T](newCapacity)
 	newRef = s.alloc(newIdx)
 
 	// Copy the content of the old allocation into the new
+	oldCapacitySize := int(sizeForSlice[T](oldCapacity))
 	oldValue := oldRef.Bytes(oldCapacitySize)
 	newValue := newRef.Bytes(oldCapacitySize)
 	copy(newValue, oldValue)
 
+	oldIdx := indexForSlice[T](oldCapacity)
 	s.free(oldIdx, oldRef)
+
 	return newRef, newCapacity
 }

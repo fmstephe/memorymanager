@@ -7,13 +7,12 @@ import (
 
 func indexForType[T any]() int {
 	size := sizeForType[T]()
-
 	return indexForSize(size)
 }
 
 func sizeForType[T any]() uint64 {
 	t := reflect.TypeFor[T]()
-	return nextPowerOfTwo(uint64(t.Size()))
+	return residentObjectSize(uint64(t.Size()))
 }
 
 func sizeForSlice[T any](capacity int) uint64 {
@@ -21,10 +20,13 @@ func sizeForSlice[T any](capacity int) uint64 {
 	return nextPowerOfTwo(tSize * uint64(capacity))
 }
 
-func sliceCapacityFromSize[T any](capacitySize uint64) int {
-	tSize := sizeForType[T]()
-	// TODO both are a power of 2, division can be eliminated
-	return int(capacitySize / tSize)
+func sliceCapacity(capacity int) int {
+	return int(nextPowerOfTwo(uint64(capacity)))
+}
+
+func indexForSlice[T any](capacity int) int {
+	sliceSize := sizeForSlice[T](capacity)
+	return indexForSize(sliceSize)
 }
 
 func indexForSize(size uint64) int {
@@ -35,11 +37,15 @@ func indexForSize(size uint64) int {
 }
 
 // Returns the smallest power of two >= val
-// If val is 0, we return 0
-func nextPowerOfTwo(val uint64) uint64 {
+// With the exception that 0 sized objects are size 1 in memory
+func residentObjectSize(val uint64) uint64 {
 	if val == 0 {
-		return 0
+		return 1
 	}
+	return nextPowerOfTwo(val)
+}
+
+func nextPowerOfTwo(val uint64) uint64 {
 	if isPowerOfTwo(val) {
 		return val
 	}

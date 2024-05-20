@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/fmstephe/flib/fmath"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,7 +21,7 @@ func Test_Slice_AllocateModifyAndGet(t *testing.T) {
 
 	// Assert that the len and cap are as expected
 	assert.Equal(t, 10, len(value))
-	assert.Equal(t, 20, cap(value))
+	assert.Equal(t, sliceCapacity(20), cap(value))
 
 	// Mutate the elements of the slice, and the copied slice
 	for i := range value {
@@ -68,7 +67,7 @@ func Test_Slice_AllocateModifyAndGet_ManySizes(t *testing.T) {
 
 			// Assert that the len and cap are as expected
 			assert.Equal(t, length, len(value))
-			assert.Equal(t, length, cap(value))
+			assert.Equal(t, sliceCapacity(length), cap(value))
 
 			// Mutate the elements of the slice, and the copied slice
 			for i := range value {
@@ -227,21 +226,30 @@ func Test_Slice_Append(t *testing.T) {
 		(1 << 14) + 1,
 	} {
 		for _, extraCapacity := range []int{0, 1, 2, 3, 4, 5, 6, 7, 16, 100} {
-			doSliceAppendTest[int64](
-				t,
-				os,
-				length,
-				extraCapacity,
-				func() int64 { return 0x11 },
-				func() int64 { return 0x22 })
 
-			doSliceAppendTest[byte](
+			doSliceAppendTest[[0]byte](
 				t,
 				os,
 				length,
 				extraCapacity,
-				func() byte { return 0x11 },
-				func() byte { return 0x22 })
+				func() [0]byte { return [0]byte{} },
+				func() [0]byte { return [0]byte{} })
+
+			doSliceAppendTest[[1]byte](
+				t,
+				os,
+				length,
+				extraCapacity,
+				func() [1]byte { return [1]byte{0x11} },
+				func() [1]byte { return [1]byte{0x22} })
+
+			doSliceAppendTest[[2]byte](
+				t,
+				os,
+				length,
+				extraCapacity,
+				func() [2]byte { return [2]byte{0x11, 0x11} },
+				func() [2]byte { return [2]byte{0x22, 0x22} })
 
 			doSliceAppendTest[[3]byte](
 				t,
@@ -250,6 +258,15 @@ func Test_Slice_Append(t *testing.T) {
 				extraCapacity,
 				func() [3]byte { return [3]byte{0x11, 0x11, 0x11} },
 				func() [3]byte { return [3]byte{0x22, 0x22, 0x22} })
+
+			doSliceAppendTest[int64](
+				t,
+				os,
+				length,
+				extraCapacity,
+				func() int64 { return 0x11 },
+				func() int64 { return 0x22 })
+
 		}
 	}
 }
@@ -261,7 +278,8 @@ func doSliceAppendTest[T any](t *testing.T, os *Store, length, extraCapacity int
 		refInit, initSlice := AllocSlice[T](os, length, capacity)
 		// Assert the allocated slice works properly
 		require.Equal(t, length, len(initSlice))
-		require.Equal(t, capacity, cap(initSlice))
+		initCapacity := sliceCapacity(capacity)
+		require.Equal(t, initCapacity, cap(initSlice))
 
 		expectedSlice := make([]T, length, capacity)
 		for i := range initSlice {
@@ -278,8 +296,8 @@ func doSliceAppendTest[T any](t *testing.T, os *Store, length, extraCapacity int
 		// unchanged. If the capacity is not enough we
 		// round up to a power of two which is large
 		// enough
-		requiredCapacity := int(fmath.NxtPowerOfTwo(int64(length + 1)))
-		require.Equal(t, max(capacity, requiredCapacity), cap(resultSlice))
+		expectedCapacity := max(initCapacity, sliceCapacity(length+1))
+		require.Equal(t, expectedCapacity, cap(resultSlice))
 
 		// Assert the contents of the slice is correct
 		require.Equal(t, expectedSlice, resultSlice)
@@ -317,34 +335,50 @@ func Test_Slice_AppendSlice(t *testing.T) {
 	} {
 		for _, extraCapacity := range []int{0, 1, 2, 3, 4, 5, 7, 16, 100} {
 			for _, appendSize := range []int{0, 1, 2, 3, 4, 5, 7, 16, 100} {
-				/*
-					doSliceAppendSliceTest[int64](
-						t,
-						os,
-						length,
-						extraCapacity,
-						appendSize,
-						func() int64 { return 0x11 },
-						func() int64 { return 0x22 })
-				*/
-				doSliceAppendSliceTest[byte](
+				doSliceAppendSliceTest[[0]byte](
 					t,
 					os,
 					length,
 					extraCapacity,
 					appendSize,
-					func() byte { return 0x11 },
-					func() byte { return 0x22 })
-				/*
-					doSliceAppendSliceTest[[3]byte](
-						t,
-						os,
-						length,
-						extraCapacity,
-						appendSize,
-						func() [3]byte { return [3]byte{0x11, 0x11, 0x11} },
-						func() [3]byte { return [3]byte{0x22, 0x22, 0x22} })
-				*/
+					func() [0]byte { return [0]byte{} },
+					func() [0]byte { return [0]byte{} })
+
+				doSliceAppendSliceTest[[1]byte](
+					t,
+					os,
+					length,
+					extraCapacity,
+					appendSize,
+					func() [1]byte { return [1]byte{0x11} },
+					func() [1]byte { return [1]byte{0x22} })
+				doSliceAppendSliceTest[[2]byte](
+					t,
+					os,
+					length,
+					extraCapacity,
+					appendSize,
+					func() [2]byte { return [2]byte{0x11, 0x11} },
+					func() [2]byte { return [2]byte{0x22, 0x22} })
+
+				doSliceAppendSliceTest[[3]byte](
+					t,
+					os,
+					length,
+					extraCapacity,
+					appendSize,
+					func() [3]byte { return [3]byte{0x11, 0x11, 0x11} },
+					func() [3]byte { return [3]byte{0x22, 0x22, 0x22} })
+
+				doSliceAppendSliceTest[int64](
+					t,
+					os,
+					length,
+					extraCapacity,
+					appendSize,
+					func() int64 { return 0x11 },
+					func() int64 { return 0x22 })
+
 			}
 		}
 	}
@@ -355,9 +389,10 @@ func doSliceAppendSliceTest[T any](t *testing.T, os *Store, length, extraCapacit
 		capacity := length + extraCapacity
 
 		refInit, initSlice := AllocSlice[T](os, length, capacity)
+		initCapacity := sliceCapacity(capacity)
 		// Assert the allocated slice works properly
 		require.Equal(t, length, len(initSlice))
-		require.Equal(t, capacity, cap(initSlice))
+		require.Equal(t, initCapacity, cap(initSlice))
 
 		appendSlice := make([]T, appendSize)
 		for i := range appendSlice {
@@ -377,22 +412,9 @@ func doSliceAppendSliceTest[T any](t *testing.T, os *Store, length, extraCapacit
 		resultSlice := refResult.Value()
 		require.Equal(t, len(expectedSlice), len(resultSlice))
 
-		requiredCapacity := int(fmath.NxtPowerOfTwo(int64(length + appendSize)))
-		switch {
-		case appendSize == 0 && capacity == 0:
-			// If the capacity is 0, and we don't append anything
-			// then the capacity remains 0.
-			require.Equal(t, 0, cap(resultSlice))
-		case capacity < requiredCapacity:
-			// The capacity will be grown to the required capacity for the append
-			require.Equal(t, requiredCapacity, cap(resultSlice))
-		case capacity >= requiredCapacity:
-			// The capacity of the slice is
-			// strictly larger than needed
-			// for the append. Capacity is
-			// unchanged.
-			require.Equal(t, capacity, cap(resultSlice))
-		}
+		expectedCapacity := max(initCapacity, sliceCapacity(length+appendSize))
+		require.Equal(t, expectedCapacity, cap(resultSlice))
+
 		require.Equal(t, expectedSlice, resultSlice)
 
 		// Assert that the original reference has been invalidated
