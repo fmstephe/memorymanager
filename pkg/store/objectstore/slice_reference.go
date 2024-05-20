@@ -2,7 +2,6 @@ package objectstore
 
 import (
 	"fmt"
-	"math/bits"
 	"reflect"
 	"unsafe"
 
@@ -50,7 +49,7 @@ func ConcatSlices[T any](s *Store, slices ...[]T) (RefSlice[T], []T) {
 // no longer valid after this function returns.  The returned reference should
 // be used instead.
 func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
-	pRef, newCapacity := resizeAndInvalidateTyped[T](s, into.ref, into.capacity, into.length+1)
+	pRef, newCapacity := resizeAndInvalidate[T](s, into.ref, into.capacity, into.length+1)
 
 	// We have the capacity available, append the element
 	newRef := newRefSlice[T](into.length, newCapacity, pRef)
@@ -65,7 +64,7 @@ func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
 // reference 'into' is no longer valid after this function returns.  The
 // returned reference should be used instead.
 func AppendSlice[T any](s *Store, into RefSlice[T], fromSlice []T) RefSlice[T] {
-	pRef, newCapacity := resizeAndInvalidateTyped[T](s, into.ref, into.capacity, into.length+len(fromSlice))
+	pRef, newCapacity := resizeAndInvalidate[T](s, into.ref, into.capacity, into.length+len(fromSlice))
 
 	// We have the capacity available, append the slice
 	newRef := newRefSlice[T](into.length, newCapacity, pRef)
@@ -122,18 +121,7 @@ func (r *RefSlice[T]) realloc() RefSlice[T] {
 	return newRef
 }
 
-func capacityForLength(lengthSize, capacitySize uint64) uint64 {
-	// Get the power of two value that holds lengthSize
-	// NB: If lengthSize is 0, capForLength will also be 0
-	capForLength := uint64(1 << bits.Len64(lengthSize-1))
-
-	// If the original capacity is larger than the capacity needed for the
-	// length We keep the original capacity. We don't want to shrink a
-	// slice just because it doesn't _yet_ have enough data in it.
-	return max(capForLength, capacitySize)
-}
-
-func resizeAndInvalidateTyped[T any](s *Store, oldRef pointerstore.RefPointer, oldCapacity, newLength int) (newRef pointerstore.RefPointer, newCapacity int) {
+func resizeAndInvalidate[T any](s *Store, oldRef pointerstore.RefPointer, oldCapacity, newLength int) (newRef pointerstore.RefPointer, newCapacity int) {
 	newCapacity = sliceCapacity(newLength)
 
 	// Check if the current allocation slot has enough space for the new
