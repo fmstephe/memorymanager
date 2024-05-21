@@ -23,7 +23,7 @@ func AllocStringFromBytes(s *Store, bytes []byte) (RefString, string) {
 
 	// Allocate the string
 	pRef := s.alloc(idx)
-	sRef := newRefStr(len(bytes), pRef)
+	sRef := newRefString(len(bytes), pRef)
 
 	// Copy the byte data across to the allocated string
 	allocBytes := sRef.ref.Bytes(len(bytes))
@@ -44,7 +44,7 @@ func ConcatStrings(s *Store, strs ...string) (RefString, string) {
 	// Allocate the string
 	idx := indexForSize(uint64(totalLength))
 	pRef := s.alloc(idx)
-	sRef := newRefStr(totalLength, pRef)
+	sRef := newRefString(totalLength, pRef)
 
 	// Copy the byte data across to the allocated string
 	allocBytes := sRef.ref.Bytes(totalLength)
@@ -54,6 +54,21 @@ func ConcatStrings(s *Store, strs ...string) (RefString, string) {
 	}
 
 	return sRef, sRef.Value()
+}
+
+// Append all of the values in 'fromSlice' to the end of the slice 'into'.  The
+// reference 'into' is no longer valid after this function returns.  The
+// returned reference should be used instead.
+func AppendString(s *Store, into RefString, value string) RefString {
+	pRef, newCapacity := resizeAndInvalidate[byte](s, into.ref, capacityForSlice(into.length), into.length+len(value))
+
+	// We have the capacity available, append the element
+	newRef := newRefString(into.length, pRef)
+	str := newRef.ref.Bytes(newCapacity)
+	copy(str[into.length:], value)
+	newRef.length += len(value)
+
+	return newRef
 }
 
 func FreeStr(s *Store, r RefString) {
@@ -68,7 +83,7 @@ type RefString struct {
 	ref    pointerstore.RefPointer
 }
 
-func newRefStr(length int, ref pointerstore.RefPointer) RefString {
+func newRefString(length int, ref pointerstore.RefPointer) RefString {
 	if ref.IsNil() {
 		panic("cannot create new RefStr with nil pointerstore.RefStr")
 	}
