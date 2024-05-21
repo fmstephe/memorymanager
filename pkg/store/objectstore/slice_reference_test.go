@@ -8,6 +8,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var testSizeRanges = []int{
+	0,
+	1,
+	2,
+	3,
+	4,
+	7,
+	8,
+	(1 << 5) - 1,
+	1 << 5,
+	(1 << 5) + 1,
+	(1 << 14) - 1,
+	1 << 14,
+	(1 << 14) + 1,
+}
+
 // Test that when we allocate a slice, the correct value is stored and
 // retrieved.
 func Test_Slice_AllocateModifyAndGet(t *testing.T) {
@@ -45,22 +61,7 @@ func Test_Slice_AllocateModifyAndGet_ManySizes(t *testing.T) {
 		ss.Destroy()
 	}()
 
-	for _, length := range []int{
-		0,
-		1,
-		2,
-		3,
-		4,
-		(1 << 5) - 1,
-		1 << 5,
-		(1 << 5) + 1,
-		(1 << 9) - 1,
-		1 << 9,
-		(1 << 9) + 1,
-		(1 << 14) - 1,
-		1 << 14,
-		(1 << 14) + 1,
-	} {
+	for _, length := range testSizeRanges {
 		t.Run(fmt.Sprintf("Allocate and get Slice %d", length), func(t *testing.T) {
 			// Allocate it
 			ref, value := AllocSlice[MutableStruct](ss, length, length)
@@ -203,29 +204,8 @@ func Test_Slice_Append(t *testing.T) {
 	os := New()
 	defer os.Destroy()
 
-	for _, length := range []int{
-		0,
-		1,
-		2,
-		3,
-		4,
-		5,
-		6,
-		7,
-		8,
-		9,
-		10,
-		(1 << 5) - 1,
-		1 << 5,
-		(1 << 5) + 1,
-		(1 << 9) - 1,
-		1 << 9,
-		(1 << 9) + 1,
-		(1 << 14) - 1,
-		1 << 14,
-		(1 << 14) + 1,
-	} {
-		for _, extraCapacity := range []int{0, 1, 2, 3, 4, 5, 6, 7, 16, 100} {
+	for _, length := range testSizeRanges {
+		for _, extraCapacity := range testSizeRanges {
 
 			doSliceAppendTest[[0]byte](
 				t,
@@ -311,30 +291,9 @@ func Test_Slice_AppendSlice(t *testing.T) {
 	os := New()
 	defer os.Destroy()
 
-	for _, length := range []int{
-		0,
-		1,
-		2,
-		3,
-		4,
-		5,
-		6,
-		7,
-		8,
-		9,
-		10,
-		(1 << 5) - 1,
-		1 << 5,
-		(1 << 5) + 1,
-		(1 << 9) - 1,
-		1 << 9,
-		(1 << 9) + 1,
-		(1 << 14) - 1,
-		1 << 14,
-		(1 << 14) + 1,
-	} {
-		for _, extraCapacity := range []int{0, 1, 2, 3, 4, 5, 7, 16, 100} {
-			for _, appendSize := range []int{0, 1, 2, 3, 4, 5, 7, 16, 100} {
+	for _, length := range testSizeRanges {
+		for _, extraCapacity := range testSizeRanges {
+			for _, appendSize := range testSizeRanges {
 				doSliceAppendSliceTest[[0]byte](
 					t,
 					os,

@@ -44,22 +44,7 @@ func Test_String_AllocateAndGet(t *testing.T) {
 		ss.Destroy()
 	}()
 
-	for _, length := range []int{
-		0,
-		1,
-		2,
-		3,
-		4,
-		(1 << 5) - 1,
-		1 << 5,
-		(1 << 5) + 1,
-		(1 << 9) - 1,
-		1 << 9,
-		(1 << 9) + 1,
-		(1 << 14) - 1,
-		1 << 14,
-		(1 << 14) + 1,
-	} {
+	for _, length := range testSizeRanges {
 		t.Run(fmt.Sprintf("Allocate and get %d", length), func(t *testing.T) {
 			// Generate a string of the desired size
 			value := makeSizedString(length)
@@ -194,6 +179,28 @@ func Test_String_SizedStats(t *testing.T) {
 
 			assert.Equal(t, expectedStats, actualStats, "Bad stats for %d sized string", length)
 		})
+	}
+}
+
+func Test_String_AppendString(t *testing.T) {
+	os := New()
+	defer os.Destroy()
+
+	for _, firstLength := range testSizeRanges {
+		for _, secondLength := range testSizeRanges {
+			t.Run(fmt.Sprintf("AppendString first %d second %d", firstLength, secondLength), func(t *testing.T) {
+				firstStr := makeSizedString(firstLength)
+				secondStr := makeSizedString(secondLength)
+
+				expectedString := firstStr + secondStr
+
+				firstRef, _ := AllocStringFromString(os, firstStr)
+				resultRef := AppendString(os, firstRef, secondStr)
+
+				assert.Equal(t, expectedString, resultRef.Value())
+				assert.Panics(t, func() { firstRef.Value() })
+			})
+		}
 	}
 }
 
