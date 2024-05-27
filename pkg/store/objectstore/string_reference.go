@@ -1,7 +1,6 @@
 package objectstore
 
 import (
-	"fmt"
 	"reflect"
 	"unsafe"
 
@@ -17,9 +16,6 @@ func AllocStringFromString(s *Store, str string) (RefString, string) {
 // Allocates a new string copied from bytes
 func AllocStringFromBytes(s *Store, bytes []byte) (RefString, string) {
 	idx := indexForSize(uint64(len(bytes)))
-	if idx >= len(s.sizedStores) {
-		panic(fmt.Errorf("Allocation too large at %d", len(bytes)))
-	}
 
 	// Allocate the string
 	pRef := s.alloc(idx)

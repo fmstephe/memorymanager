@@ -19,9 +19,6 @@ func AllocSlice[T any](s *Store, length, requestedCapacity int) (RefSlice[T], []
 	actualCapacity := capacityForSlice(requestedCapacity)
 
 	idx := indexForSlice[T](actualCapacity)
-	if idx >= len(s.sizedStores) {
-		panic(fmt.Errorf("Allocation too large at %d", sizeForType[T]()))
-	}
 
 	pRef := s.alloc(idx)
 	sRef := newRefSlice[T](length, actualCapacity, pRef)

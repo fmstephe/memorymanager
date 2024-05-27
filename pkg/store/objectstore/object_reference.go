@@ -14,9 +14,6 @@ func AllocObject[T any](s *Store) (RefObject[T], *T) {
 	}
 
 	idx := indexForType[T]()
-	if idx >= len(s.sizedStores) {
-		panic(fmt.Errorf("Allocation too large at %d", sizeForType[T]()))
-	}
 
 	pRef := s.alloc(idx)
 	oRef := newRefObject[T](pRef)

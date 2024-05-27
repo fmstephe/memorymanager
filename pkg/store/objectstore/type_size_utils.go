@@ -7,6 +7,8 @@ import (
 	"unsafe"
 )
 
+var maxAllocSize = maxAllocationSize()
+
 // The maximum number of bits allowable for an allocation, given the CPU
 // architecture we are running on
 func maxAllocationBits() int {
@@ -60,23 +62,19 @@ func indexForType[T any]() int {
 	return indexForSize(size)
 }
 
-func sizeForType[T any]() uint64 {
-	t := reflect.TypeFor[T]()
-	return residentObjectSize(uint64(t.Size()))
-}
-
 func sizeForSlice[T any](capacity int) uint64 {
 	tSize := sizeForType[T]()
-	return nextPowerOfTwo(tSize * uint64(capacity))
-}
-
-func capacityForSlice(requestedCapacity int) int {
-	return int(nextPowerOfTwo(uint64(requestedCapacity)))
+	return residentObjectSize(tSize * uint64(capacity))
 }
 
 func indexForSlice[T any](capacity int) int {
 	sliceSize := sizeForSlice[T](capacity)
 	return indexForSize(sliceSize)
+}
+
+func sizeForType[T any]() uint64 {
+	t := reflect.TypeFor[T]()
+	return residentObjectSize(uint64(t.Size()))
 }
 
 func indexForSize(size uint64) int {
@@ -86,13 +84,28 @@ func indexForSize(size uint64) int {
 	return bits.Len64(uint64(size) - 1)
 }
 
+// NB: It is very important to note that this function deals with the capacity
+// reported by cap(slice).  This is not the same as the actual memory size of
+// the slice or allocation, as it does not include the size of slice's type.
+//
+// The reason we have a distinct function to calculate the capacity is that
+// requested-capacity of 0 is preserved. Whereas an allocation size 0 currently
+// occupies 1 byte of memory.
+func capacityForSlice(requestedCapacity int) int {
+	return int(nextPowerOfTwo(uint64(requestedCapacity)))
+}
+
 // Returns the smallest power of two >= val
 // With the exception that 0 sized objects are size 1 in memory
 func residentObjectSize(val uint64) uint64 {
 	if val == 0 {
 		return 1
 	}
-	return nextPowerOfTwo(val)
+	size := nextPowerOfTwo(val)
+	if size > uint64(maxAllocSize) {
+		panic(fmt.Errorf("Allocation size (%d) too large. Can't exceed %d", size, maxAllocSize))
+	}
+	return size
 }
 
 func nextPowerOfTwo(val uint64) uint64 {
@@ -102,7 +115,9 @@ func nextPowerOfTwo(val uint64) uint64 {
 	return 1 << bits.Len64(uint64(val))
 }
 
-// Returns true if val is a power of two, otherwise returns false
+// Returns true if val is a power of two, otherwise returns false.  NB: This
+// function considers 0 to be a power of two. This strictly wrong, but it's an
+// acceptable behaviour for us.
 func isPowerOfTwo(val uint64) bool {
 	return val&(val-1) == 0
 }
