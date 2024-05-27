@@ -15,7 +15,7 @@ func AllocStringFromString(s *Store, str string) (RefString, string) {
 
 // Allocates a new string copied from bytes
 func AllocStringFromBytes(s *Store, bytes []byte) (RefString, string) {
-	idx := indexForSize(uint64(len(bytes)))
+	idx := indexForSize(len(bytes))
 
 	// Allocate the string
 	pRef := s.alloc(idx)
@@ -38,7 +38,7 @@ func ConcatStrings(s *Store, strs ...string) (RefString, string) {
 	}
 
 	// Allocate the string
-	idx := indexForSize(uint64(totalLength))
+	idx := indexForSize(totalLength)
 	pRef := s.alloc(idx)
 	sRef := newRefString(totalLength, pRef)
 
@@ -68,7 +68,7 @@ func AppendString(s *Store, into RefString, value string) RefString {
 }
 
 func FreeStr(s *Store, r RefString) {
-	idx := indexForSize(uint64(r.length))
+	idx := indexForSize(r.length)
 	s.free(idx, r.ref)
 }
 

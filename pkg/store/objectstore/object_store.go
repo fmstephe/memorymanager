@@ -172,17 +172,17 @@ func New() *Store {
 	}
 }
 
-func NewSized(slabSize uint64) *Store {
+func NewSized(slabSize int) *Store {
 	return &Store{
 		sizedStores: initSizeStore(slabSize),
 	}
 }
 
-func initSizeStore(slabSize uint64) []*pointerstore.Store {
+func initSizeStore(slabSize int) []*pointerstore.Store {
 	slabs := make([]*pointerstore.Store, maxAllocationBits())
 
 	for i := range slabs {
-		slabs[i] = pointerstore.New(pointerstore.NewAllocConfigBySize(1<<i, slabSize))
+		slabs[i] = pointerstore.New(pointerstore.NewAllocConfigBySize(1<<i, uint64(slabSize)))
 	}
 
 	return slabs
@@ -231,7 +231,7 @@ func StatsForSlice[T any](s *Store, capacity int) pointerstore.Stats {
 // Returns the stats for the allocations size of a string of length
 func StatsForString(s *Store, length int) pointerstore.Stats {
 	stats := s.Stats()
-	idx := indexForSize(uint64(length))
+	idx := indexForSize(length)
 	return stats[idx]
 }
 
@@ -260,6 +260,6 @@ func ConfForSlice[T any](s *Store, capacity int) pointerstore.AllocConfig {
 // Returns the allocation config for the allocations size of a string of length
 func ConfForString(s *Store, length int) pointerstore.AllocConfig {
 	configs := s.AllocConfigs()
-	idx := indexForSize(uint64(length))
+	idx := indexForSize(length)
 	return configs[idx]
 }

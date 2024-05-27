@@ -131,7 +131,7 @@ func resizeAndInvalidate[T any](s *Store, oldRef pointerstore.RefPointer, oldCap
 	newRef = s.alloc(newIdx)
 
 	// Copy the content of the old allocation into the new
-	oldCapacitySize := int(sizeForSlice[T](oldCapacity))
+	oldCapacitySize := sizeForSlice[T](oldCapacity)
 	oldValue := oldRef.Bytes(oldCapacitySize)
 	newValue := newRef.Bytes(oldCapacitySize)
 	copy(newValue, oldValue)

@@ -19,7 +19,7 @@ func maxAllocationBits() int {
 //
 // An important feature of these values is that for each architecture an 'int'
 // value is able to capture any legal allocation size
-func maxAllocationBitsInternal(wordSizeBits uintptr) int {
+func maxAllocationBitsInternal(wordSizeBits int) int {
 	switch wordSizeBits {
 	case 32:
 		// We allow allocations up to 31 bits in size
@@ -47,14 +47,14 @@ func maxAllocationSize() int {
 }
 
 // This function exists to allow easy unit testing of this functions behaviour
-func maxAllocationSizeInternal(wordSizeBits uintptr) int {
+func maxAllocationSizeInternal(wordSizeBits int) int {
 	return 1 << (maxAllocationBitsInternal(wordSizeBits) - 1)
 }
 
 // Indicate the number of bits in a word for the CPU architecture we are
 // running on
-func wordSizeBits() uintptr {
-	return unsafe.Sizeof(uintptr(0)) * 8
+func wordSizeBits() int {
+	return int(unsafe.Sizeof(uintptr(0)) * 8)
 }
 
 func indexForType[T any]() int {
@@ -62,26 +62,26 @@ func indexForType[T any]() int {
 	return indexForSize(size)
 }
 
-func sizeForSlice[T any](capacity int) uint64 {
-	tSize := sizeForType[T]()
-	return residentObjectSize(tSize * uint64(capacity))
-}
-
 func indexForSlice[T any](capacity int) int {
 	sliceSize := sizeForSlice[T](capacity)
 	return indexForSize(sliceSize)
 }
 
-func sizeForType[T any]() uint64 {
-	t := reflect.TypeFor[T]()
-	return residentObjectSize(uint64(t.Size()))
+func sizeForSlice[T any](capacity int) int {
+	tSize := sizeForType[T]()
+	return residentObjectSize(tSize * capacity)
 }
 
-func indexForSize(size uint64) int {
+func sizeForType[T any]() int {
+	t := reflect.TypeFor[T]()
+	return residentObjectSize(int(t.Size()))
+}
+
+func indexForSize(size int) int {
 	if size == 0 {
 		return 0
 	}
-	return bits.Len64(uint64(size) - 1)
+	return bits.Len(uint(size) - 1)
 }
 
 // NB: It is very important to note that this function deals with the capacity
@@ -92,32 +92,35 @@ func indexForSize(size uint64) int {
 // requested-capacity of 0 is preserved. Whereas an allocation size 0 currently
 // occupies 1 byte of memory.
 func capacityForSlice(requestedCapacity int) int {
-	return int(nextPowerOfTwo(uint64(requestedCapacity)))
+	return nextPowerOfTwo(requestedCapacity)
 }
 
 // Returns the smallest power of two >= val
 // With the exception that 0 sized objects are size 1 in memory
-func residentObjectSize(val uint64) uint64 {
-	if val == 0 {
+func residentObjectSize(requestedSize int) int {
+	if requestedSize < 0 {
+		panic(fmt.Errorf("Allocation size (%d) negative. Very likely uintptr size of type overflowed int", requestedSize))
+	}
+	if requestedSize == 0 {
 		return 1
 	}
-	size := nextPowerOfTwo(val)
-	if size > uint64(maxAllocSize) {
+	size := nextPowerOfTwo(requestedSize)
+	if size > maxAllocSize {
 		panic(fmt.Errorf("Allocation size (%d) too large. Can't exceed %d", size, maxAllocSize))
 	}
 	return size
 }
 
-func nextPowerOfTwo(val uint64) uint64 {
+func nextPowerOfTwo(val int) int {
 	if isPowerOfTwo(val) {
 		return val
 	}
-	return 1 << bits.Len64(uint64(val))
+	return 1 << bits.Len(uint(val))
 }
 
 // Returns true if val is a power of two, otherwise returns false.  NB: This
 // function considers 0 to be a power of two. This strictly wrong, but it's an
 // acceptable behaviour for us.
-func isPowerOfTwo(val uint64) bool {
+func isPowerOfTwo(val int) bool {
 	return val&(val-1) == 0
 }
