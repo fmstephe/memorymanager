@@ -179,12 +179,7 @@ func NewSized(slabSize uint64) *Store {
 }
 
 func initSizeStore(slabSize uint64) []*pointerstore.Store {
-	// We allow allocations up to 48 bits in size
-	//
-	// The upper limit is chosen because (at time of writing) X86 systems
-	// only use 48 bits in 64 bit addresses so this size limit feels like
-	// an inclusive and generous upper limit
-	slabs := make([]*pointerstore.Store, 48)
+	slabs := make([]*pointerstore.Store, maxAllocationBits())
 
 	for i := range slabs {
 		slabs[i] = pointerstore.New(pointerstore.NewAllocConfigBySize(1<<i, slabSize))
