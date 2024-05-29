@@ -104,11 +104,14 @@ func residentObjectSize(requestedSize int) int {
 	if requestedSize == 0 {
 		return 1
 	}
-	size := nextPowerOfTwo(requestedSize)
-	if size > maxAllocSize {
-		panic(fmt.Errorf("Allocation size (%d) too large. Can't exceed %d", size, maxAllocSize))
+	residentSize := nextPowerOfTwo(requestedSize)
+	if residentSize > maxAllocSize {
+		panic(fmt.Errorf("Allocation size (%d, resident %d) too large. Can't exceed %d", requestedSize, residentSize, maxAllocSize))
 	}
-	return size
+	if residentSize < 0 {
+		panic(fmt.Errorf("Allocation size (%d, resident %d) too large. Has overflowed int", requestedSize, residentSize))
+	}
+	return residentSize
 }
 
 func nextPowerOfTwo(val int) int {
