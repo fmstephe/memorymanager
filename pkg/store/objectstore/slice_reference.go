@@ -46,7 +46,7 @@ func ConcatSlices[T any](s *Store, slices ...[]T) (RefSlice[T], []T) {
 // no longer valid after this function returns.  The returned reference should
 // be used instead.
 func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
-	pRef, newCapacity := resizeAndInvalidate[T](s, into.ref, into.capacity, into.length+1)
+	pRef, newCapacity := resizeAndInvalidate[T](s, into.ref, into.capacity, into.length, 1)
 
 	// We have the capacity available, append the element
 	newRef := newRefSlice[T](into.length, newCapacity, pRef)
@@ -61,7 +61,7 @@ func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
 // reference 'into' is no longer valid after this function returns.  The
 // returned reference should be used instead.
 func AppendSlice[T any](s *Store, into RefSlice[T], fromSlice []T) RefSlice[T] {
-	pRef, newCapacity := resizeAndInvalidate[T](s, into.ref, into.capacity, into.length+len(fromSlice))
+	pRef, newCapacity := resizeAndInvalidate[T](s, into.ref, into.capacity, into.length, len(fromSlice))
 
 	// We have the capacity available, append the slice
 	newRef := newRefSlice[T](into.length, newCapacity, pRef)
@@ -118,7 +118,18 @@ func (r *RefSlice[T]) realloc() RefSlice[T] {
 	return newRef
 }
 
-func resizeAndInvalidate[T any](s *Store, oldRef pointerstore.RefPointer, oldCapacity, newLength int) (newRef pointerstore.RefPointer, newCapacity int) {
+func resizeAndInvalidate[T any](s *Store, oldRef pointerstore.RefPointer, oldCapacity, oldLength, extra int) (newRef pointerstore.RefPointer, newCapacity int) {
+	// Calculate the new length
+	newLength := oldLength + extra
+	// TODO test this overflow case We first need to introduce a new option
+	// where the pointerstore tracks allocations with no memory backing the
+	// allocation data. This would allow us to create test allocations
+	// which are very large without having to actually have that much
+	// memory available for the test
+	if newLength < oldLength {
+		panic(fmt.Errorf("resize (oldLength %d extra %d) has overflowed int", oldLength, extra))
+	}
+
 	newCapacity = capacityForSlice(newLength)
 
 	// Check if the current allocation slot has enough space for the new

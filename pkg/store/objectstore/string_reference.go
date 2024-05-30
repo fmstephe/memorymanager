@@ -56,7 +56,7 @@ func ConcatStrings(s *Store, strs ...string) (RefString, string) {
 // reference 'into' is no longer valid after this function returns.  The
 // returned reference should be used instead.
 func AppendString(s *Store, into RefString, value string) RefString {
-	pRef, newCapacity := resizeAndInvalidate[byte](s, into.ref, capacityForSlice(into.length), into.length+len(value))
+	pRef, newCapacity := resizeAndInvalidate[byte](s, into.ref, capacityForSlice(into.length), into.length, len(value))
 
 	// We have the capacity available, append the element
 	newRef := newRefString(into.length, pRef)
