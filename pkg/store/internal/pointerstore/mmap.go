@@ -2,7 +2,6 @@ package pointerstore
 
 import (
 	"fmt"
-	"reflect"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -36,10 +35,6 @@ func MunmapSlab(ptr uintptr, allocConf AllocConfig) error {
 	return unix.Munmap(b)
 }
 
-func pointerToBytes(ptr uintptr, size int) (b []byte) {
-	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-	sliceHeader.Data = ptr
-	sliceHeader.Len = size
-	sliceHeader.Cap = size
-	return b
+func pointerToBytes(ptr uintptr, size int) []byte {
+	return ([]byte)(unsafe.Slice((*byte)((unsafe.Pointer)(ptr)), size))
 }
