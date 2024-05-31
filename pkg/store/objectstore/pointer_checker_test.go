@@ -8,26 +8,40 @@ import (
 )
 
 type deepBadStruct struct {
-	badInt       *int
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	badInt *int
+	//lint:ignore U1000 this field looks unused but is observed by reflection
 	deepBadField badStruct
 }
 
 type badStruct struct {
+	//lint:ignore U1000 this field looks unused but is observed by reflection
 	badField string
 }
 
+// We will create a test which uses this struct in the future
+//
+//lint:ignore U1000 this struct actually is unused - but it represents a real bug in our code
 type stringSmugglerStruct struct {
+	//lint:ignore U1000 this field looks unused but is observed by reflection
 	reference RefObject[string]
 }
 
 type manyPointers struct {
-	chanField      chan int
-	funcField      func(int) int
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	chanField chan int
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	funcField func(int) int
+	//lint:ignore U1000 this field looks unused but is observed by reflection
 	interfaceField any
-	mapField       map[int]int
-	pointerField   *int
-	sliceField     []int
-	stringField    string
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	mapField map[int]int
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	pointerField *int
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	sliceField []int
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	stringField string
 }
 
 func TestBadTypes(t *testing.T) {
@@ -50,7 +64,7 @@ func TestBadTypes(t *testing.T) {
 	// No structs with any pointerful fields
 	assert.EqualError(t, containsNoPointers[badStruct](), "found pointer(s): (objectstore.badStruct)badField<string>")
 	assert.EqualError(t, containsNoPointers[deepBadStruct](), "found pointer(s): (objectstore.deepBadStruct)badInt<*int>,(objectstore.deepBadStruct)deepBadField(objectstore.badStruct)badField<string>")
-	//assert.EqualError(t, containsNoPointers[stringSmugglerStruct](), "found pointer(s): ")
+	// assert.EqualError(t, containsNoPointers[stringSmugglerStruct](), "found pointer(s): ")
 	// No unsafe pointer(s)
 	assert.EqualError(t, containsNoPointers[unsafe.Pointer](), "found pointer(s): <unsafe.Pointer>")
 	// We should find all of the bad fields in this struct
@@ -65,13 +79,18 @@ func TestBadTypes(t *testing.T) {
 }
 
 type deepGoodStruct struct {
+	//lint:ignore U1000 this field looks unused but is observed by reflection
 	boolField bool
+	//lint:ignore U1000 this field looks unused but is observed by reflection
 	deepField goodStruct
 }
 
 type goodStruct struct {
-	intField       int
-	floatField     float64
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	intField int
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	floatField float64
+	//lint:ignore U1000 this field looks unused but is observed by reflection
 	referenceField RefObject[goodStruct]
 }
 
