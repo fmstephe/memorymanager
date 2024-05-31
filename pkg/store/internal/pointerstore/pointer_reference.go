@@ -20,8 +20,6 @@ type RefPointer struct {
 	metaAddress uint64
 }
 
-const metadataSize = unsafe.Sizeof(metadata{})
-
 // If the object's metadata has a non-nil nextFree pointer then the object is
 // currently free. Object's which have never been allocated are implicitly
 // free, but have a nil nextFree.
@@ -47,7 +45,7 @@ func NewReference(pAddress, pMetadata uintptr) RefPointer {
 	// If there were any 1s in the top part of the address our generation
 	// smuggling system will break this pointer. This is an unrecoverable error.
 	if address != maskedAddress {
-		panic(fmt.Errorf("The raw pointer (%d) uses more than %d bits", address, maskShift))
+		panic(fmt.Errorf("the raw pointer (%d) uses more than %d bits", address, maskShift))
 	}
 
 	// NB: The gen on a brand new Reference is always 0
@@ -86,7 +84,7 @@ func (r *RefPointer) Free(oldFree RefPointer) {
 	}
 
 	if meta.gen != r.Gen() {
-		panic(fmt.Errorf("Attempt to free allocation (%d) using stale reference (%d)", meta.gen, r.Gen()))
+		panic(fmt.Errorf("attempt to free allocation (%d) using stale reference (%d)", meta.gen, r.Gen()))
 	}
 
 	if oldFree.IsNil() {
@@ -108,7 +106,7 @@ func (r *RefPointer) DataPtr() uintptr {
 	}
 
 	if meta.gen != r.Gen() {
-		panic(fmt.Errorf("Attempt to get value (%d) using stale reference (%d)", meta.gen, r.Gen()))
+		panic(fmt.Errorf("attempt to get value (%d) using stale reference (%d)", meta.gen, r.Gen()))
 	}
 	return (uintptr)(r.dataAddress & pointerMask)
 }
