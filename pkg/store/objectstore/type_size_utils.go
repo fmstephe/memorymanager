@@ -37,7 +37,7 @@ func maxAllocationBitsInternal(wordSizeBits int) int {
 		// an inclusive and generous upper limit
 		return 48
 	default:
-		panic(fmt.Errorf("Unsupported architecture word size %d", wordSizeBits))
+		panic(fmt.Errorf("unsupported architecture word size %d", wordSizeBits))
 	}
 }
 
@@ -99,17 +99,17 @@ func capacityForSlice(requestedCapacity int) int {
 // With the exception that 0 sized objects are size 1 in memory
 func residentObjectSize(requestedSize int) int {
 	if requestedSize < 0 {
-		panic(fmt.Errorf("Allocation size (%d) negative. Very likely uintptr size of type overflowed int", requestedSize))
+		panic(fmt.Errorf("allocation size (%d) negative, very likely uintptr size of type overflowed int", requestedSize))
 	}
 	if requestedSize == 0 {
 		return 1
 	}
 	residentSize := nextPowerOfTwo(requestedSize)
 	if residentSize > maxAllocSize {
-		panic(fmt.Errorf("Allocation size (%d, resident %d) too large. Can't exceed %d", requestedSize, residentSize, maxAllocSize))
+		panic(fmt.Errorf("allocation size (%d, resident %d) too large, can't exceed %d", requestedSize, residentSize, maxAllocSize))
 	}
 	if residentSize < 0 {
-		panic(fmt.Errorf("Allocation size (%d, resident %d) too large. Has overflowed int", requestedSize, residentSize))
+		panic(fmt.Errorf("allocation size (%d, resident %d) too large, has overflowed int", requestedSize, residentSize))
 	}
 	return residentSize
 }
