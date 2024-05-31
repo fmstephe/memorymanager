@@ -52,9 +52,9 @@ func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
 
 	// We have the capacity available, append the element
 	newRef := newRefSlice[T](into.length, newCapacity, pRef)
-	slice := newRef.Value()
-	slice = append(slice, value)
 	newRef.length++
+	slice := newRef.Value()
+	slice[len(slice)-1] = value
 
 	return newRef
 }
@@ -67,9 +67,9 @@ func AppendSlice[T any](s *Store, into RefSlice[T], fromSlice []T) RefSlice[T] {
 
 	// We have the capacity available, append the slice
 	newRef := newRefSlice[T](into.length, newCapacity, pRef)
-	intoSlice := newRef.Value()
-	intoSlice = append(intoSlice, fromSlice...)
 	newRef.length += len(fromSlice)
+	intoSlice := newRef.Value()
+	copy(intoSlice[into.length:], fromSlice)
 
 	return newRef
 }
