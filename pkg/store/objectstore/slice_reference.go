@@ -9,7 +9,7 @@ import (
 )
 
 // Allocates a new slice with the desired length and capacity
-func AllocSlice[T any](s *Store, length, requestedCapacity int) (RefSlice[T], []T) {
+func AllocSlice[T any](s *Store, length, requestedCapacity int) RefSlice[T] {
 	// TODO this is not fast - we _need_ to cache this type data
 	if err := containsNoPointers[T](); err != nil {
 		panic(fmt.Errorf("cannot allocate generic type containing pointers %w", err))
@@ -22,24 +22,26 @@ func AllocSlice[T any](s *Store, length, requestedCapacity int) (RefSlice[T], []
 
 	pRef := s.alloc(idx)
 	sRef := newRefSlice[T](length, actualCapacity, pRef)
-	return sRef, sRef.Value()
+	return sRef
 }
 
 // Allocates a new slice which contains the elements of slices concatenated together
-func ConcatSlices[T any](s *Store, slices ...[]T) (RefSlice[T], []T) {
+func ConcatSlices[T any](s *Store, slices ...[]T) RefSlice[T] {
 	totalLength := 0
+	// TODO check this value for overflow
 	for _, slice := range slices {
 		totalLength += len(slice)
 	}
 
-	r, newSlice := AllocSlice[T](s, totalLength, totalLength)
+	r := AllocSlice[T](s, totalLength, totalLength)
+	newSlice := r.Value()
 
 	newSlice = newSlice[:0]
 	for _, slice := range slices {
 		newSlice = append(newSlice, slice...)
 	}
 
-	return r, newSlice
+	return r
 }
 
 // Append the value onto the end of the slice 'into'.  The reference 'into' is

@@ -74,7 +74,8 @@ func fillTree(parcelChan chan lds_csv.CSVParcelData) (*quadtree.Tree[objectstore
 				errCount++
 				continue
 			}
-			or, buffer := objectstore.AllocSlice[byte](byteStore, len(bytes), len(bytes))
+			or := objectstore.AllocSlice[byte](byteStore, len(bytes), len(bytes))
+			buffer := or.Value()
 			copy(buffer, bytes)
 
 			if err := tree.Insert(northLong, westLat, or); err != nil {

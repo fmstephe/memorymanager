@@ -33,7 +33,8 @@ func Test_Slice_AllocateModifyAndGet(t *testing.T) {
 	}()
 
 	// Allocate it
-	ref, value := AllocSlice[MutableStruct](ss, 10, 20)
+	ref := AllocSlice[MutableStruct](ss, 10, 20)
+	value := ref.Value()
 
 	// Assert that the len and cap are as expected
 	assert.Equal(t, 10, len(value))
@@ -64,7 +65,8 @@ func Test_Slice_AllocateModifyAndGet_ManySizes(t *testing.T) {
 	for _, length := range testSizeRanges {
 		t.Run(fmt.Sprintf("Allocate and get Slice %d", length), func(t *testing.T) {
 			// Allocate it
-			ref, value := AllocSlice[MutableStruct](ss, length, length)
+			ref := AllocSlice[MutableStruct](ss, length, length)
+			value := ref.Value()
 
 			// Assert that the len and cap are as expected
 			assert.Equal(t, length, len(value))
@@ -99,7 +101,7 @@ func Test_Slice_NewFreeGet_Panic(t *testing.T) {
 	}()
 
 	// Allocate and free a slice value
-	ref, _ := AllocSlice[MutableStruct](ss, 10, 10)
+	ref := AllocSlice[MutableStruct](ss, 10, 10)
 	FreeSlice(ss, ref)
 
 	// Assert that calling Value() now panics
@@ -115,7 +117,7 @@ func Test_Slice_NewFreeFree_Panic(t *testing.T) {
 	}()
 
 	// Allocate and free a slice value
-	ref, _ := AllocSlice[MutableStruct](ss, 10, 10)
+	ref := AllocSlice[MutableStruct](ss, 10, 10)
 	FreeSlice(ss, ref)
 
 	// Assert that calling FreeSlice() now panics
@@ -127,7 +129,7 @@ func Test_Slice_NewFreeAllocFree_Panic(t *testing.T) {
 	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	r, _ := AllocSlice[MutableStruct](os, 10, 10)
+	r := AllocSlice[MutableStruct](os, 10, 10)
 	FreeSlice(os, r)
 	// This will re-allocate the just-freed slice
 	AllocSlice[MutableStruct](os, 10, 10)
@@ -140,7 +142,7 @@ func Test_Slice_NewFreeAllocGet_Panic(t *testing.T) {
 	os := NewSized(1 << 8)
 	defer os.Destroy()
 
-	r, _ := AllocSlice[MutableStruct](os, 10, 10)
+	r := AllocSlice[MutableStruct](os, 10, 10)
 	FreeSlice(os, r)
 	// This will re-allocate the just-freed slice
 	AllocSlice[MutableStruct](os, 10, 10)
@@ -171,10 +173,10 @@ func Test_Slice_SizedStats(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			expectedStats := StatsForSlice[MutableStruct](os, capacity)
 
-			r1, _ := AllocSlice[MutableStruct](os, capacity, capacity)
-			r2, _ := AllocSlice[MutableStruct](os, capacity, capacity)
+			r1 := AllocSlice[MutableStruct](os, capacity, capacity)
+			r2 := AllocSlice[MutableStruct](os, capacity, capacity)
 			FreeSlice[MutableStruct](os, r1)
-			r3, _ := AllocSlice[MutableStruct](os, capacity, capacity)
+			r3 := AllocSlice[MutableStruct](os, capacity, capacity)
 			FreeSlice[MutableStruct](os, r2)
 			FreeSlice[MutableStruct](os, r3)
 
@@ -255,7 +257,8 @@ func doSliceAppendTest[T any](t *testing.T, os *Store, length, extraCapacity int
 	t.Run(fmt.Sprintf("type %T length %d extra capacity %d", *(new(T)), length, extraCapacity), func(t *testing.T) {
 		capacity := length + extraCapacity
 
-		refInit, initSlice := AllocSlice[T](os, length, capacity)
+		refInit := AllocSlice[T](os, length, capacity)
+		initSlice := refInit.Value()
 		// Assert the allocated slice works properly
 		require.Equal(t, length, len(initSlice))
 		initCapacity := capacityForSlice(capacity)
@@ -347,7 +350,8 @@ func doSliceAppendSliceTest[T any](t *testing.T, os *Store, length, extraCapacit
 	t.Run(fmt.Sprintf("type %T length %d append %d extra capacity %d", *(new(T)), length, appendSize, extraCapacity), func(t *testing.T) {
 		capacity := length + extraCapacity
 
-		refInit, initSlice := AllocSlice[T](os, length, capacity)
+		refInit := AllocSlice[T](os, length, capacity)
+		initSlice := refInit.Value()
 		initCapacity := capacityForSlice(capacity)
 		// Assert the allocated slice works properly
 		require.Equal(t, length, len(initSlice))
@@ -433,7 +437,8 @@ func Test_Slice_ConcatSlices(t *testing.T) {
 			expectedSlice = append(expectedSlice, slice...)
 		}
 
-		r, resultSlice := ConcatSlices[int64](os, testCase.slices...)
+		r := ConcatSlices[int64](os, testCase.slices...)
+		resultSlice := r.Value()
 
 		assert.Equal(t, expectedSlice, resultSlice)
 		assert.Equal(t, expectedSlice, r.Value())
