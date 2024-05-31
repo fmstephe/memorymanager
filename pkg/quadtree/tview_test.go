@@ -4,7 +4,6 @@ import (
 	"math"
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -23,7 +22,6 @@ func TestNewView(t *testing.T) {
 		// Negative ones
 		{-4.4e3, 10.01e8, 5.0e5, -45.0e4},
 		{-5.5, 30.03, 5.96, -3.45},
-		{-0.0, 0.0, 0.0, -0.0},
 		{-1.123456, 9999.9999, 12345.5, -9876.5},
 		{-4.4e3, 10.01e8, 5.0e5, -45.0e4},
 	} {
@@ -56,7 +54,6 @@ func TestIllegalView(t *testing.T) {
 }
 
 func TestOverLap(t *testing.T) {
-	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < 10000; i++ {
 		v1, v2 := overlap()
 		if !v1.overlaps(v2) {
@@ -71,7 +68,6 @@ func TestOverLap(t *testing.T) {
 }
 
 func TestDisjoint(t *testing.T) {
-	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < 1000; i++ {
 		v1, v2 := disjoint()
 		if v1.overlaps(v2) {
@@ -174,7 +170,7 @@ func disjoint() (v1, v2 View) {
 	by, ty := oPair(negRFLoat64(), negRFLoat64())
 	v1 = NewView(lx, rx, ty, by)
 	var x1, y1 float64
-	for true {
+	for {
 		x1 = negRFLoat64()
 		y1 = negRFLoat64()
 		if !v1.containsPoint(x1, y1) {

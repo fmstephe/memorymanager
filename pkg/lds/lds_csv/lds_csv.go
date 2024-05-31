@@ -153,31 +153,31 @@ func processCSVLine(line []string, lineNum int) CSVParcelData {
 
 	// We expect exactly 11 data elements per line
 	if len(line) != 11 {
-		return CSVParcelData{LineNum: lineNum, Error: fmt.Errorf("Error reading line %d, %d parts expect 11 in %v", lineNum, len(line), line)}
+		return CSVParcelData{LineNum: lineNum, Error: fmt.Errorf("error reading line %d, %d parts expect 11 in %v", lineNum, len(line), line)}
 	}
 
 	// Read the polygon(s) which define the physical dimensions of the parcel
 	plot, err := parseParcelDimensions(line[0])
 	if err != nil {
-		return CSVParcelData{LineNum: lineNum, Error: fmt.Errorf("Error reading line %d bad plot %q in %v %s", lineNum, line[0], line, err)}
+		return CSVParcelData{LineNum: lineNum, Error: fmt.Errorf("error reading line %d bad plot %q in %v %s", lineNum, line[0], line, err)}
 	}
 
 	// Read the ID of the parcel as an integer
 	id, err := strconv.ParseInt(line[1], 10, 64)
 	if err != nil {
-		return CSVParcelData{LineNum: lineNum, Error: fmt.Errorf("Error reading line %d bad Id %s in %v %s", lineNum, line[1], line, err)}
+		return CSVParcelData{LineNum: lineNum, Error: fmt.Errorf("error reading line %d bad Id %s in %v %s", lineNum, line[1], line, err)}
 	}
 
 	// Read the survey area of the parcel as a float
 	surveyArea, err := parseFloat(line[9])
 	if err != nil {
-		return CSVParcelData{LineNum: lineNum, Error: fmt.Errorf("Error reading line %d bad Survey Area %q in %v %s", lineNum, line[9], line, err)}
+		return CSVParcelData{LineNum: lineNum, Error: fmt.Errorf("error reading line %d bad Survey Area %q in %v %s", lineNum, line[9], line, err)}
 	}
 
 	// Read the calculated area of the parcel as a float
 	calcArea, err := parseFloat(line[10])
 	if err != nil {
-		return CSVParcelData{LineNum: lineNum, Error: fmt.Errorf("Error reading line %d bad Calc Area %q in %v %s", lineNum, line[10], line, err)}
+		return CSVParcelData{LineNum: lineNum, Error: fmt.Errorf("error reading line %d bad Calc Area %q in %v %s", lineNum, line[10], line, err)}
 	}
 
 	return CSVParcelData{

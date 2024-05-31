@@ -170,12 +170,6 @@ func (v View) Split(divisions int) []View {
 	return views
 }
 
-// Indicates whether v and ov are equivalent to each other
-// Two views are equivalent iff each of the four corners are equal in both views
-func (v View) eq(ov View) bool {
-	return v == ov
-}
-
 // Human readable (sort of) representation of v
 func (v View) String() string {
 	lx := strconv.FormatFloat(v.lx, 'f', 6, 64)

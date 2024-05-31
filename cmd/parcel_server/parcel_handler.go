@@ -109,12 +109,14 @@ func surveyFunc(w http.ResponseWriter, limit int) func(_, _ float64, br *objects
 
 		_, err := w.Write(bytes)
 		if err != nil {
-			// TODO handle error
+			// TODO handle error better
+			panic(err)
 		}
 
 		_, err = w.Write(comma)
 		if err != nil {
-			// TODO handle error
+			// TODO handle error better
+			panic(err)
 		}
 
 		return true

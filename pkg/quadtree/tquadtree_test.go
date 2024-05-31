@@ -38,7 +38,7 @@ func TestOverflowLeaf(t *testing.T) {
 	}
 	fun, results := SliceSurvey[int]()
 	tree.Survey(tree.View(), fun)
-	if 70 != len(*results) {
+	if len(*results) != 70 {
 		t.Errorf("Failed to retrieve 70 elements in scatter test, found only %d", len(*results))
 	}
 }
@@ -57,7 +57,7 @@ func testOneElement(tree *Tree[int], t *testing.T) {
 	assert.NoError(t, err)
 	fun, results := SliceSurvey[int]()
 	tree.Survey(tree.View(), fun)
-	if len(*results) != 1 || -1 != (*results)[0] {
+	if len(*results) != 1 || (*results)[0] != -1 {
 		t.Errorf("Failed to find required element at (%f,%f), in tree \n%v", x, y, tree)
 	}
 }
