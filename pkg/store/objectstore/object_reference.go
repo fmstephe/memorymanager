@@ -7,7 +7,7 @@ import (
 	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
 )
 
-func AllocObject[T any](s *Store) (RefObject[T], *T) {
+func AllocObject[T any](s *Store) RefObject[T] {
 	// TODO this is not fast - we _need_ to cache this type data
 	if err := containsNoPointers[T](); err != nil {
 		panic(fmt.Errorf("cannot allocate generic type containing pointers %w", err))
@@ -17,7 +17,7 @@ func AllocObject[T any](s *Store) (RefObject[T], *T) {
 
 	pRef := s.alloc(idx)
 	oRef := newRefObject[T](pRef)
-	return oRef, oRef.Value()
+	return oRef
 }
 
 func FreeObject[T any](s *Store, r RefObject[T]) {

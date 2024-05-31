@@ -38,7 +38,8 @@ func allocateAndModify(t *testing.T, os *Store, barrier *sync.WaitGroup) {
 	barrier.Wait()
 	refs := []RefObject[MutableStruct]{}
 	for i := 0; i < allocsPerGoroutine; i++ {
-		ref, v := AllocObject[MutableStruct](os)
+		ref := AllocObject[MutableStruct](os)
+		v := ref.Value()
 		refs = append(refs, ref)
 		v.Field = i
 	}
@@ -92,7 +93,8 @@ func allocateAndModifyShared(
 	barrier.Wait()
 
 	for i := 0; i < allocsPerGoroutine; i++ {
-		ref, v := AllocObject[MutableStruct](os)
+		ref := AllocObject[MutableStruct](os)
+		v := ref.Value()
 		v.Field = i
 		sharedChan <- ref
 	}

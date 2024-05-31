@@ -59,7 +59,8 @@ func (l *List[O]) setReference(r objectstore.RefObject[node[O]]) {
 // the embedded data is returned. The embedded data can then be mutated via
 // this pointer.
 func (l *List[O]) PushHead(store *Store[O]) *O {
-	newR, newNode := objectstore.AllocObject[node[O]](store.nodeStore)
+	newR := objectstore.AllocObject[node[O]](store.nodeStore)
+	newNode := newR.Value()
 	l.pushTail(store, newR, newNode)
 	l.setReference(newR)
 	return newNode.getData()
@@ -70,7 +71,8 @@ func (l *List[O]) PushHead(store *Store[O]) *O {
 // the embedded data is returned. The embedded data can then be mutated via
 // this pointer.
 func (l *List[O]) PushTail(store *Store[O]) *O {
-	newR, newNode := objectstore.AllocObject[node[O]](store.nodeStore)
+	newR := objectstore.AllocObject[node[O]](store.nodeStore)
+	newNode := newR.Value()
 	l.pushTail(store, newR, newNode)
 	return newNode.getData()
 }
