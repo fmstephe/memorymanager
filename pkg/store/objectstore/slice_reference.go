@@ -2,7 +2,6 @@ package objectstore
 
 import (
 	"fmt"
-	"reflect"
 	"unsafe"
 
 	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
@@ -100,24 +99,13 @@ func newRefSlice[T any](length, capacity int, ref pointerstore.RefPointer) RefSl
 	}
 }
 
-func (r *RefSlice[T]) Value() (slice []T) {
-	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&slice))
-	sliceHeader.Data = r.ref.DataPtr()
-	sliceHeader.Len = r.length
-	sliceHeader.Cap = r.capacity
-	return slice
+func (r *RefSlice[T]) Value() []T {
+	slice := unsafe.Slice((*T)(unsafe.Pointer(r.ref.DataPtr())), r.capacity)
+	return slice[:r.length]
 }
 
 func (r *RefSlice[T]) IsNil() bool {
 	return r.ref.IsNil()
-}
-
-func (r *RefSlice[T]) realloc() RefSlice[T] {
-	// Copy this reference
-	newRef := *r
-	// Reallocate it's pointer reference
-	newRef.ref = newRef.ref.Realloc()
-	return newRef
 }
 
 func resizeAndInvalidate[T any](s *Store, oldRef pointerstore.RefPointer, oldCapacity, oldLength, extra int) (newRef pointerstore.RefPointer, newCapacity int) {
