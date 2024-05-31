@@ -26,3 +26,6 @@ jobs:
 
     - name: Test
       run: go test -v -short ./...
+
+    - name: Check code quality
+      uses: dominikh/staticcheck-action@v1
