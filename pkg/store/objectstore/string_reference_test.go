@@ -21,14 +21,16 @@ func Test_String_AllocateAndGet_Simple(t *testing.T) {
 	value := "test string"
 
 	// Allocate it
-	refString, valueOutString := AllocStringFromString(ss, value)
+	refString := AllocStringFromString(ss, value)
+	valueOutString := refString.Value()
 
 	// Assert that we can get the correct string from the Reference
 	assert.Equal(t, value, valueOutString)
 	assert.Equal(t, value, refString.Value())
 
 	// Allocate it
-	refBytes, valueOutBytes := AllocStringFromBytes(ss, []byte(value))
+	refBytes := AllocStringFromBytes(ss, []byte(value))
+	valueOutBytes := refBytes.Value()
 
 	// Assert that we can get the correct string from the Reference
 	assert.Equal(t, value, valueOutBytes)
@@ -50,14 +52,16 @@ func Test_String_AllocateAndGet(t *testing.T) {
 			value := makeSizedString(length)
 
 			// Allocate it using the string
-			refString, valueOutString := AllocStringFromString(ss, value)
+			refString := AllocStringFromString(ss, value)
+			valueOutString := refString.Value()
 
 			// Assert that we can get the correct string from the Reference
 			assert.Equal(t, value, valueOutString)
 			assert.Equal(t, value, refString.Value())
 
 			// Allocate it using bytes
-			refBytes, valueOutBytes := AllocStringFromBytes(ss, []byte(value))
+			refBytes := AllocStringFromBytes(ss, []byte(value))
+			valueOutBytes := refBytes.Value()
 
 			// Assert that we can get the correct string from the Reference
 			assert.Equal(t, value, valueOutBytes)
@@ -76,7 +80,7 @@ func Test_String_NewFreeGet_Panic(t *testing.T) {
 
 	// Allocate and free a string value
 	value := "test string"
-	ref, _ := AllocStringFromString(ss, value)
+	ref := AllocStringFromString(ss, value)
 	FreeStr(ss, ref)
 
 	// Assert that calling Value() now panics
@@ -93,7 +97,7 @@ func Test_String_NewFreeFree_Panic(t *testing.T) {
 
 	// Allocate and free a string value
 	value := "test string"
-	ref, _ := AllocStringFromString(ss, value)
+	ref := AllocStringFromString(ss, value)
 	FreeStr(ss, ref)
 
 	// Assert that calling FreeStr() now panics
@@ -106,7 +110,7 @@ func Test_String_NewFreeAllocFree_Panic(t *testing.T) {
 	defer os.Destroy()
 
 	value := "test string"
-	r, _ := AllocStringFromString(os, value)
+	r := AllocStringFromString(os, value)
 	FreeStr(os, r)
 	// This will re-allocate the just-freed string
 	AllocStringFromString(os, value)
@@ -120,7 +124,7 @@ func Test_String_NewFreeAllocGet_Panic(t *testing.T) {
 	defer os.Destroy()
 
 	value := "test string"
-	r, _ := AllocStringFromString(os, value)
+	r := AllocStringFromString(os, value)
 	FreeStr(os, r)
 	// This will re-allocate the just-freed string
 	AllocStringFromString(os, value)
@@ -153,10 +157,10 @@ func Test_String_SizedStats(t *testing.T) {
 
 			value := makeSizedString(length)
 
-			r1, _ := AllocStringFromString(os, value)
-			r2, _ := AllocStringFromString(os, value)
+			r1 := AllocStringFromString(os, value)
+			r2 := AllocStringFromString(os, value)
 			FreeStr(os, r1)
-			r3, _ := AllocStringFromString(os, value)
+			r3 := AllocStringFromString(os, value)
 			FreeStr(os, r2)
 			FreeStr(os, r3)
 
@@ -194,7 +198,7 @@ func Test_String_AppendString(t *testing.T) {
 
 				expectedString := firstStr + secondStr
 
-				firstRef, _ := AllocStringFromString(os, firstStr)
+				firstRef := AllocStringFromString(os, firstStr)
 				resultRef := AppendString(os, firstRef, secondStr)
 
 				assert.Equal(t, expectedString, resultRef.Value())
@@ -256,7 +260,8 @@ func Test_String_ConcatStrings(t *testing.T) {
 			expectedString += str
 		}
 
-		r, resultString := ConcatStrings(os, testCase.strs...)
+		r := ConcatStrings(os, testCase.strs...)
+		resultString := r.Value()
 
 		assert.Equal(t, expectedString, resultString)
 		assert.Equal(t, expectedString, r.Value())

@@ -9,12 +9,12 @@ import (
 )
 
 // Allocates a new string copied from str
-func AllocStringFromString(s *Store, str string) (RefString, string) {
+func AllocStringFromString(s *Store, str string) RefString {
 	return AllocStringFromBytes(s, funsafe.StringToBytes(str))
 }
 
 // Allocates a new string copied from bytes
-func AllocStringFromBytes(s *Store, bytes []byte) (RefString, string) {
+func AllocStringFromBytes(s *Store, bytes []byte) RefString {
 	idx := indexForSize(len(bytes))
 
 	// Allocate the string
@@ -26,11 +26,11 @@ func AllocStringFromBytes(s *Store, bytes []byte) (RefString, string) {
 	copy(allocBytes, bytes)
 
 	// Return the string-ref and string value
-	return sRef, sRef.Value()
+	return sRef
 }
 
 // Allocates a new string which contains the elements of strs concatenated together
-func ConcatStrings(s *Store, strs ...string) (RefString, string) {
+func ConcatStrings(s *Store, strs ...string) RefString {
 	// Calculate the total string size needed
 	totalLength := 0
 	for _, str := range strs {
@@ -49,7 +49,7 @@ func ConcatStrings(s *Store, strs ...string) (RefString, string) {
 		allocBytes = append(allocBytes, str...)
 	}
 
-	return sRef, sRef.Value()
+	return sRef
 }
 
 // Append all of the values in 'fromSlice' to the end of the slice 'into'.  The
