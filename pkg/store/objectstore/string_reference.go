@@ -1,7 +1,6 @@
 package objectstore
 
 import (
-	"reflect"
 	"unsafe"
 
 	"github.com/fmstephe/flib/funsafe"
@@ -45,7 +44,7 @@ func ConcatStrings(s *Store, strs ...string) RefString {
 	// Copy the byte data across to the allocated string
 	allocBytes := sRef.ref.Bytes(totalLength)
 	allocBytes = allocBytes[:0]
-	for _, str := range strs[:len(strs)] {
+	for _, str := range strs {
 		allocBytes = append(allocBytes, str...)
 	}
 
@@ -90,11 +89,8 @@ func newRefString(length int, ref pointerstore.RefPointer) RefString {
 	}
 }
 
-func (r *RefString) Value() (str string) {
-	stringHeader := (*reflect.StringHeader)(unsafe.Pointer(&str))
-	stringHeader.Data = r.ref.DataPtr()
-	stringHeader.Len = r.length
-	return str
+func (r *RefString) Value() string {
+	return unsafe.String((*byte)((unsafe.Pointer)(r.ref.DataPtr())), r.length)
 }
 
 func (r *RefString) IsNil() bool {
