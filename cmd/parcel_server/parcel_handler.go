@@ -8,12 +8,12 @@ import (
 	"strconv"
 
 	"github.com/fmstephe/location-system/pkg/quadtree"
-	"github.com/fmstephe/location-system/pkg/store/objectstore"
+	"github.com/fmstephe/location-system/pkg/store/offheap"
 )
 
 type ParcelHandler struct {
-	byteStore *objectstore.Store
-	tree      *quadtree.Tree[objectstore.RefSlice[byte]]
+	byteStore *offheap.Store
+	tree      *quadtree.Tree[offheap.RefSlice[byte]]
 }
 
 func (s *ParcelHandler) Handle(w http.ResponseWriter, r *http.Request) {
@@ -90,9 +90,9 @@ var endArray = []byte(`null]`)
 var comma = []byte(`,`)
 var end = []byte(`}`)
 
-func surveyFunc(w http.ResponseWriter, limit int) func(_, _ float64, br *objectstore.RefSlice[byte]) bool {
-	refSet := map[objectstore.RefSlice[byte]]struct{}{}
-	return func(_, _ float64, br *objectstore.RefSlice[byte]) bool {
+func surveyFunc(w http.ResponseWriter, limit int) func(_, _ float64, br *offheap.RefSlice[byte]) bool {
+	refSet := map[offheap.RefSlice[byte]]struct{}{}
+	return func(_, _ float64, br *offheap.RefSlice[byte]) bool {
 		if _, ok := refSet[*br]; ok {
 			// We've already seen this reference, don't write it out again
 			return true

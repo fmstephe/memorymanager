@@ -1,4 +1,4 @@
-package objectstore
+package offheap
 
 import (
 	"testing"
@@ -46,7 +46,7 @@ type manyPointers struct {
 
 func TestBadTypes(t *testing.T) {
 	// No arrays with pointers in them
-	assert.EqualError(t, containsNoPointers[[32]badStruct](), "found pointer(s): [32](objectstore.badStruct)badField<string>")
+	assert.EqualError(t, containsNoPointers[[32]badStruct](), "found pointer(s): [32](offheap.badStruct)badField<string>")
 	// No channels
 	assert.EqualError(t, containsNoPointers[chan int](), "found pointer(s): <chan int>")
 	// No functions
@@ -62,20 +62,20 @@ func TestBadTypes(t *testing.T) {
 	// No strings
 	assert.EqualError(t, containsNoPointers[string](), "found pointer(s): <string>")
 	// No structs with any pointerful fields
-	assert.EqualError(t, containsNoPointers[badStruct](), "found pointer(s): (objectstore.badStruct)badField<string>")
-	assert.EqualError(t, containsNoPointers[deepBadStruct](), "found pointer(s): (objectstore.deepBadStruct)badInt<*int>,(objectstore.deepBadStruct)deepBadField(objectstore.badStruct)badField<string>")
+	assert.EqualError(t, containsNoPointers[badStruct](), "found pointer(s): (offheap.badStruct)badField<string>")
+	assert.EqualError(t, containsNoPointers[deepBadStruct](), "found pointer(s): (offheap.deepBadStruct)badInt<*int>,(offheap.deepBadStruct)deepBadField(offheap.badStruct)badField<string>")
 	// assert.EqualError(t, containsNoPointers[stringSmugglerStruct](), "found pointer(s): ")
 	// No unsafe pointer(s)
 	assert.EqualError(t, containsNoPointers[unsafe.Pointer](), "found pointer(s): <unsafe.Pointer>")
 	// We should find all of the bad fields in this struct
 	assert.EqualError(t, containsNoPointers[manyPointers](), "found pointer(s): "+
-		"(objectstore.manyPointers)chanField<chan int>,"+
-		"(objectstore.manyPointers)funcField<func(int) int>,"+
-		"(objectstore.manyPointers)interfaceField<interface {}>,"+
-		"(objectstore.manyPointers)mapField<map[int]int>,"+
-		"(objectstore.manyPointers)pointerField<*int>,"+
-		"(objectstore.manyPointers)sliceField<[]int>,"+
-		"(objectstore.manyPointers)stringField<string>")
+		"(offheap.manyPointers)chanField<chan int>,"+
+		"(offheap.manyPointers)funcField<func(int) int>,"+
+		"(offheap.manyPointers)interfaceField<interface {}>,"+
+		"(offheap.manyPointers)mapField<map[int]int>,"+
+		"(offheap.manyPointers)pointerField<*int>,"+
+		"(offheap.manyPointers)sliceField<[]int>,"+
+		"(offheap.manyPointers)stringField<string>")
 }
 
 type deepGoodStruct struct {

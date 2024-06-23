@@ -1,7 +1,7 @@
 package linkedlist
 
 import (
-	"github.com/fmstephe/location-system/pkg/store/objectstore"
+	"github.com/fmstephe/location-system/pkg/store/offheap"
 )
 
 // A node contains the list data as well as the forward and previous References
@@ -10,8 +10,8 @@ import (
 // this node.
 type node[O any] struct {
 	data O
-	next objectstore.RefObject[node[O]]
-	prev objectstore.RefObject[node[O]]
+	next offheap.RefObject[node[O]]
+	prev offheap.RefObject[node[O]]
 }
 
 // Convenience method to get a pointer to the embedded data.
@@ -22,13 +22,13 @@ func (n *node[O]) getData() *O {
 // The store for linked lists. It is used to create a new list, but must also
 // be passed into any method which operates on linkedlists.
 type Store[O any] struct {
-	nodeStore *objectstore.Store
+	nodeStore *offheap.Store
 }
 
 // Creates a new Store.
 func New[O any]() *Store[O] {
 	return &Store[O]{
-		nodeStore: objectstore.New(),
+		nodeStore: offheap.New(),
 	}
 }
 
@@ -42,15 +42,15 @@ func (s *Store[O]) NewList() List[O] {
 }
 
 // A List is simply a Reference to a node
-type List[O any] objectstore.RefObject[node[O]]
+type List[O any] offheap.RefObject[node[O]]
 
 // casts a List to the raw Reference
-func (l *List[O]) getReference() objectstore.RefObject[node[O]] {
-	return objectstore.RefObject[node[O]](*l)
+func (l *List[O]) getReference() offheap.RefObject[node[O]] {
+	return offheap.RefObject[node[O]](*l)
 }
 
 // sets the value of a List using a raw Reference value
-func (l *List[O]) setReference(r objectstore.RefObject[node[O]]) {
+func (l *List[O]) setReference(r offheap.RefObject[node[O]]) {
 	*l = List[O](r)
 }
 
@@ -59,7 +59,7 @@ func (l *List[O]) setReference(r objectstore.RefObject[node[O]]) {
 // the embedded data is returned. The embedded data can then be mutated via
 // this pointer.
 func (l *List[O]) PushHead(store *Store[O]) *O {
-	newR := objectstore.AllocObject[node[O]](store.nodeStore)
+	newR := offheap.AllocObject[node[O]](store.nodeStore)
 	newNode := newR.Value()
 	l.pushTail(store, newR, newNode)
 	l.setReference(newR)
@@ -71,13 +71,13 @@ func (l *List[O]) PushHead(store *Store[O]) *O {
 // the embedded data is returned. The embedded data can then be mutated via
 // this pointer.
 func (l *List[O]) PushTail(store *Store[O]) *O {
-	newR := objectstore.AllocObject[node[O]](store.nodeStore)
+	newR := offheap.AllocObject[node[O]](store.nodeStore)
 	newNode := newR.Value()
 	l.pushTail(store, newR, newNode)
 	return newNode.getData()
 }
 
-func (l *List[O]) pushTail(store *Store[O], newR objectstore.RefObject[node[O]], newNode *node[O]) {
+func (l *List[O]) pushTail(store *Store[O], newR offheap.RefObject[node[O]], newNode *node[O]) {
 	firstR := l.getReference()
 
 	// If we are inserting into an empty list, then make it point to itself
@@ -127,14 +127,14 @@ func (l *List[O]) RemoveTail(store *Store[O]) {
 	l.remove(store, origin.prev)
 }
 
-func (l *List[O]) remove(store *Store[O], r objectstore.RefObject[node[O]]) {
+func (l *List[O]) remove(store *Store[O], r offheap.RefObject[node[O]]) {
 	n := r.Value()
 	if n.prev == r && n.next == r {
 		// There is only one element in this list, now we empty it
 		*l = List[O]{}
 
 		// Free the removed node
-		objectstore.FreeObject(store.nodeStore, r)
+		offheap.FreeObject(store.nodeStore, r)
 		return
 	}
 
@@ -150,7 +150,7 @@ func (l *List[O]) remove(store *Store[O], r objectstore.RefObject[node[O]]) {
 	}
 
 	// Free the removed node
-	objectstore.FreeObject(store.nodeStore, r)
+	offheap.FreeObject(store.nodeStore, r)
 }
 
 // Adds the nodes in attach to l. After this method is called attach should
@@ -262,7 +262,7 @@ func (l *List[O]) Filter(store *Store[O], pred func(o *O) bool) {
 		}
 
 		// Filter current node
-		objectstore.FreeObject(store.nodeStore, current)
+		offheap.FreeObject(store.nodeStore, current)
 
 		if n.prev == current && n.next == current {
 			// Special case where we are filtering the last node
@@ -271,7 +271,7 @@ func (l *List[O]) Filter(store *Store[O], pred func(o *O) bool) {
 				panic("We assumed that this case could only be hit when origin == current")
 			}
 			// Make origin a nil Reference
-			origin = objectstore.RefObject[node[O]]{}
+			origin = offheap.RefObject[node[O]]{}
 			return
 		}
 

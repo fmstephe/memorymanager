@@ -1,10 +1,10 @@
-// The objectstore package allows us to alloc, free and retrieve Go objects.
+// The offheap package allows us to alloc, free and retrieve Go objects.
 //
 // Each Store instance can alloc/free a single type of object. This is
-// controlled by the generic type of an objectstore instance e.g.
+// controlled by the generic type of an offheap instance e.g.
 //
-//	var store *objectstore.Store
-//	store = objectstore.New[int]()
+//	var store *offheap.Store
+//	store = offheap.New[int]()
 //
 // will alloc/free only int values.
 //
@@ -12,8 +12,8 @@
 // conventional pointer to retrieve the allocated object Reference.Value()
 // e.g.
 //
-//	store := objectstore.New[int]()
-//	var ref objectstore.Reference[int]
+//	store := offheap.New[int]()
+//	var ref offheap.Reference[int]
 //	var i1 *int
 //	ref, i1 = store.Alloc()
 //	var i2 *int
@@ -25,7 +25,7 @@
 // When you know that an allocated object will never be used again it's memory
 // can be released back to the Store using Free() e.g.
 //
-//	store := objectstore.New[int]()
+//	store := offheap.New[int]()
 //	ref, i1 := store.Alloc()
 //	println(*i1)
 //	store.Free(ref)
@@ -60,8 +60,8 @@
 // The disadvantage of using a Store is that we don't get to enjoy the benefits
 // of the Go garbage collector.  We must be responsible for freeing unneeded
 // objects manually.  The disadvantages mean that effective use of the
-// objectstore requires a careful design which encapsulates these details and
-// hides the use of the objectstore package from the rest of the program.
+// offheap requires a careful design which encapsulates these details and
+// hides the use of the offheap package from the rest of the program.
 //
 // It is important to note that the objects managed by a Store do not exist on
 // the managed Go heap. They live in a series of manually mapped memory regions
@@ -154,7 +154,7 @@
 // If we call Free() on a Reference while another goroutine is calling
 // Reference.Value() this is a data race. This will have unpredictable
 // behaviour, and is never safe.
-package objectstore
+package offheap
 
 import (
 	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"

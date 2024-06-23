@@ -1,18 +1,18 @@
-package objectstore_test
+package offheap_test
 
 import (
 	"fmt"
 
-	"github.com/fmstephe/location-system/pkg/store/objectstore"
+	"github.com/fmstephe/location-system/pkg/store/offheap"
 )
 
 // Calling AllocObject allocates an object and returns a RefObject which acts
 // like a conventional pointer through which you can retrieve the allocated
 // object via RefObject.Value()
 func ExampleAllocObject() {
-	var store *objectstore.Store = objectstore.New()
+	var store *offheap.Store = offheap.New()
 
-	var ref objectstore.RefObject[int] = objectstore.AllocObject[int](store)
+	var ref offheap.RefObject[int] = offheap.AllocObject[int](store)
 	var i1 *int = ref.Value()
 
 	var i2 *int = ref.Value()
@@ -27,11 +27,11 @@ func ExampleAllocObject() {
 // FreeObject(...). The RefObject can no longer be used, and the use of the
 // actual object pointed to will have unpredicatable results.
 func ExampleFreeObject() {
-	var store *objectstore.Store = objectstore.New()
+	var store *offheap.Store = offheap.New()
 
-	var ref objectstore.RefObject[int] = objectstore.AllocObject[int](store)
+	var ref offheap.RefObject[int] = offheap.AllocObject[int](store)
 
-	objectstore.FreeObject(store, ref)
+	offheap.FreeObject(store, ref)
 	// You must never use ref again
 }
 
@@ -40,21 +40,21 @@ func ExampleFreeObject() {
 // like trees in this example.
 func ExampleAllocObject_complexType() {
 	type Node struct {
-		left  objectstore.RefObject[Node]
-		right objectstore.RefObject[Node]
+		left  offheap.RefObject[Node]
+		right offheap.RefObject[Node]
 	}
 
-	var store *objectstore.Store = objectstore.New()
+	var store *offheap.Store = offheap.New()
 
-	var refParent objectstore.RefObject[Node] = objectstore.AllocObject[Node]((store))
+	var refParent offheap.RefObject[Node] = offheap.AllocObject[Node]((store))
 
 	var parent *Node = refParent.Value()
 
-	var refLeft objectstore.RefObject[Node] = objectstore.AllocObject[Node]((store))
+	var refLeft offheap.RefObject[Node] = offheap.AllocObject[Node]((store))
 
 	parent.left = refLeft
 
-	var refRight objectstore.RefObject[Node] = objectstore.AllocObject[Node]((store))
+	var refRight offheap.RefObject[Node] = offheap.AllocObject[Node]((store))
 
 	parent.right = refRight
 
@@ -81,8 +81,8 @@ func ExampleAllocObject_badTypeString() {
 		}
 	}()
 
-	var store *objectstore.Store = objectstore.New()
-	objectstore.AllocObject[BadStruct](store)
+	var store *offheap.Store = offheap.New()
+	offheap.AllocObject[BadStruct](store)
 	// Output: Can't allocate strings
 }
 
@@ -100,8 +100,8 @@ func ExampleAllocObject_badTypeMap() {
 		}
 	}()
 
-	var store *objectstore.Store = objectstore.New()
-	objectstore.AllocObject[BadStruct](store)
+	var store *offheap.Store = offheap.New()
+	offheap.AllocObject[BadStruct](store)
 	// Output: Can't allocate maps
 }
 
@@ -119,8 +119,8 @@ func ExampleAllocObject_badTypeSlice() {
 		}
 	}()
 
-	var store *objectstore.Store = objectstore.New()
-	objectstore.AllocObject[BadStruct](store)
+	var store *offheap.Store = offheap.New()
+	offheap.AllocObject[BadStruct](store)
 	// Output: Can't allocate slices (as an object)
 }
 
@@ -137,7 +137,7 @@ func ExampleAllocObject_badTypePointer() {
 		}
 	}()
 
-	var store *objectstore.Store = objectstore.New()
-	objectstore.AllocObject[BadStruct](store)
+	var store *offheap.Store = offheap.New()
+	offheap.AllocObject[BadStruct](store)
 	// Output: Can't allocate pointers
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/fmstephe/location-system/pkg/store/linkedlist"
-	"github.com/fmstephe/location-system/pkg/store/objectstore"
+	"github.com/fmstephe/location-system/pkg/store/offheap"
 )
 
 // A point with a list of stored elements
@@ -55,12 +55,12 @@ type node[T any] struct {
 	ps [LEAF_SIZE]point[T]
 
 	// Used if this node is not a leaf
-	children [4]objectstore.RefObject[node[T]]
+	children [4]offheap.RefObject[node[T]]
 }
 
 // Build an internal node, including allocating all of the children of this node.
 // All of the child nodes are leaf nodes.
-func makeNode[T any](view View, store *nodeStore[T]) objectstore.RefObject[node[T]] {
+func makeNode[T any](view View, store *nodeStore[T]) offheap.RefObject[node[T]] {
 	nodeR, newNode := store.allocNode(view)
 	views := view.quarters()
 	for i, view := range views {

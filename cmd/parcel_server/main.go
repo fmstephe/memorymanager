@@ -11,7 +11,7 @@ import (
 
 	"github.com/fmstephe/location-system/pkg/lds/lds_csv"
 	"github.com/fmstephe/location-system/pkg/quadtree"
-	"github.com/fmstephe/location-system/pkg/store/objectstore"
+	"github.com/fmstephe/location-system/pkg/store/offheap"
 )
 
 var (
@@ -50,9 +50,9 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func fillTree(parcelChan chan lds_csv.CSVParcelData) (*quadtree.Tree[objectstore.RefSlice[byte]], *objectstore.Store) {
-	byteStore := objectstore.New()
-	tree := quadtree.NewTree[objectstore.RefSlice[byte]](quadtree.NewLongLatView())
+func fillTree(parcelChan chan lds_csv.CSVParcelData) (*quadtree.Tree[offheap.RefSlice[byte]], *offheap.Store) {
+	byteStore := offheap.New()
+	tree := quadtree.NewTree[offheap.RefSlice[byte]](quadtree.NewLongLatView())
 
 	count := 0
 	errCount := 0
@@ -74,7 +74,7 @@ func fillTree(parcelChan chan lds_csv.CSVParcelData) (*quadtree.Tree[objectstore
 				errCount++
 				continue
 			}
-			or := objectstore.AllocSlice[byte](byteStore, len(bytes), len(bytes))
+			or := offheap.AllocSlice[byte](byteStore, len(bytes), len(bytes))
 			buffer := or.Value()
 			copy(buffer, bytes)
 

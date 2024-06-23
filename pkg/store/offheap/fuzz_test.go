@@ -1,4 +1,4 @@
-package objectstore
+package offheap
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"github.com/fmstephe/location-system/pkg/store/fuzzutil"
 )
 
-// The single fuzzer test for objectstore
+// The single fuzzer test for offheap
 func FuzzObjectStore(f *testing.F) {
 	testCases := fuzzutil.MakeRandomTestCases()
 	for _, tc := range testCases {

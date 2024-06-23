@@ -1,18 +1,18 @@
-package objectstore_test
+package offheap_test
 
 import (
 	"fmt"
 
-	"github.com/fmstephe/location-system/pkg/store/objectstore"
+	"github.com/fmstephe/location-system/pkg/store/offheap"
 )
 
 // Calling AllocSlice allocates a slice and returns a RefSlice which acts like
 // a conventional pointer through which you can retrieve the allocated slice
 // via RefSlice.Value()
 func ExampleAllocSlice() {
-	var store *objectstore.Store = objectstore.New()
+	var store *offheap.Store = offheap.New()
 
-	var ref objectstore.RefSlice[int] = objectstore.AllocSlice[int](store, 1, 2)
+	var ref offheap.RefSlice[int] = offheap.AllocSlice[int](store, 1, 2)
 
 	// Set the first element in the allocated slice
 	var s1 []int = ref.Value()
@@ -27,13 +27,13 @@ func ExampleAllocSlice() {
 
 // You can allocate a RefSlice by passing in a number of slices to be concatenated together
 func ExampleConcatSlices() {
-	var store *objectstore.Store = objectstore.New()
+	var store *offheap.Store = offheap.New()
 
 	slice1 := []int{1, 2}
 	slice2 := []int{3, 4}
 	slice3 := []int{5, 6}
 
-	var ref objectstore.RefSlice[int] = objectstore.ConcatSlices[int](store, slice1, slice2, slice3)
+	var ref offheap.RefSlice[int] = offheap.ConcatSlices[int](store, slice1, slice2, slice3)
 
 	var s1 []int = ref.Value()
 
@@ -43,16 +43,16 @@ func ExampleConcatSlices() {
 
 // You can append an element to an allocated RefSlice
 func ExampleAppend() {
-	var store *objectstore.Store = objectstore.New()
+	var store *offheap.Store = offheap.New()
 
-	var ref1 objectstore.RefSlice[int] = objectstore.AllocSlice[int](store, 1, 2)
+	var ref1 offheap.RefSlice[int] = offheap.AllocSlice[int](store, 1, 2)
 
 	// Set the first element in the allocated slice
 	var s1 []int = ref1.Value()
 	s1[0] = 1
 
 	// Append a second element to the slice
-	var ref2 objectstore.RefSlice[int] = objectstore.Append(store, ref1, 2)
+	var ref2 offheap.RefSlice[int] = offheap.Append(store, ref1, 2)
 
 	var s2 []int = ref2.Value()
 
@@ -62,16 +62,16 @@ func ExampleAppend() {
 
 // After call to append the old RefSlice is no longer valid for use
 func ExampleAppend_oldRef() {
-	var store *objectstore.Store = objectstore.New()
+	var store *offheap.Store = offheap.New()
 
-	var ref1 objectstore.RefSlice[int] = objectstore.AllocSlice[int](store, 1, 2)
+	var ref1 offheap.RefSlice[int] = offheap.AllocSlice[int](store, 1, 2)
 
 	// Set the first element in the allocated slice
 	var s1 []int = ref1.Value()
 	s1[0] = 1
 
 	// Append a second element to the slice
-	objectstore.Append(store, ref1, 2)
+	offheap.Append(store, ref1, 2)
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -86,16 +86,16 @@ func ExampleAppend_oldRef() {
 // You can append a slice to a RefSlice. This will create a new RefSlice with
 // the original slice and the slice passed in appended together.
 func ExampleAppendSlice() {
-	var store *objectstore.Store = objectstore.New()
+	var store *offheap.Store = offheap.New()
 
-	var ref1 objectstore.RefSlice[int] = objectstore.AllocSlice[int](store, 1, 2)
+	var ref1 offheap.RefSlice[int] = offheap.AllocSlice[int](store, 1, 2)
 
 	// Set the first element in the allocated slice
 	var s1 []int = ref1.Value()
 	s1[0] = 1
 
 	// Append a second element to the slice
-	var ref2 objectstore.RefSlice[int] = objectstore.AppendSlice(store, ref1, []int{2, 3})
+	var ref2 offheap.RefSlice[int] = offheap.AppendSlice(store, ref1, []int{2, 3})
 
 	var s2 []int = ref2.Value()
 
@@ -105,16 +105,16 @@ func ExampleAppendSlice() {
 
 // After call to AppendSlice the old RefSlice is no longer valid for use.
 func ExampleAppendSlice_oldRef() {
-	var store *objectstore.Store = objectstore.New()
+	var store *offheap.Store = offheap.New()
 
-	var ref1 objectstore.RefSlice[int] = objectstore.AllocSlice[int](store, 1, 2)
+	var ref1 offheap.RefSlice[int] = offheap.AllocSlice[int](store, 1, 2)
 
 	// Set the first element in the allocated slice
 	var s1 []int = ref1.Value()
 	s1[0] = 1
 
 	// Append a second element to the slice
-	objectstore.AppendSlice(store, ref1, []int{2, 3})
+	offheap.AppendSlice(store, ref1, []int{2, 3})
 
 	defer func() {
 		if err := recover(); err != nil {

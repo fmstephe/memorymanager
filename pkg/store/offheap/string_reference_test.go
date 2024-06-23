@@ -1,4 +1,4 @@
-package objectstore
+package offheap
 
 import (
 	"fmt"

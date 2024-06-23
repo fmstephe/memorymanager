@@ -3,13 +3,13 @@ package quadtree
 import (
 	"fmt"
 
-	"github.com/fmstephe/location-system/pkg/store/objectstore"
+	"github.com/fmstephe/location-system/pkg/store/offheap"
 )
 
 // This struct is the exported root of a quad tree
 type Tree[T any] struct {
 	store         *nodeStore[T]
-	treeReference objectstore.RefObject[node[T]]
+	treeReference offheap.RefObject[node[T]]
 	view          View
 }
 
