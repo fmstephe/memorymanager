@@ -7,7 +7,12 @@ import (
 	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
 )
 
-// Allocates a new slice with the desired length and capacity
+// Allocates a new slice with the desired length and capacity. The capacity of
+// the actual slice may not be the same as requestedCapacity, but it will never
+// be smaller than requestedCapacity.
+//
+// The contents of the slice will be arbitrary. Unlike Go slices acquired via
+// AllocSlice do _not_ have their contents zeroed out.
 func AllocSlice[T any](s *Store, length, requestedCapacity int) RefSlice[T] {
 	// TODO this is not fast - we _need_ to cache this type data
 	if err := containsNoPointers[T](); err != nil {
@@ -43,9 +48,14 @@ func ConcatSlices[T any](s *Store, slices ...[]T) RefSlice[T] {
 	return r
 }
 
-// Append the value onto the end of the slice 'into'.  The reference 'into' is
-// no longer valid after this function returns.  The returned reference should
-// be used instead.
+// Returns a new RefSlice pointing to a slice whose size and contents is the
+// same as append(into.Value(), value).
+//
+// After this function returns into is no longer a valid RefSlice, and will
+// behave as if Free(...) was called on it.  Internally there is an
+// optimisation which _may_ reuse the existing allocation slot if possible. But
+// externally this function behaves as if a new allocation is made and the old
+// one freed.
 func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
 	pRef, newCapacity := resizeAndInvalidate[T](s, into.ref, into.capacity, into.length, 1)
 
@@ -58,9 +68,14 @@ func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
 	return newRef
 }
 
-// Append all of the values in 'fromSlice' to the end of the slice 'into'.  The
-// reference 'into' is no longer valid after this function returns.  The
-// returned reference should be used instead.
+// Returns a new RefSlice pointing to a slice whose size and contents is the
+// same as append(into.Value(), fromSlice...).
+//
+// After this function returns into is no longer a valid RefSlice, and will
+// behave as if Free(...) was called on it.  Internally there is an
+// optimisation which _may_ reuse the existing allocation slot if possible. But
+// externally this function behaves as if a new allocation is made and the old
+// one freed.
 func AppendSlice[T any](s *Store, into RefSlice[T], fromSlice []T) RefSlice[T] {
 	pRef, newCapacity := resizeAndInvalidate[T](s, into.ref, into.capacity, into.length, len(fromSlice))
 
@@ -73,14 +88,20 @@ func AppendSlice[T any](s *Store, into RefSlice[T], fromSlice []T) RefSlice[T] {
 	return newRef
 }
 
+// Frees the allocation referenced by r. After this call returns r must never
+// be used again. Any use of the slice referenced by r will have unpredicatable
+// behaviour.
 func FreeSlice[T any](s *Store, r RefSlice[T]) {
 	idx := indexForSlice[T](r.capacity)
 	s.free(idx, r.ref)
 }
 
-// A reference to a typed slice
-// length is len() of the slice
-// capacity is cap() of the slice
+// A reference to a slice. This reference allows us to gain access to an
+// allocated slice directly.
+//
+// It is acceptable, and enouraged, to use RefSlice in fields of types which
+// will be managed by a Store. This is acceptable because RefSlice does not
+// contain any conventional Go pointers, unlike native slices.
 type RefSlice[T any] struct {
 	length   int
 	capacity int
@@ -99,11 +120,16 @@ func newRefSlice[T any](length, capacity int, ref pointerstore.RefPointer) RefSl
 	}
 }
 
+// Returns the raw slice pointed to by this RefSlice.
+//
+// Care must be taken not to use this slice after FreeSlice(...) has been
+// called on this RefSlice.
 func (r *RefSlice[T]) Value() []T {
 	slice := unsafe.Slice((*T)(unsafe.Pointer(r.ref.DataPtr())), r.capacity)
 	return slice[:r.length]
 }
 
+// Returns true if this RefSlice does not point to an allocated slice, false otherwise.
 func (r *RefSlice[T]) IsNil() bool {
 	return r.ref.IsNil()
 }

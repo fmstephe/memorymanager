@@ -7,12 +7,14 @@ import (
 	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
 )
 
-// Allocates a new string copied from str
+// Allocates a new string whose size and contents will be the same as found in
+// str.
 func AllocStringFromString(s *Store, str string) RefString {
 	return AllocStringFromBytes(s, funsafe.StringToBytes(str))
 }
 
-// Allocates a new string copied from bytes
+// Allocates a new string whose size and contents will be the same as found in
+// bytes.
 func AllocStringFromBytes(s *Store, bytes []byte) RefString {
 	idx := indexForSize(len(bytes))
 
@@ -28,7 +30,7 @@ func AllocStringFromBytes(s *Store, bytes []byte) RefString {
 	return sRef
 }
 
-// Allocates a new string which contains the elements of strs concatenated together
+// Allocates a new string which contains the elements of strs concatenated together.
 func ConcatStrings(s *Store, strs ...string) RefString {
 	// Calculate the total string size needed
 	totalLength := 0
@@ -51,9 +53,14 @@ func ConcatStrings(s *Store, strs ...string) RefString {
 	return sRef
 }
 
-// Append all of the values in 'fromSlice' to the end of the slice 'into'.  The
-// reference 'into' is no longer valid after this function returns.  The
-// returned reference should be used instead.
+// Returns a new RefString pointing to a string whose size and contents is the
+// same as into.Value() + value.
+//
+// After this function returns into is no longer a valid RefString, and will
+// behave as if Free(...) was called on it.  Internally there is an
+// optimisation which _may_ reuse the existing allocation slot if possible. But
+// externally this function behaves as if a new allocation is made and the old
+// one freed.
 func AppendString(s *Store, into RefString, value string) RefString {
 	pRef, newCapacity := resizeAndInvalidate[byte](s, into.ref, capacityForSlice(into.length), into.length, len(value))
 
@@ -66,13 +73,20 @@ func AppendString(s *Store, into RefString, value string) RefString {
 	return newRef
 }
 
+// Frees the allocation referenced by r. After this call returns r must never
+// be used again. Any use of the string referenced by r will have
+// unpredicatable behaviour.
 func FreeStr(s *Store, r RefString) {
 	idx := indexForSize(r.length)
 	s.free(idx, r.ref)
 }
 
-// A reference to a string
-// length is the len() of the string
+// A reference to a string. This reference allows us to gain access to an
+// allocated string directly.
+//
+// It is acceptable, and enouraged, to use RefString in fields of types which
+// will be managed by a Store. This is acceptable because RefString does not
+// contain any conventional Go pointers, unlike native strings.
 type RefString struct {
 	length int
 	ref    pointerstore.RefPointer
@@ -89,10 +103,15 @@ func newRefString(length int, ref pointerstore.RefPointer) RefString {
 	}
 }
 
+// Returns the raw string pointed to by this RefString.
+//
+// Care must be taken not to use this string after FreeString(...) has been
+// called on this RefString.
 func (r *RefString) Value() string {
 	return unsafe.String((*byte)((unsafe.Pointer)(r.ref.DataPtr())), r.length)
 }
 
+// Returns true if this RefString does not point to an allocated string, false otherwise.
 func (r *RefString) IsNil() bool {
 	return r.ref.IsNil()
 }
