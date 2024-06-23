@@ -81,7 +81,7 @@ func Test_String_NewFreeGet_Panic(t *testing.T) {
 	// Allocate and free a string value
 	value := "test string"
 	ref := AllocStringFromString(ss, value)
-	FreeStr(ss, ref)
+	FreeString(ss, ref)
 
 	// Assert that calling Value() now panics
 	assert.Panics(t, func() { ref.Value() })
@@ -98,10 +98,10 @@ func Test_String_NewFreeFree_Panic(t *testing.T) {
 	// Allocate and free a string value
 	value := "test string"
 	ref := AllocStringFromString(ss, value)
-	FreeStr(ss, ref)
+	FreeString(ss, ref)
 
 	// Assert that calling FreeStr() now panics
-	assert.Panics(t, func() { FreeStr(ss, ref) })
+	assert.Panics(t, func() { FreeString(ss, ref) })
 }
 
 // Demonstrate that when we double free a re-allocated string we still panic.
@@ -111,11 +111,11 @@ func Test_String_NewFreeAllocFree_Panic(t *testing.T) {
 
 	value := "test string"
 	r := AllocStringFromString(os, value)
-	FreeStr(os, r)
+	FreeString(os, r)
 	// This will re-allocate the just-freed string
 	AllocStringFromString(os, value)
 
-	assert.Panics(t, func() { FreeStr(os, r) })
+	assert.Panics(t, func() { FreeString(os, r) })
 }
 
 // Demonstrate that when we call Value() on a re-allocated RefStr we still panic
@@ -125,7 +125,7 @@ func Test_String_NewFreeAllocGet_Panic(t *testing.T) {
 
 	value := "test string"
 	r := AllocStringFromString(os, value)
-	FreeStr(os, r)
+	FreeString(os, r)
 	// This will re-allocate the just-freed string
 	AllocStringFromString(os, value)
 
@@ -159,10 +159,10 @@ func Test_String_SizedStats(t *testing.T) {
 
 			r1 := AllocStringFromString(os, value)
 			r2 := AllocStringFromString(os, value)
-			FreeStr(os, r1)
+			FreeString(os, r1)
 			r3 := AllocStringFromString(os, value)
-			FreeStr(os, r2)
-			FreeStr(os, r3)
+			FreeString(os, r2)
+			FreeString(os, r3)
 
 			expectedStats.Allocs = 3
 			expectedStats.Frees = 3

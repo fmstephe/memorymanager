@@ -76,7 +76,7 @@ func AppendString(s *Store, into RefString, value string) RefString {
 // Frees the allocation referenced by r. After this call returns r must never
 // be used again. Any use of the string referenced by r will have
 // unpredicatable behaviour.
-func FreeStr(s *Store, r RefString) {
+func FreeString(s *Store, r RefString) {
 	idx := indexForSize(r.length)
 	s.free(idx, r.ref)
 }
