@@ -67,3 +67,25 @@ func (r *RefObject[T]) Value() *T {
 func (r *RefObject[T]) IsNil() bool {
 	return r.ref.IsNil()
 }
+
+// Returns the stats for the allocation size of type T.
+//
+// It is important to note that these statistics apply to the size class
+// indicated by T. The statistics allocations will capture all allocations for
+// this _size_ including allocations for types other than T.
+func StatsForType[T any](s *Store) pointerstore.Stats {
+	stats := s.Stats()
+	idx := indexForType[T]()
+	return stats[idx]
+}
+
+// Returns the allocation config for the allocation size of type T
+//
+// It is important to note that this config apply to the size class indicated
+// by T. The config apply to all allocations for this _size_ including
+// allocations for types other than T.
+func ConfForType[T any](s *Store) pointerstore.AllocConfig {
+	configs := s.AllocConfigs()
+	idx := indexForType[T]()
+	return configs[idx]
+}

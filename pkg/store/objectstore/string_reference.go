@@ -115,3 +115,25 @@ func (r *RefString) Value() string {
 func (r *RefString) IsNil() bool {
 	return r.ref.IsNil()
 }
+
+// Returns the stats for the allocations size of a string of length.
+//
+// It is important to note that these statistics apply to the size class
+// indicated here. The statistics allocations will capture all allocations for
+// this _size_ including allocations for non-slice types.
+func StatsForString(s *Store, length int) pointerstore.Stats {
+	stats := s.Stats()
+	idx := indexForSize(length)
+	return stats[idx]
+}
+
+// Returns the allocation config for the allocations size of a string of length.
+//
+// It is important to note that this config apply to the size class indicated
+// here. The config apply to all allocations for this _size_ including
+// allocations for non-string types.
+func ConfForString(s *Store, length int) pointerstore.AllocConfig {
+	configs := s.AllocConfigs()
+	idx := indexForSize(length)
+	return configs[idx]
+}

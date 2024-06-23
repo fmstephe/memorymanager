@@ -134,6 +134,29 @@ func (r *RefSlice[T]) IsNil() bool {
 	return r.ref.IsNil()
 }
 
+// Returns the stats for the allocation size of a []T with capacity.
+//
+// It is important to note that these statistics apply to the size class
+// indicated here. The statistics allocations will capture all allocations for
+// this _size_ including allocations for non-slice types.
+func StatsForSlice[T any](s *Store, capacity int) pointerstore.Stats {
+	stats := s.Stats()
+	idx := indexForSlice[T](capacity)
+	return stats[idx]
+}
+
+// Returns the allocation config for the allocation size of a []T with
+// capacity.
+//
+// It is important to note that this config apply to the size class indicated
+// here. The config apply to all allocations for this _size_ including
+// allocations for non-slice types.
+func ConfForSlice[T any](s *Store, capacity int) pointerstore.AllocConfig {
+	configs := s.AllocConfigs()
+	idx := indexForSlice[T](capacity)
+	return configs[idx]
+}
+
 func resizeAndInvalidate[T any](s *Store, oldRef pointerstore.RefPointer, oldCapacity, oldLength, extra int) (newRef pointerstore.RefPointer, newCapacity int) {
 	// Calculate the new length
 	newLength := oldLength + extra
