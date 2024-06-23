@@ -35,6 +35,27 @@ func ExampleFreeObject() {
 	// You must never use ref again
 }
 
+// You can free memory used by an an allocated object by calling
+// FreeObject(...). The RefObject can no longer be used, and the use of the
+// actual object pointed to will have unpredicatable results.
+func ExampleFreeObject_useAfterFreePanics() {
+	var store *offheap.Store = offheap.New()
+
+	var ref offheap.RefObject[int] = offheap.AllocObject[int](store)
+
+	offheap.FreeObject(store, ref)
+	// You must never use ref again
+
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("Use after free panics")
+		}
+	}()
+
+	ref.Value()
+	// Output: Use after free panics
+}
+
 // You can allocate objects of complex types, including types with fields which
 // are also of type RefObject. This allows us to build large datastructures,
 // like trees in this example.
