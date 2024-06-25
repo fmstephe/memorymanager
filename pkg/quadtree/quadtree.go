@@ -31,7 +31,7 @@ func (r *Tree[T]) Insert(x, y float64, data T) error {
 	if !r.view.containsPoint(x, y) {
 		return fmt.Errorf("cannot insert x(%f) y(%f) into view %s", x, y, r.view)
 	}
-	list := r.store.newList(data)
+	list := r.store.newSlice(data)
 	st := r.treeReference.Value()
 	st.insert(x, y, list, r.store)
 	return nil

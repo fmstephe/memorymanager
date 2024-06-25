@@ -3,14 +3,13 @@ package quadtree
 import (
 	"fmt"
 
-	"github.com/fmstephe/location-system/pkg/store/linkedlist"
 	"github.com/fmstephe/location-system/pkg/store/offheap"
 )
 
 // A point with a list of stored elements
 type point[T any] struct {
 	x, y float64
-	list linkedlist.List[T]
+	list offheap.RefSlice[T]
 }
 
 // Indicates whether a point is isEmpty, i.e. uninitialised.  Because we never
@@ -18,7 +17,7 @@ type point[T any] struct {
 // data to it.  This invariant will stop holding if this quadtree ever supports
 // data deletion.
 func (np *point[T]) isEmpty() bool {
-	return np.list.IsEmpty()
+	return np.list.IsNil()
 }
 
 // Indicates whether a point has the same x,y coords as those passed in
@@ -71,7 +70,7 @@ func makeNode[T any](view View, store *nodeStore[T]) offheap.RefObject[node[T]] 
 }
 
 // Inserts list into the single child subtree whose view contains (x,y)
-func (n *node[T]) insert(x, y float64, list linkedlist.List[T], store *nodeStore[T]) {
+func (n *node[T]) insert(x, y float64, list offheap.RefSlice[T], store *nodeStore[T]) {
 	// We are adding an element to this node or one of its children, increment the count
 	n.cachedCount++
 
@@ -85,7 +84,7 @@ func (n *node[T]) insert(x, y float64, list linkedlist.List[T], store *nodeStore
 				return
 			}
 			if n.ps[i].sameLoc(x, y) {
-				n.ps[i].list.Append(store.listStore, list)
+				n.ps[i].list = offheap.AppendSlice(store.nodes, n.ps[i].list, list.Value())
 				return
 			}
 		}
@@ -139,8 +138,11 @@ func (n *node[T]) survey(view View, fun func(x, y float64, data *T) bool, store 
 		for i := range n.ps {
 			p := &n.ps[i]
 			if !p.isEmpty() && view.containsPoint(p.x, p.y) {
-				if !p.list.Survey(store.listStore, func(data *T) bool { return fun(p.x, p.y, data) }) {
-					return false
+				listSlc := p.list.Value()
+				for i := range listSlc {
+					if !fun(p.x, p.y, &listSlc[i]) {
+						return false
+					}
 				}
 			}
 		}
@@ -172,8 +174,7 @@ func (n *node[T]) count(view View, store *nodeStore[T]) int64 {
 		for i := range n.ps {
 			p := &n.ps[i]
 			if !p.isEmpty() && view.containsPoint(p.x, p.y) {
-				// Visit all the elements stored here and count them
-				p.list.Survey(store.listStore, func(_ *T) bool { counted++; return true })
+				counted += int64(len(p.list.Value()))
 			}
 		}
 		return counted
