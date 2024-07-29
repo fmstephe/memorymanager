@@ -13,34 +13,28 @@ import (
 //
 // This example exists simply to illustrate how the Reference type can be used.
 // I don't think it's obvious without at least one example.
-//
-// TODO this example is actually pretty bad. We somehow need to show the ReferenceMap
-// implementation inside the example. Otherwise the most important and
-// complicated part is missing from the example.
 func ExampleReference_refString() {
-	var refStringMap *ReferenceMap[byte, offheap.RefString] = NewReferenceMap[byte, offheap.RefString]()
+	// The ReferenceMap type is capable of storing either RefString,
+	// RefSlice or RefObject types
+	type ReferenceMap[T any, R offheap.Reference[T]] struct {
+		rMap map[int]R
+	}
+
+	// Here we instantiate a ReferenceMap which can store RefString references
+	var refStringMap ReferenceMap[byte, offheap.RefString] = ReferenceMap[byte, offheap.RefString]{
+		rMap: make(map[int]offheap.RefString),
+	}
+
+	// Create a RefString
 	var store *offheap.Store = offheap.New()
+	var ref offheap.RefString = offheap.ConcatStrings(store, "ref string reference")
 
-	var ref1 offheap.RefString = offheap.ConcatStrings(store, "ref string reference")
+	// Store and retrieve that RefString
+	refStringMap.rMap[1] = ref
+	var refOut offheap.RefString = refStringMap.rMap[1]
 
-	refStringMap.Add(1, ref1)
-
-	var refOut offheap.RefString = refStringMap.Get(1)
 	fmt.Printf("Stored and retrieved %q", refOut.Value())
 	// Output: Stored and retrieved "ref string reference"
-}
-
-func ExampleReference_refString2() {
-	var stringReference offheap.Reference[byte]
-	var store *offheap.Store = offheap.New()
-
-	var ref1 offheap.RefString = offheap.ConcatStrings(store, "ref string reference")
-
-	stringReference = ref1
-
-	fmt.Printf("Stored and retrieved %q", stringReference.value())
-	// Output: Stored and retrieved "ref string reference"
-	//
 }
 
 // Here we store and retrieve a RefSlice[byte] using a Reference typed
@@ -48,19 +42,26 @@ func ExampleReference_refString2() {
 //
 // This example exists simply to illustrate how the Reference type can be used.
 // I don't think it's obvious without at least one example.
-//
-// TODO this example is actually pretty bad. We somehow need to show the ReferenceMap
-// implementation inside the example. Otherwise the most important and
-// complicated part is missing from the example.
 func ExampleReference_refSlice() {
-	var refSliceMap *ReferenceMap[byte, offheap.RefSlice[byte]] = NewReferenceMap[byte, offheap.RefSlice[byte]]()
+	// The ReferenceMap type is capable of storing either RefString,
+	// RefSlice or RefObject types
+	type ReferenceMap[T any, R offheap.Reference[T]] struct {
+		rMap map[int]R
+	}
+
+	// Here we instantiate a ReferenceMap which can store RefSlice references
+	var refSliceMap ReferenceMap[byte, offheap.RefSlice[byte]] = ReferenceMap[byte, offheap.RefSlice[byte]]{
+		rMap: make(map[int]offheap.RefSlice[byte]),
+	}
+
+	// Create a RefSlice
 	var store *offheap.Store = offheap.New()
+	var ref offheap.RefSlice[byte] = offheap.ConcatSlices[byte](store, []byte("ref slice reference"))
 
-	var ref1 offheap.RefSlice[byte] = offheap.ConcatSlices[byte](store, []byte("ref slice reference"))
+	// Store and retrieve that RefSlice
+	refSliceMap.rMap[1] = ref
+	var refOut offheap.RefSlice[byte] = refSliceMap.rMap[1]
 
-	refSliceMap.Add(1, ref1)
-
-	var refOut offheap.RefSlice[byte] = refSliceMap.Get(1)
 	fmt.Printf("Stored and retrieved %q", refOut.Value())
 	// Output: Stored and retrieved "ref slice reference"
 }
@@ -70,39 +71,28 @@ func ExampleReference_refSlice() {
 //
 // This example exists simply to illustrate how the Reference type can be used.
 // I don't think it's obvious without at least one example.
-//
-// TODO this example is actually pretty bad. We somehow need to show the ReferenceMap
-// implementation inside the example. Otherwise the most important and
-// complicated part is missing from the example.
 func ExampleReference_refObject() {
-	var refObjectMap *ReferenceMap[int, offheap.RefObject[int]] = NewReferenceMap[int, offheap.RefObject[int]]()
-	var store *offheap.Store = offheap.New()
+	// The ReferenceMap type is capable of storing either RefString,
+	// RefSlice or RefObject types
+	type ReferenceMap[T any, R offheap.Reference[T]] struct {
+		rMap map[int]R
+	}
 
-	var ref1 offheap.RefObject[int] = offheap.AllocObject[int](store)
-	var intValue *int = ref1.Value()
+	// Here we instantiate a ReferenceMap which can store RefObject references
+	var refObjectMap ReferenceMap[int, offheap.RefObject[int]] = ReferenceMap[int, offheap.RefObject[int]]{
+		rMap: make(map[int]offheap.RefObject[int]),
+	}
+
+	// Create a RefObject
+	var store *offheap.Store = offheap.New()
+	var ref offheap.RefObject[int] = offheap.AllocObject[int](store)
+	var intValue *int = ref.Value()
 	*intValue = 127
 
-	refObjectMap.Add(1, ref1)
+	// Store and retrieve that RefObject
+	refObjectMap.rMap[1] = ref
+	var refOut offheap.RefObject[int] = refObjectMap.rMap[1]
 
-	var refOut offheap.RefObject[int] = refObjectMap.Get(1)
 	fmt.Printf("Stored and retrieved %v", *(refOut.Value()))
 	// Output: Stored and retrieved 127
-}
-
-type ReferenceMap[T any, R offheap.Reference[T]] struct {
-	rMap map[int]R
-}
-
-func NewReferenceMap[T any, R offheap.Reference[T]]() *ReferenceMap[T, R] {
-	return &ReferenceMap[T, R]{
-		rMap: make(map[int]R),
-	}
-}
-
-func (f *ReferenceMap[T, R]) Add(hash int, value R) {
-	f.rMap[hash] = value
-}
-
-func (f *ReferenceMap[T, R]) Get(hash int) R {
-	return f.rMap[hash]
 }
