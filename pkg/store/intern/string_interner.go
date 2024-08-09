@@ -10,12 +10,12 @@ import (
 
 type StringInterner struct {
 	indexMask uint64
-	shards    []Interner
+	shards    []internShard
 }
 
 func New(maxLen, maxBytes int) *StringInterner {
 	shardCount := runtime.NumCPU()
-	return NewWithShards(maxLens, maxBytes, shardCount)
+	return NewWithShards(maxLen, maxBytes, shardCount)
 }
 
 func NewWithShards(maxLen, maxBytes, shardCount int) *StringInterner {
@@ -24,9 +24,9 @@ func NewWithShards(maxLen, maxBytes, shardCount int) *StringInterner {
 
 	controller := newController(maxLen, maxBytes)
 
-	shards := make([]Interner, shardCount)
+	shards := make([]internShard, shardCount)
 	for i := range shards {
-		shards[i] = newInterner(controller)
+		shards[i] = newInternShard(controller)
 	}
 	return &StringInterner{
 		indexMask: indexMask,
@@ -36,19 +36,19 @@ func NewWithShards(maxLen, maxBytes, shardCount int) *StringInterner {
 
 func (i *StringInterner) GetFromFloat64(floatVal float64) string {
 	idx := i.getIndex(math.Float64bits(floatVal))
-	return i.shards[idx].GetFromFloat64(floatVal)
+	return i.shards[idx].getFromFloat64(floatVal)
 }
 
 func (i *StringInterner) GetFromInt64(intVal int64) string {
 	idx := i.getIndex(uint64(intVal))
-	return i.shards[idx].GetFromInt64(intVal)
+	return i.shards[idx].getFromInt64(intVal)
 }
 
 func (i *StringInterner) GetFromBytes(bytes []byte) string {
 	hash := xxhash.Sum64(bytes)
 
 	idx := i.getIndex(hash)
-	return i.shards[idx].GetFromBytes(bytes, hash)
+	return i.shards[idx].getFromBytes(bytes, hash)
 }
 
 func (i *StringInterner) getIndex(hash uint64) uint64 {

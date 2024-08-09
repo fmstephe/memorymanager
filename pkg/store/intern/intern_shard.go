@@ -9,7 +9,7 @@ import (
 	"github.com/fmstephe/location-system/pkg/store/offheap"
 )
 
-type Interner struct {
+type internShard struct {
 	controller *internController
 	store      *offheap.Store
 
@@ -20,8 +20,8 @@ type Interner struct {
 	internedBytes map[uint64]offheap.RefString
 }
 
-func newInterner(controller *internController) Interner {
-	return Interner{
+func newInternShard(controller *internController) internShard {
+	return internShard{
 		controller: controller,
 		store:      offheap.New(),
 
@@ -33,7 +33,7 @@ func newInterner(controller *internController) Interner {
 	}
 }
 
-func (i *Interner) GetFromFloat64(floatVal float64) string {
+func (i *internShard) getFromFloat64(floatVal float64) string {
 	// Avoid trying to add NaN values into our map
 	if math.IsNaN(floatVal) {
 		return "NaN"
@@ -59,7 +59,7 @@ func (i *Interner) GetFromFloat64(floatVal float64) string {
 	return interned
 }
 
-func (i *Interner) GetFromInt64(intVal int64) string {
+func (i *internShard) getFromInt64(intVal int64) string {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -80,7 +80,7 @@ func (i *Interner) GetFromInt64(intVal int64) string {
 	return interned
 }
 
-func (i *Interner) GetFromBytes(bytes []byte, hash uint64) string {
+func (i *internShard) getFromBytes(bytes []byte, hash uint64) string {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
