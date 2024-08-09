@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	xxhash "github.com/cespare/xxhash/v2"
+	"github.com/fmstephe/location-system/pkg/store/offheap"
 )
 
 type StringInterner struct {
@@ -19,17 +20,16 @@ func New(maxLen, maxBytes int) *StringInterner {
 }
 
 func NewWithShards(maxLen, maxBytes, shardCount int) *StringInterner {
-	shardCount = nextPowerOfTwo(shardCount)
-	indexMask := uint64(shardCount - 1)
-
 	controller := newController(maxLen, maxBytes)
+	store := offheap.New()
 
-	shards := make([]internShard, shardCount)
+	shards := make([]internShard, nextPowerOfTwo(shardCount))
 	for i := range shards {
-		shards[i] = newInternShard(controller)
+		shards[i] = newInternShard(controller, store)
 	}
+
 	return &StringInterner{
-		indexMask: indexMask,
+		indexMask: uint64(shardCount - 1),
 		shards:    shards,
 	}
 }

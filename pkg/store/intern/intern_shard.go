@@ -20,10 +20,10 @@ type internShard struct {
 	internedBytes map[uint64]offheap.RefString
 }
 
-func newInternShard(controller *internController) internShard {
+func newInternShard(controller *internController, store *offheap.Store) internShard {
 	return internShard{
 		controller: controller,
-		store:      offheap.New(),
+		store:      store,
 
 		// lock protected fields
 		lock:          sync.Mutex{},
