@@ -13,12 +13,16 @@ type internShard struct {
 	controller *internController
 	store      *offheap.Store
 
-	// lock protected fields
-	lock          sync.Mutex // consider a readwrite lock
+	//
+	floatLock     sync.Mutex
 	internedFloat map[float64]offheap.RefString
 	floatStats    Stats
-	internedInt   map[int64]offheap.RefString
-	intStats      Stats
+	//
+	intLock     sync.Mutex
+	internedInt map[int64]offheap.RefString
+	intStats    Stats
+	//
+	bytesLock     sync.Mutex
 	internedBytes map[uint64]offheap.RefString
 	bytesStats    Stats
 }
@@ -28,8 +32,6 @@ func newInternShard(controller *internController, store *offheap.Store) internSh
 		controller: controller,
 		store:      store,
 
-		// lock protected fields
-		lock:          sync.Mutex{},
 		internedFloat: make(map[float64]offheap.RefString),
 		internedInt:   make(map[int64]offheap.RefString),
 		internedBytes: make(map[uint64]offheap.RefString),
@@ -43,8 +45,8 @@ func (i *internShard) getFromFloat64(floatVal float64) string {
 		return "NaN"
 	}
 
-	i.lock.Lock()
-	defer i.lock.Unlock()
+	i.floatLock.Lock()
+	defer i.floatLock.Unlock()
 
 	if refString, ok := i.internedFloat[floatVal]; ok {
 		i.floatStats.returned++
@@ -73,15 +75,15 @@ func (i *internShard) getFromFloat64(floatVal float64) string {
 }
 
 func (i *internShard) getFloatStats() Stats {
-	i.lock.Lock()
-	defer i.lock.Unlock()
+	i.floatLock.Lock()
+	defer i.floatLock.Unlock()
 
 	return i.floatStats
 }
 
 func (i *internShard) getFromInt64(intVal int64) string {
-	i.lock.Lock()
-	defer i.lock.Unlock()
+	i.intLock.Lock()
+	defer i.intLock.Unlock()
 
 	if refString, ok := i.internedInt[intVal]; ok {
 		i.intStats.returned++
@@ -110,15 +112,15 @@ func (i *internShard) getFromInt64(intVal int64) string {
 }
 
 func (i *internShard) getIntStats() Stats {
-	i.lock.Lock()
-	defer i.lock.Unlock()
+	i.intLock.Lock()
+	defer i.intLock.Unlock()
 
 	return i.intStats
 }
 
 func (i *internShard) getFromBytes(bytes []byte, hash uint64) string {
-	i.lock.Lock()
-	defer i.lock.Unlock()
+	i.bytesLock.Lock()
+	defer i.bytesLock.Unlock()
 
 	str := unsafe.String(&bytes[0], len(bytes))
 	// Perform lookup for existing interned string based on hash
@@ -156,8 +158,8 @@ func (i *internShard) getFromBytes(bytes []byte, hash uint64) string {
 }
 
 func (i *internShard) getBytesStats() Stats {
-	i.lock.Lock()
-	defer i.lock.Unlock()
+	i.bytesLock.Lock()
+	defer i.bytesLock.Unlock()
 
 	return i.bytesStats
 }
