@@ -12,18 +12,17 @@ import (
 type internShard struct {
 	controller *internController
 	store      *offheap.Store
-
 	//
 	floatLock     sync.Mutex
-	internedFloat map[float64]offheap.RefString
+	floatInterned map[float64]offheap.RefString
 	floatStats    Stats
 	//
 	intLock     sync.Mutex
-	internedInt map[int64]offheap.RefString
+	intInterned map[int64]offheap.RefString
 	intStats    Stats
 	//
 	bytesLock     sync.Mutex
-	internedBytes map[uint64]offheap.RefString
+	bytesInterned map[uint64]offheap.RefString
 	bytesStats    Stats
 }
 
@@ -32,9 +31,9 @@ func newInternShard(controller *internController, store *offheap.Store) internSh
 		controller: controller,
 		store:      store,
 
-		internedFloat: make(map[float64]offheap.RefString),
-		internedInt:   make(map[int64]offheap.RefString),
-		internedBytes: make(map[uint64]offheap.RefString),
+		floatInterned: make(map[float64]offheap.RefString),
+		intInterned:   make(map[int64]offheap.RefString),
+		bytesInterned: make(map[uint64]offheap.RefString),
 	}
 }
 
@@ -48,7 +47,7 @@ func (i *internShard) getFromFloat64(floatVal float64) string {
 	i.floatLock.Lock()
 	defer i.floatLock.Unlock()
 
-	if refString, ok := i.internedFloat[floatVal]; ok {
+	if refString, ok := i.floatInterned[floatVal]; ok {
 		i.floatStats.returned++
 		return refString.Value()
 	}
@@ -67,7 +66,7 @@ func (i *internShard) getFromFloat64(floatVal float64) string {
 
 	// intern int-string and then return interned version
 	refString := offheap.AllocStringFromString(i.store, str)
-	i.internedFloat[floatVal] = refString
+	i.floatInterned[floatVal] = refString
 
 	interned := refString.Value()
 	i.floatStats.interned++
@@ -85,7 +84,7 @@ func (i *internShard) getFromInt64(intVal int64) string {
 	i.intLock.Lock()
 	defer i.intLock.Unlock()
 
-	if refString, ok := i.internedInt[intVal]; ok {
+	if refString, ok := i.intInterned[intVal]; ok {
 		i.intStats.returned++
 		return refString.Value()
 	}
@@ -104,7 +103,7 @@ func (i *internShard) getFromInt64(intVal int64) string {
 
 	// intern int-string and then return interned version
 	refString := offheap.AllocStringFromString(i.store, str)
-	i.internedInt[intVal] = refString
+	i.intInterned[intVal] = refString
 
 	interned := refString.Value()
 	i.intStats.interned++
@@ -124,7 +123,7 @@ func (i *internShard) getFromBytes(bytes []byte, hash uint64) string {
 
 	str := unsafe.String(&bytes[0], len(bytes))
 	// Perform lookup for existing interned string based on hash
-	if refString, ok := i.internedBytes[hash]; ok {
+	if refString, ok := i.bytesInterned[hash]; ok {
 		iStr := refString.Value()
 		// Because two different strings _might_ have the same hash we
 		// test that the interned string and the submitted string are
@@ -150,7 +149,7 @@ func (i *internShard) getFromBytes(bytes []byte, hash uint64) string {
 
 	// intern string and then return interned version
 	refString := offheap.AllocStringFromBytes(i.store, bytes)
-	i.internedBytes[hash] = refString
+	i.bytesInterned[hash] = refString
 
 	interned := refString.Value()
 	i.bytesStats.interned++
