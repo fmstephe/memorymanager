@@ -18,7 +18,7 @@ func newController(maxLen, maxBytes int) *internController {
 	}
 }
 
-func (c *internController) canIntern(str string) bool {
+func (c *internController) canInternMaxLen(str string) bool {
 	if c.maxLen != -1 {
 		// There is a limit to how long an interned string can be
 
@@ -28,6 +28,10 @@ func (c *internController) canIntern(str string) bool {
 		}
 	}
 
+	return true
+}
+
+func (c *internController) canInternUsedBytes(str string) bool {
 	if c.maxBytes != -1 {
 		// There is a limit to the total number of bytes that can be
 		// interned

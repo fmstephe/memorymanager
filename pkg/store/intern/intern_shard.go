@@ -16,8 +16,11 @@ type internShard struct {
 	// lock protected fields
 	lock          sync.Mutex // consider a readwrite lock
 	internedFloat map[float64]offheap.RefString
+	floatStats    Stats
 	internedInt   map[int64]offheap.RefString
+	intStats      Stats
 	internedBytes map[uint64]offheap.RefString
+	bytesStats    Stats
 }
 
 func newInternShard(controller *internController, store *offheap.Store) internShard {
@@ -36,6 +39,7 @@ func newInternShard(controller *internController, store *offheap.Store) internSh
 func (i *internShard) getFromFloat64(floatVal float64) string {
 	// Avoid trying to add NaN values into our map
 	if math.IsNaN(floatVal) {
+		i.floatStats.returned++
 		return "NaN"
 	}
 
@@ -43,11 +47,19 @@ func (i *internShard) getFromFloat64(floatVal float64) string {
 	defer i.lock.Unlock()
 
 	if refString, ok := i.internedFloat[floatVal]; ok {
+		i.floatStats.returned++
 		return refString.Value()
 	}
 
 	str := strconv.FormatFloat(floatVal, 'f', -1, 64)
-	if !i.controller.canIntern(str) {
+
+	if !i.controller.canInternMaxLen(str) {
+		i.floatStats.maxLenExceeded++
+		return str
+	}
+
+	if !i.controller.canInternUsedBytes(str) {
+		i.floatStats.usedBytesExceeded++
 		return str
 	}
 
@@ -56,7 +68,15 @@ func (i *internShard) getFromFloat64(floatVal float64) string {
 	i.internedFloat[floatVal] = refString
 
 	interned := refString.Value()
+	i.floatStats.interned++
 	return interned
+}
+
+func (i *internShard) getFloatStats() Stats {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	return i.floatStats
 }
 
 func (i *internShard) getFromInt64(intVal int64) string {
@@ -64,11 +84,19 @@ func (i *internShard) getFromInt64(intVal int64) string {
 	defer i.lock.Unlock()
 
 	if refString, ok := i.internedInt[intVal]; ok {
+		i.intStats.returned++
 		return refString.Value()
 	}
 
 	str := strconv.FormatInt(intVal, 10)
-	if !i.controller.canIntern(str) {
+
+	if !i.controller.canInternMaxLen(str) {
+		i.intStats.maxLenExceeded++
+		return str
+	}
+
+	if !i.controller.canInternUsedBytes(str) {
+		i.intStats.usedBytesExceeded++
 		return str
 	}
 
@@ -77,7 +105,15 @@ func (i *internShard) getFromInt64(intVal int64) string {
 	i.internedInt[intVal] = refString
 
 	interned := refString.Value()
+	i.intStats.interned++
 	return interned
+}
+
+func (i *internShard) getIntStats() Stats {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	return i.intStats
 }
 
 func (i *internShard) getFromBytes(bytes []byte, hash uint64) string {
@@ -93,14 +129,20 @@ func (i *internShard) getFromBytes(bytes []byte, hash uint64) string {
 		// equal.
 		if iStr == str {
 			// Return the interned version of the string
+			i.bytesStats.returned++
 			return iStr
 		}
 		// Hash collision, return string copy
+		i.bytesStats.hashCollision++
 		return string(bytes)
 	}
 
-	if !i.controller.canIntern(str) {
-		// Can't intern, return string copy
+	if !i.controller.canInternMaxLen(str) {
+		i.bytesStats.maxLenExceeded++
+		return string(bytes)
+	}
+	if !i.controller.canInternUsedBytes(str) {
+		i.bytesStats.usedBytesExceeded++
 		return string(bytes)
 	}
 
@@ -109,5 +151,13 @@ func (i *internShard) getFromBytes(bytes []byte, hash uint64) string {
 	i.internedBytes[hash] = refString
 
 	interned := refString.Value()
+	i.bytesStats.interned++
 	return interned
+}
+
+func (i *internShard) getBytesStats() Stats {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	return i.bytesStats
 }

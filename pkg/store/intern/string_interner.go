@@ -39,9 +39,25 @@ func (i *StringInterner) GetFromFloat64(floatVal float64) string {
 	return i.shards[idx].getFromFloat64(floatVal)
 }
 
+func (i *StringInterner) GetFloatStats() StatsSummary {
+	floatShards := make([]Stats, 0, len(i.shards))
+	for idx := range i.shards {
+		floatShards = append(floatShards, i.shards[idx].getFloatStats())
+	}
+	return makeSummary(floatShards)
+}
+
 func (i *StringInterner) GetFromInt64(intVal int64) string {
 	idx := i.getIndex(uint64(intVal))
 	return i.shards[idx].getFromInt64(intVal)
+}
+
+func (i *StringInterner) GetIntStats() StatsSummary {
+	intShards := make([]Stats, 0, len(i.shards))
+	for idx := range i.shards {
+		intShards = append(intShards, i.shards[idx].getIntStats())
+	}
+	return makeSummary(intShards)
 }
 
 func (i *StringInterner) GetFromBytes(bytes []byte) string {
@@ -49,6 +65,14 @@ func (i *StringInterner) GetFromBytes(bytes []byte) string {
 
 	idx := i.getIndex(hash)
 	return i.shards[idx].getFromBytes(bytes, hash)
+}
+
+func (i *StringInterner) GetBytesStats() StatsSummary {
+	bytesShards := make([]Stats, 0, len(i.shards))
+	for idx := range i.shards {
+		bytesShards = append(bytesShards, i.shards[idx].getBytesStats())
+	}
+	return makeSummary(bytesShards)
 }
 
 func (i *StringInterner) getIndex(hash uint64) uint64 {
