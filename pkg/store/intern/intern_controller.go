@@ -18,6 +18,10 @@ func newController(maxLen, maxBytes int) *internController {
 	}
 }
 
+func (c *internController) getUsedBytes() int {
+	return int(c.usedBytes.Load())
+}
+
 func (c *internController) canInternMaxLen(str string) bool {
 	if c.maxLen != -1 {
 		// There is a limit to how long an interned string can be

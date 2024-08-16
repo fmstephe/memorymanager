@@ -10,8 +10,10 @@ import (
 )
 
 type StringInterner struct {
-	indexMask uint64
-	shards    []internShard
+	indexMask  uint64
+	controller *internController
+	store      *offheap.Store
+	shards     []internShard
 }
 
 func New(maxLen, maxBytes int) *StringInterner {
@@ -29,8 +31,10 @@ func NewWithShards(maxLen, maxBytes, shardCount int) *StringInterner {
 	}
 
 	return &StringInterner{
-		indexMask: uint64(shardCount - 1),
-		shards:    shards,
+		indexMask:  uint64(shardCount - 1),
+		controller: controller,
+		store:      store,
+		shards:     shards,
 	}
 }
 
@@ -44,7 +48,7 @@ func (i *StringInterner) GetFloatStats() StatsSummary {
 	for idx := range i.shards {
 		floatShards = append(floatShards, i.shards[idx].getFloatStats())
 	}
-	return makeSummary(floatShards)
+	return makeSummary(floatShards, i.controller)
 }
 
 func (i *StringInterner) GetFromInt64(intVal int64) string {
@@ -57,7 +61,7 @@ func (i *StringInterner) GetIntStats() StatsSummary {
 	for idx := range i.shards {
 		intShards = append(intShards, i.shards[idx].getIntStats())
 	}
-	return makeSummary(intShards)
+	return makeSummary(intShards, i.controller)
 }
 
 func (i *StringInterner) GetFromBytes(bytes []byte) string {
@@ -72,7 +76,7 @@ func (i *StringInterner) GetBytesStats() StatsSummary {
 	for idx := range i.shards {
 		bytesShards = append(bytesShards, i.shards[idx].getBytesStats())
 	}
-	return makeSummary(bytesShards)
+	return makeSummary(bytesShards, i.controller)
 }
 
 func (i *StringInterner) getIndex(hash uint64) uint64 {

@@ -1,8 +1,9 @@
 package intern
 
 type StatsSummary struct {
-	Total  Stats
-	Shards []Stats
+	UsedBytes int
+	Total     Stats
+	Shards    []Stats
 }
 
 type Stats struct {
@@ -13,7 +14,7 @@ type Stats struct {
 	hashCollision     int
 }
 
-func makeSummary(shards []Stats) StatsSummary {
+func makeSummary(shards []Stats, controller *internController) StatsSummary {
 	total := Stats{}
 
 	for i := range shards {
@@ -25,7 +26,8 @@ func makeSummary(shards []Stats) StatsSummary {
 	}
 
 	return StatsSummary{
-		Total:  total,
-		Shards: shards,
+		UsedBytes: controller.getUsedBytes(),
+		Total:     total,
+		Shards:    shards,
 	}
 }
