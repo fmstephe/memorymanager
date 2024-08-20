@@ -2,6 +2,7 @@ package intern
 
 import (
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -9,13 +10,27 @@ import (
 func TestInternBytes_Interned(t *testing.T) {
 	interner := New(64, 1024)
 
+	// A string value is returned with the same value as expectedString
 	expectedString := "interned string"
 	internedString := interner.GetFromBytes([]byte(expectedString))
+	assert.Equal(t, expectedString, internedString)
 
+	// a new string value has been interned
 	expectedStats := Stats{interned: 1}
 	stats := interner.GetBytesStats()
+	assert.Equal(t, expectedStats, stats.Total)
 
-	assert.Equal(t, expectedString, internedString)
+	// A string value is returned with the same value as expectedString
+	internedString2 := interner.GetFromBytes([]byte(expectedString))
+	assert.Equal(t, expectedString, internedString2)
+	// The string returned uses the same memory allocation as the first
+	// value returned i.e. the string is interned as is being reused as
+	// intended
+	assert.Equal(t, unsafe.StringData(internedString), unsafe.StringData(internedString2))
+
+	// An interned string value has been returned
+	expectedStats = Stats{interned: 1, returned: 1}
+	stats = interner.GetBytesStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
 

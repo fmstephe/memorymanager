@@ -3,6 +3,7 @@ package intern
 import (
 	"strconv"
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -10,13 +11,27 @@ import (
 func TestInternInt_Interned(t *testing.T) {
 	interner := New(64, 1024)
 
+	// A string is returned with the same value as intVal
 	intVal := int64(1234)
 	internedInt := interner.GetFromInt64(int64(intVal))
+	assert.Equal(t, strconv.FormatInt(intVal, 10), internedInt)
 
+	// a new int value has been interned
 	expectedStats := Stats{interned: 1}
 	stats := interner.GetIntStats()
+	assert.Equal(t, expectedStats, stats.Total)
 
-	assert.Equal(t, strconv.Itoa(int(intVal)), internedInt)
+	// A string is returned with the same value as intVal
+	internedInt2 := interner.GetFromInt64(int64(intVal))
+	assert.Equal(t, strconv.FormatInt(intVal, 10), internedInt2)
+	// The string returned uses the same memory allocation as the first
+	// value returned i.e. the string is interned as is being reused as
+	// intended
+	assert.Equal(t, unsafe.StringData(internedInt), unsafe.StringData(internedInt2))
+
+	// An interned string has been returned
+	expectedStats = Stats{interned: 1, returned: 1}
+	stats = interner.GetIntStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
 
