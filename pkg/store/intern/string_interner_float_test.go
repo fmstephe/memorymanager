@@ -13,7 +13,7 @@ func TestInternFloat_Interned(t *testing.T) {
 
 	// A string is returned with the same value as floatVal
 	floatVal := float64(12.34)
-	internedFloat := interner.GetFromFloat64(float64(floatVal))
+	internedFloat := interner.GetFromFloat64(floatVal)
 	assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), internedFloat)
 
 	// a new float value has been interned
@@ -22,7 +22,7 @@ func TestInternFloat_Interned(t *testing.T) {
 	assert.Equal(t, expectedStats, stats.Total)
 
 	// A string is returned with the same value as floatVal
-	internedFloat2 := interner.GetFromFloat64(float64(floatVal))
+	internedFloat2 := interner.GetFromFloat64(floatVal)
 	assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), internedFloat2)
 	// The string returned uses the same memory allocation as the first
 	// value returned i.e. the string is interned as is being reused as
@@ -38,13 +38,27 @@ func TestInternFloat_Interned(t *testing.T) {
 func TestInternFloat_NotInternedMaxLen(t *testing.T) {
 	interner := New(3, 1024)
 
+	// A string is returned with the same value as floatVal
 	floatVal := float64(12.34)
-	internedFloat := interner.GetFromFloat64(float64(floatVal))
+	notInternedFloat := interner.GetFromFloat64(floatVal)
+	assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), notInternedFloat)
 
+	// The float passed in was too long, so maxLenExceeded should be recorded
 	expectedStats := Stats{maxLenExceeded: 1}
 	stats := interner.GetFloatStats()
+	assert.Equal(t, expectedStats, stats.Total)
 
-	assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), internedFloat)
+	// A string is returned with the same value as floatVal
+	notInternedFloat2 := interner.GetFromFloat64(floatVal)
+	assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), notInternedFloat2)
+	// The string returned uses a different memory allocation from the
+	// first value returned i.e. the strings were not interned, and a new
+	// string is being allocated each time
+	assert.NotSame(t, unsafe.StringData(notInternedFloat), unsafe.StringData(notInternedFloat2))
+
+	// The float passed in was too long, so maxLenExceeded should be recorded
+	expectedStats = Stats{maxLenExceeded: 2}
+	stats = interner.GetFloatStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
 
@@ -52,7 +66,7 @@ func TestInternFloat_NotInternedUsedBytes(t *testing.T) {
 	interner := New(64, 3)
 
 	floatVal := float64(12.34)
-	internedFloat := interner.GetFromFloat64(float64(floatVal))
+	internedFloat := interner.GetFromFloat64(floatVal)
 
 	expectedStats := Stats{usedBytesExceeded: 1}
 	stats := interner.GetFloatStats()
@@ -73,7 +87,7 @@ func TestInternFloat_Complex(t *testing.T) {
 	{
 		for intVal := range numberOfFloats {
 			floatVal := float64(intVal) + 0.1234
-			internedFloat := interner.GetFromFloat64(float64(floatVal))
+			internedFloat := interner.GetFromFloat64(floatVal)
 			assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), internedFloat)
 		}
 
@@ -89,7 +103,7 @@ func TestInternFloat_Complex(t *testing.T) {
 	{
 		for intVal := range numberOfFloats {
 			floatVal := float64(intVal) + 0.1234
-			internedFloat := interner.GetFromFloat64(float64(floatVal))
+			internedFloat := interner.GetFromFloat64(floatVal)
 			assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), internedFloat)
 		}
 
@@ -123,7 +137,7 @@ func TestInternFloat_Complex(t *testing.T) {
 	{
 		for intVal := range numberOfFloats {
 			floatVal := float64(intVal+numberOfFloats) + 0.1234
-			internedFloat := interner.GetFromFloat64(float64(floatVal))
+			internedFloat := interner.GetFromFloat64(floatVal)
 			assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), internedFloat)
 		}
 
@@ -141,7 +155,7 @@ func TestInternFloat_Complex(t *testing.T) {
 	{
 		for intVal := range numberOfFloats {
 			floatVal := float64(intVal) + 0.1234
-			internedFloat := interner.GetFromFloat64(float64(floatVal))
+			internedFloat := interner.GetFromFloat64(floatVal)
 			assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), internedFloat)
 		}
 

@@ -13,7 +13,7 @@ func TestInternInt_Interned(t *testing.T) {
 
 	// A string is returned with the same value as intVal
 	intVal := int64(1234)
-	internedInt := interner.GetFromInt64(int64(intVal))
+	internedInt := interner.GetFromInt64(intVal)
 	assert.Equal(t, strconv.FormatInt(intVal, 10), internedInt)
 
 	// a new int value has been interned
@@ -22,7 +22,7 @@ func TestInternInt_Interned(t *testing.T) {
 	assert.Equal(t, expectedStats, stats.Total)
 
 	// A string is returned with the same value as intVal
-	internedInt2 := interner.GetFromInt64(int64(intVal))
+	internedInt2 := interner.GetFromInt64(intVal)
 	assert.Equal(t, strconv.FormatInt(intVal, 10), internedInt2)
 	// The string returned uses the same memory allocation as the first
 	// value returned i.e. the string is interned as is being reused as
@@ -38,13 +38,27 @@ func TestInternInt_Interned(t *testing.T) {
 func TestInternInt_NotInternedMaxLen(t *testing.T) {
 	interner := New(3, 1024)
 
+	// A string is returned with the same value as intVal
 	intVal := int64(1234)
-	internedInt := interner.GetFromInt64(int64(intVal))
+	notInternedInt := interner.GetFromInt64(intVal)
+	assert.Equal(t, strconv.FormatInt(intVal, 10), notInternedInt)
 
+	// The int passed in was too long, so maxLenExceeded should be recorded
 	expectedStats := Stats{maxLenExceeded: 1}
 	stats := interner.GetIntStats()
+	assert.Equal(t, expectedStats, stats.Total)
 
-	assert.Equal(t, strconv.Itoa(int(intVal)), internedInt)
+	// A string is returned with the same value as intVal
+	notInternedInt2 := interner.GetFromInt64(intVal)
+	assert.Equal(t, strconv.FormatInt(intVal, 10), notInternedInt2)
+	// The string returned uses a different memory allocation from the
+	// first value returned i.e. the strings were not interned, and a new
+	// string is being allocated each time
+	assert.NotSame(t, unsafe.StringData(notInternedInt), unsafe.StringData(notInternedInt2))
+
+	// The int passed in was too long, so maxLenExceeded should be recorded
+	expectedStats = Stats{maxLenExceeded: 2}
+	stats = interner.GetIntStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
 
@@ -52,12 +66,12 @@ func TestInternInt_NotInternedUsedInt(t *testing.T) {
 	interner := New(64, 3)
 
 	intVal := int64(1234)
-	internedInt := interner.GetFromInt64(int64(intVal))
+	internedInt := interner.GetFromInt64(intVal)
 
 	expectedStats := Stats{usedBytesExceeded: 1}
 	stats := interner.GetIntStats()
 
-	assert.Equal(t, strconv.Itoa(int(intVal)), internedInt)
+	assert.Equal(t, strconv.FormatInt(intVal, 10), internedInt)
 	assert.Equal(t, expectedStats, stats.Total)
 }
 
@@ -72,8 +86,9 @@ func TestInternInt_Complex(t *testing.T) {
 	// When we intern all these ints, each one is unique and is interned
 	{
 		for intVal := range numberOfInts {
-			internedInt := interner.GetFromInt64(int64(intVal))
-			assert.Equal(t, strconv.Itoa(int(intVal)), internedInt)
+			intVal64 := int64(intVal)
+			internedInt := interner.GetFromInt64(intVal64)
+			assert.Equal(t, strconv.FormatInt(intVal64, 10), internedInt)
 		}
 
 		expectedStats := Stats{
@@ -87,8 +102,9 @@ func TestInternInt_Complex(t *testing.T) {
 	// interned and their interned values are returned to us
 	{
 		for intVal := range numberOfInts {
-			internedInt := interner.GetFromInt64(int64(intVal))
-			assert.Equal(t, strconv.Itoa(int(intVal)), internedInt)
+			intVal64 := int64(intVal)
+			internedInt := interner.GetFromInt64(intVal64)
+			assert.Equal(t, strconv.FormatInt(intVal64, 10), internedInt)
 		}
 
 		expectedStats := Stats{
@@ -120,9 +136,9 @@ func TestInternInt_Complex(t *testing.T) {
 	// to intern any of them
 	{
 		for intVal := range numberOfInts {
-			intVal = intVal + numberOfInts
-			internedInt := interner.GetFromInt64(int64(intVal))
-			assert.Equal(t, strconv.Itoa(int(intVal)), internedInt)
+			intVal64 := int64(intVal + numberOfInts)
+			internedInt := interner.GetFromInt64(intVal64)
+			assert.Equal(t, strconv.FormatInt(intVal64, 10), internedInt)
 		}
 
 		expectedStats := Stats{
@@ -138,8 +154,9 @@ func TestInternInt_Complex(t *testing.T) {
 	// interned and their interned values are returned to us
 	{
 		for intVal := range numberOfInts {
-			internedInt := interner.GetFromInt64(int64(intVal))
-			assert.Equal(t, strconv.Itoa(int(intVal)), internedInt)
+			intVal64 := int64(intVal)
+			internedInt := interner.GetFromInt64(intVal64)
+			assert.Equal(t, strconv.FormatInt(intVal64, 10), internedInt)
 		}
 
 		expectedStats := Stats{
