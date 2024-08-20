@@ -65,13 +65,27 @@ func TestInternInt_NotInternedMaxLen(t *testing.T) {
 func TestInternInt_NotInternedUsedInt(t *testing.T) {
 	interner := New(64, 3)
 
+	// A string is returned with the same value as intVal
 	intVal := int64(1234)
-	internedInt := interner.GetFromInt64(intVal)
+	notInternedInt := interner.GetFromInt64(intVal)
+	assert.Equal(t, strconv.FormatInt(intVal, 10), notInternedInt)
 
+	// The int passed in was too long, so usedBytesExceeded should be recorded
 	expectedStats := Stats{usedBytesExceeded: 1}
 	stats := interner.GetIntStats()
+	assert.Equal(t, expectedStats, stats.Total)
 
-	assert.Equal(t, strconv.FormatInt(intVal, 10), internedInt)
+	// A string is returned with the same value as intVal
+	notInternedInt2 := interner.GetFromInt64(intVal)
+	assert.Equal(t, strconv.FormatInt(intVal, 10), notInternedInt2)
+	// The string returned uses a different memory allocation from the
+	// first value returned i.e. the strings were not interned, and a new
+	// string is being allocated each time
+	assert.NotSame(t, unsafe.StringData(notInternedInt), unsafe.StringData(notInternedInt2))
+
+	// The int passed in was too long, so usedBytesExceeded should be recorded
+	expectedStats = Stats{usedBytesExceeded: 2}
+	stats = interner.GetIntStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
 
