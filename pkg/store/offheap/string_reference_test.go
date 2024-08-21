@@ -2,10 +2,9 @@ package offheap
 
 import (
 	"fmt"
-	"math/rand"
-	"strings"
 	"testing"
 
+	"github.com/fmstephe/location-system/pkg/store/internal/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,10 +45,12 @@ func Test_String_AllocateAndGet(t *testing.T) {
 		ss.Destroy()
 	}()
 
+	rsm := testutil.NewRandomStringMaker()
+
 	for _, length := range testSizeRanges {
 		t.Run(fmt.Sprintf("Allocate and get %d", length), func(t *testing.T) {
 			// Generate a string of the desired size
-			value := makeSizedString(length)
+			value := rsm.MakeSizedString(length)
 
 			// Allocate it using the string
 			refString := AllocStringFromString(ss, value)
@@ -80,6 +81,7 @@ func Test_String_NewFreeGet_Panic(t *testing.T) {
 
 	// Allocate and free a string value
 	value := "test string"
+
 	ref := AllocStringFromString(ss, value)
 	FreeString(ss, ref)
 
@@ -141,6 +143,8 @@ func Test_String_SizedStats(t *testing.T) {
 	os := New()
 	defer os.Destroy()
 
+	rsm := testutil.NewRandomStringMaker()
+
 	for _, length := range []int{
 		0,
 		1 << 1,
@@ -155,7 +159,7 @@ func Test_String_SizedStats(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			expectedStats := StatsForString(os, length)
 
-			value := makeSizedString(length)
+			value := rsm.MakeSizedString(length)
 
 			r1 := AllocStringFromString(os, value)
 			r2 := AllocStringFromString(os, value)
@@ -190,11 +194,13 @@ func Test_String_AppendString(t *testing.T) {
 	os := New()
 	defer os.Destroy()
 
+	rsm := testutil.NewRandomStringMaker()
+
 	for _, firstLength := range testSizeRanges {
 		for _, secondLength := range testSizeRanges {
 			t.Run(fmt.Sprintf("AppendString first %d second %d", firstLength, secondLength), func(t *testing.T) {
-				firstStr := makeSizedString(firstLength)
-				secondStr := makeSizedString(secondLength)
+				firstStr := rsm.MakeSizedString(firstLength)
+				secondStr := rsm.MakeSizedString(secondLength)
 
 				expectedString := firstStr + secondStr
 
@@ -266,17 +272,4 @@ func Test_String_ConcatStrings(t *testing.T) {
 		assert.Equal(t, expectedString, resultString)
 		assert.Equal(t, expectedString, r.Value())
 	}
-}
-
-const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-var strRand = rand.New(rand.NewSource(1))
-
-func makeSizedString(length int) string {
-	builder := strings.Builder{}
-	builder.Grow(length)
-	for range length {
-		builder.WriteByte(letters[strRand.Intn(len(letters))])
-	}
-	return builder.String()
 }
