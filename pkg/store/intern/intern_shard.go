@@ -38,14 +38,14 @@ func newInternShard(controller *internController, store *offheap.Store) internSh
 }
 
 func (i *internShard) getFromFloat64(floatVal float64) string {
+	i.floatLock.Lock()
+	defer i.floatLock.Unlock()
+
 	// Avoid trying to add NaN values into our map
 	if math.IsNaN(floatVal) {
 		i.floatStats.returned++
 		return "NaN"
 	}
-
-	i.floatLock.Lock()
-	defer i.floatLock.Unlock()
 
 	if refString, ok := i.floatInterned[floatVal]; ok {
 		i.floatStats.returned++
@@ -118,14 +118,14 @@ func (i *internShard) getIntStats() Stats {
 }
 
 func (i *internShard) getFromBytes(bytes []byte, hash uint64) string {
+	i.bytesLock.Lock()
+	defer i.bytesLock.Unlock()
+
 	if len(bytes) == 0 {
 		// Return the interned version of the string
 		i.bytesStats.returned++
 		return ""
 	}
-
-	i.bytesLock.Lock()
-	defer i.bytesLock.Unlock()
 
 	str := unsafe.String(&bytes[0], len(bytes))
 	// Perform lookup for existing interned string based on hash
