@@ -1,12 +1,27 @@
 package intern
 
 import (
+	"math"
 	"strconv"
 	"testing"
 	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestInternFloat_Interned_NaN(t *testing.T) {
+	interner := New(64, 1024)
+
+	// A string is returned with the same value as floatVal
+	floatVal := math.NaN()
+	internedFloat := interner.GetFromFloat64(floatVal)
+	assert.Equal(t, "NaN", internedFloat)
+
+	// a new float value has been interned
+	expectedStats := Stats{returned: 1}
+	stats := interner.GetFloatStats()
+	assert.Equal(t, expectedStats, stats.Total)
+}
 
 func TestInternFloat_Interned(t *testing.T) {
 	interner := New(64, 1024)

@@ -118,6 +118,12 @@ func (i *internShard) getIntStats() Stats {
 }
 
 func (i *internShard) getFromBytes(bytes []byte, hash uint64) string {
+	if len(bytes) == 0 {
+		// Return the interned version of the string
+		i.bytesStats.returned++
+		return ""
+	}
+
 	i.bytesLock.Lock()
 	defer i.bytesLock.Unlock()
 

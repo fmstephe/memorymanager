@@ -7,6 +7,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestInternBytes_Interned_EmptySlice(t *testing.T) {
+	interner := New(64, 1024)
+
+	internedString := interner.GetFromBytes([]byte{})
+	assert.Equal(t, "", internedString)
+
+	// a new string value has been interned
+	expectedStats := Stats{returned: 1}
+	stats := interner.GetBytesStats()
+	assert.Equal(t, expectedStats, stats.Total)
+}
+
 func TestInternBytes_Interned(t *testing.T) {
 	interner := New(64, 1024)
 
