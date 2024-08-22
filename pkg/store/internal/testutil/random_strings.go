@@ -17,6 +17,14 @@ func NewRandomStringMaker() *RandomStringMaker {
 	}
 }
 
+func (rsm *RandomStringMaker) MakeSizedBytes(length int) []byte {
+	bytes := make([]byte, 0, length)
+	for range length {
+		bytes = append(bytes, letters[rsm.r.Intn(len(letters))])
+	}
+	return bytes
+}
+
 func (rsm *RandomStringMaker) MakeSizedString(length int) string {
 	builder := strings.Builder{}
 	builder.Grow(length)
