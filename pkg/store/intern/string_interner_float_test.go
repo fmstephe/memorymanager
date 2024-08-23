@@ -18,7 +18,7 @@ func TestInternFloat_Interned_NaN(t *testing.T) {
 	assert.Equal(t, "NaN", internedFloat)
 
 	// a new float value has been interned
-	expectedStats := Stats{returned: 1}
+	expectedStats := Stats{Returned: 1}
 	stats := interner.GetFloatStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
@@ -32,7 +32,7 @@ func TestInternFloat_Interned(t *testing.T) {
 	assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), internedFloat)
 
 	// a new float value has been interned
-	expectedStats := Stats{interned: 1}
+	expectedStats := Stats{Interned: 1}
 	stats := interner.GetFloatStats()
 	assert.Equal(t, expectedStats, stats.Total)
 
@@ -45,7 +45,7 @@ func TestInternFloat_Interned(t *testing.T) {
 	assert.Equal(t, unsafe.StringData(internedFloat), unsafe.StringData(internedFloat2))
 
 	// An interned string has been returned
-	expectedStats = Stats{interned: 1, returned: 1}
+	expectedStats = Stats{Interned: 1, Returned: 1}
 	stats = interner.GetFloatStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
@@ -59,7 +59,7 @@ func TestInternFloat_NotInternedMaxLen(t *testing.T) {
 	assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), notInternedFloat)
 
 	// The float passed in was too long, so maxLenExceeded should be recorded
-	expectedStats := Stats{maxLenExceeded: 1}
+	expectedStats := Stats{MaxLenExceeded: 1}
 	stats := interner.GetFloatStats()
 	assert.Equal(t, expectedStats, stats.Total)
 
@@ -72,7 +72,7 @@ func TestInternFloat_NotInternedMaxLen(t *testing.T) {
 	assert.NotSame(t, unsafe.StringData(notInternedFloat), unsafe.StringData(notInternedFloat2))
 
 	// The float passed in was too long, so maxLenExceeded should be recorded
-	expectedStats = Stats{maxLenExceeded: 2}
+	expectedStats = Stats{MaxLenExceeded: 2}
 	stats = interner.GetFloatStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
@@ -86,7 +86,7 @@ func TestInternFloat_NotInternedUsedBytes(t *testing.T) {
 	assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), notInternedFloat)
 
 	// The float passed in was too long, so usedBytesExceeded should be recorded
-	expectedStats := Stats{usedBytesExceeded: 1}
+	expectedStats := Stats{UsedBytesExceeded: 1}
 	stats := interner.GetFloatStats()
 	assert.Equal(t, expectedStats, stats.Total)
 
@@ -99,7 +99,7 @@ func TestInternFloat_NotInternedUsedBytes(t *testing.T) {
 	assert.NotSame(t, unsafe.StringData(notInternedFloat), unsafe.StringData(notInternedFloat2))
 
 	// The float passed in was too long, so usedBytesExceeded should be recorded
-	expectedStats = Stats{usedBytesExceeded: 2}
+	expectedStats = Stats{UsedBytesExceeded: 2}
 	stats = interner.GetFloatStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
@@ -121,7 +121,7 @@ func TestInternFloat_Complex(t *testing.T) {
 		}
 
 		expectedStats := Stats{
-			interned: numberOfFloats,
+			Interned: numberOfFloats,
 		}
 		stats := interner.GetFloatStats()
 		assert.Equal(t, expectedStats, stats.Total)
@@ -137,8 +137,8 @@ func TestInternFloat_Complex(t *testing.T) {
 		}
 
 		expectedStats := Stats{
-			interned: numberOfFloats,
-			returned: numberOfFloats,
+			Interned: numberOfFloats,
+			Returned: numberOfFloats,
 		}
 		stats := interner.GetFloatStats()
 		assert.Equal(t, expectedStats, stats.Total)
@@ -154,8 +154,8 @@ func TestInternFloat_Complex(t *testing.T) {
 		assert.Equal(t, string(filler), fillerStr)
 
 		expectedStats := Stats{
-			interned: numberOfFloats,
-			returned: numberOfFloats,
+			Interned: numberOfFloats,
+			Returned: numberOfFloats,
 		}
 		stats := interner.GetFloatStats()
 		assert.Equal(t, expectedStats, stats.Total)
@@ -171,9 +171,9 @@ func TestInternFloat_Complex(t *testing.T) {
 		}
 
 		expectedStats := Stats{
-			interned:          numberOfFloats,
-			returned:          numberOfFloats,
-			usedBytesExceeded: numberOfFloats,
+			Interned:          numberOfFloats,
+			Returned:          numberOfFloats,
+			UsedBytesExceeded: numberOfFloats,
 		}
 		stats := interner.GetFloatStats()
 		assert.Equal(t, expectedStats, stats.Total)
@@ -189,9 +189,9 @@ func TestInternFloat_Complex(t *testing.T) {
 		}
 
 		expectedStats := Stats{
-			interned:          numberOfFloats,
-			returned:          numberOfFloats * 2,
-			usedBytesExceeded: numberOfFloats,
+			Interned:          numberOfFloats,
+			Returned:          numberOfFloats * 2,
+			UsedBytesExceeded: numberOfFloats,
 		}
 		stats := interner.GetFloatStats()
 		assert.Equal(t, expectedStats, stats.Total)

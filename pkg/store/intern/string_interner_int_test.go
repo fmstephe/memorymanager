@@ -17,7 +17,7 @@ func TestInternInt_Interned(t *testing.T) {
 	assert.Equal(t, strconv.FormatInt(intVal, 10), internedInt)
 
 	// a new int value has been interned
-	expectedStats := Stats{interned: 1}
+	expectedStats := Stats{Interned: 1}
 	stats := interner.GetIntStats()
 	assert.Equal(t, expectedStats, stats.Total)
 
@@ -30,7 +30,7 @@ func TestInternInt_Interned(t *testing.T) {
 	assert.Equal(t, unsafe.StringData(internedInt), unsafe.StringData(internedInt2))
 
 	// An interned string has been returned
-	expectedStats = Stats{interned: 1, returned: 1}
+	expectedStats = Stats{Interned: 1, Returned: 1}
 	stats = interner.GetIntStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
@@ -44,7 +44,7 @@ func TestInternInt_NotInternedMaxLen(t *testing.T) {
 	assert.Equal(t, strconv.FormatInt(intVal, 10), notInternedInt)
 
 	// The int passed in was too long, so maxLenExceeded should be recorded
-	expectedStats := Stats{maxLenExceeded: 1}
+	expectedStats := Stats{MaxLenExceeded: 1}
 	stats := interner.GetIntStats()
 	assert.Equal(t, expectedStats, stats.Total)
 
@@ -57,7 +57,7 @@ func TestInternInt_NotInternedMaxLen(t *testing.T) {
 	assert.NotSame(t, unsafe.StringData(notInternedInt), unsafe.StringData(notInternedInt2))
 
 	// The int passed in was too long, so maxLenExceeded should be recorded
-	expectedStats = Stats{maxLenExceeded: 2}
+	expectedStats = Stats{MaxLenExceeded: 2}
 	stats = interner.GetIntStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
@@ -71,7 +71,7 @@ func TestInternInt_NotInternedUsedInt(t *testing.T) {
 	assert.Equal(t, strconv.FormatInt(intVal, 10), notInternedInt)
 
 	// The int passed in was too long, so usedBytesExceeded should be recorded
-	expectedStats := Stats{usedBytesExceeded: 1}
+	expectedStats := Stats{UsedBytesExceeded: 1}
 	stats := interner.GetIntStats()
 	assert.Equal(t, expectedStats, stats.Total)
 
@@ -84,7 +84,7 @@ func TestInternInt_NotInternedUsedInt(t *testing.T) {
 	assert.NotSame(t, unsafe.StringData(notInternedInt), unsafe.StringData(notInternedInt2))
 
 	// The int passed in was too long, so usedBytesExceeded should be recorded
-	expectedStats = Stats{usedBytesExceeded: 2}
+	expectedStats = Stats{UsedBytesExceeded: 2}
 	stats = interner.GetIntStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
@@ -106,7 +106,7 @@ func TestInternInt_Complex(t *testing.T) {
 		}
 
 		expectedStats := Stats{
-			interned: numberOfInts,
+			Interned: numberOfInts,
 		}
 		stats := interner.GetIntStats()
 		assert.Equal(t, expectedStats, stats.Total)
@@ -122,8 +122,8 @@ func TestInternInt_Complex(t *testing.T) {
 		}
 
 		expectedStats := Stats{
-			interned: numberOfInts,
-			returned: numberOfInts,
+			Interned: numberOfInts,
+			Returned: numberOfInts,
 		}
 		stats := interner.GetIntStats()
 		assert.Equal(t, expectedStats, stats.Total)
@@ -139,8 +139,8 @@ func TestInternInt_Complex(t *testing.T) {
 		assert.Equal(t, string(filler), fillerStr)
 
 		expectedStats := Stats{
-			interned: numberOfInts,
-			returned: numberOfInts,
+			Interned: numberOfInts,
+			Returned: numberOfInts,
 		}
 		stats := interner.GetIntStats()
 		assert.Equal(t, expectedStats, stats.Total)
@@ -156,9 +156,9 @@ func TestInternInt_Complex(t *testing.T) {
 		}
 
 		expectedStats := Stats{
-			interned:          numberOfInts,
-			returned:          numberOfInts,
-			usedBytesExceeded: numberOfInts,
+			Interned:          numberOfInts,
+			Returned:          numberOfInts,
+			UsedBytesExceeded: numberOfInts,
 		}
 		stats := interner.GetIntStats()
 		assert.Equal(t, expectedStats, stats.Total)
@@ -174,9 +174,9 @@ func TestInternInt_Complex(t *testing.T) {
 		}
 
 		expectedStats := Stats{
-			interned:          numberOfInts,
-			returned:          numberOfInts * 2,
-			usedBytesExceeded: numberOfInts,
+			Interned:          numberOfInts,
+			Returned:          numberOfInts * 2,
+			UsedBytesExceeded: numberOfInts,
 		}
 		stats := interner.GetIntStats()
 		assert.Equal(t, expectedStats, stats.Total)

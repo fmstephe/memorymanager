@@ -14,7 +14,7 @@ func TestInternBytes_Interned_EmptySlice(t *testing.T) {
 	assert.Equal(t, "", internedString)
 
 	// a new string value has been interned
-	expectedStats := Stats{returned: 1}
+	expectedStats := Stats{Returned: 1}
 	stats := interner.GetBytesStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
@@ -28,7 +28,7 @@ func TestInternBytes_Interned(t *testing.T) {
 	assert.Equal(t, expectedString, internedString)
 
 	// a new string value has been interned
-	expectedStats := Stats{interned: 1}
+	expectedStats := Stats{Interned: 1}
 	stats := interner.GetBytesStats()
 	assert.Equal(t, expectedStats, stats.Total)
 
@@ -41,7 +41,7 @@ func TestInternBytes_Interned(t *testing.T) {
 	assert.Equal(t, unsafe.StringData(internedString), unsafe.StringData(internedString2))
 
 	// An interned string value has been returned
-	expectedStats = Stats{interned: 1, returned: 1}
+	expectedStats = Stats{Interned: 1, Returned: 1}
 	stats = interner.GetBytesStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
@@ -55,7 +55,7 @@ func TestInternBytes_NotInternedMaxLen(t *testing.T) {
 	assert.Equal(t, expectedString, notInternedString)
 
 	// The bytes passed in was too long, so maxLenExceeded should be recorded
-	expectedStats := Stats{maxLenExceeded: 1}
+	expectedStats := Stats{MaxLenExceeded: 1}
 	stats := interner.GetBytesStats()
 	assert.Equal(t, expectedStats, stats.Total)
 
@@ -68,7 +68,7 @@ func TestInternBytes_NotInternedMaxLen(t *testing.T) {
 	assert.NotSame(t, unsafe.StringData(notInternedString), unsafe.StringData(notInternedString2))
 
 	// The bytes passed in was too long, so maxLenExceeded should be recorded
-	expectedStats = Stats{maxLenExceeded: 2}
+	expectedStats = Stats{MaxLenExceeded: 2}
 	stats = interner.GetBytesStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
@@ -82,7 +82,7 @@ func TestInternBytes_NotInternedUsedBytes(t *testing.T) {
 	assert.Equal(t, expectedString, notInternedString)
 
 	// The bytes passed in was too long, so usedBytesExceeded should be recorded
-	expectedStats := Stats{usedBytesExceeded: 1}
+	expectedStats := Stats{UsedBytesExceeded: 1}
 	stats := interner.GetBytesStats()
 	assert.Equal(t, expectedStats, stats.Total)
 
@@ -95,7 +95,7 @@ func TestInternBytes_NotInternedUsedBytes(t *testing.T) {
 	assert.NotSame(t, unsafe.StringData(notInternedString), unsafe.StringData(notInternedString2))
 
 	// The bytes passed in was too long, so usedBytesExceeded should be recorded
-	expectedStats = Stats{usedBytesExceeded: 2}
+	expectedStats = Stats{UsedBytesExceeded: 2}
 	stats = interner.GetBytesStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
@@ -198,7 +198,7 @@ func TestInternBytes_Complex(t *testing.T) {
 		}
 
 		expectedStats := Stats{
-			interned: len(strings),
+			Interned: len(strings),
 		}
 		stats := interner.GetBytesStats()
 		assert.Equal(t, expectedStats, stats.Total)
@@ -214,8 +214,8 @@ func TestInternBytes_Complex(t *testing.T) {
 		}
 
 		expectedStats := Stats{
-			interned: len(strings),
-			returned: len(strings),
+			Interned: len(strings),
+			Returned: len(strings),
 		}
 		stats := interner.GetBytesStats()
 		assert.Equal(t, expectedStats, stats.Total)
@@ -231,8 +231,8 @@ func TestInternBytes_Complex(t *testing.T) {
 		assert.Equal(t, string(filler), fillerStr)
 
 		expectedStats := Stats{
-			interned: len(strings) + 1,
-			returned: len(strings),
+			Interned: len(strings) + 1,
+			Returned: len(strings),
 		}
 		stats := interner.GetBytesStats()
 		assert.Equal(t, expectedStats, stats.Total)
@@ -249,9 +249,9 @@ func TestInternBytes_Complex(t *testing.T) {
 		}
 
 		expectedStats := Stats{
-			interned:          len(strings) + 1,
-			returned:          len(strings),
-			usedBytesExceeded: len(strings),
+			Interned:          len(strings) + 1,
+			Returned:          len(strings),
+			UsedBytesExceeded: len(strings),
 		}
 		stats := interner.GetBytesStats()
 		assert.Equal(t, expectedStats, stats.Total)
@@ -267,9 +267,9 @@ func TestInternBytes_Complex(t *testing.T) {
 		}
 
 		expectedStats := Stats{
-			interned:          len(strings) + 1,
-			returned:          len(strings) * 2,
-			usedBytesExceeded: len(strings),
+			Interned:          len(strings) + 1,
+			Returned:          len(strings) * 2,
+			UsedBytesExceeded: len(strings),
 		}
 		stats := interner.GetBytesStats()
 		assert.Equal(t, expectedStats, stats.Total)
