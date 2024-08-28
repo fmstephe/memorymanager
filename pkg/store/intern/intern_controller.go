@@ -4,15 +4,15 @@ import "sync/atomic"
 
 type internController struct {
 	// Immutable fields
-	maxLen   int64 // set of -1 for unlimited string length
-	maxBytes int64 // set to -1 for unlimited bytes
+	maxLen   int   // set to <= 0 for unlimited string length
+	maxBytes int64 // set to <= 0 for unlimited bytes
 	// Mutable fields
 	usedBytes atomic.Int64
 }
 
 func newController(maxLen, maxBytes int) *internController {
 	return &internController{
-		maxLen:    int64(maxLen),
+		maxLen:    maxLen,
 		maxBytes:  int64(maxBytes),
 		usedBytes: atomic.Int64{},
 	}
@@ -23,41 +23,33 @@ func (c *internController) getUsedBytes() int {
 }
 
 func (c *internController) canInternMaxLen(str string) bool {
-	if c.maxLen != -1 {
-		// There is a limit to how long an interned string can be
-
-		if c.maxLen < int64(len(str)) {
-			// str is too long, cannot intern str
-			return false
-		}
+	if c.maxLen <= 0 {
+		// No length limit
+		return true
 	}
 
-	return true
+	// There is a limit to how long an interned string can be
+	return len(str) <= c.maxLen
 }
 
 func (c *internController) canInternUsedBytes(str string) bool {
-	if c.maxBytes != -1 {
-		// There is a limit to the total number of bytes that can be
-		// interned
+	for {
+		usedBytes := c.usedBytes.Load()
+		nextUsedBytes := usedBytes + int64(len(str))
 
-		for {
-			usedBytes := c.usedBytes.Load()
-			nextUsedBytes := usedBytes + int64(len(str))
+		if (c.maxBytes > 0) && (nextUsedBytes > c.maxBytes) {
+			// There is a limit to the total number of bytes that
+			// can be interned and interning str would cause us to
+			// exceed that limit
+			return false
+		}
 
-			if nextUsedBytes > c.maxBytes {
-				// Interning str would cause us to exceed
-				// usedBytes limit, cannot intern str
-				return false
-			}
-
-			// Cas the new value into usedBytes
-			//
-			// if this fails then someone else has probably
-			// interned a string - better check usedBytes again
-			if c.usedBytes.CompareAndSwap(usedBytes, nextUsedBytes) {
-				break
-			}
-
+		// Cas the new value into usedBytes
+		//
+		// if this fails then someone else has probably
+		// interned a string - check usedBytes again
+		if c.usedBytes.CompareAndSwap(usedBytes, nextUsedBytes) {
+			break
 		}
 	}
 
