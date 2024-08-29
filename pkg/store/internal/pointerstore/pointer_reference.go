@@ -102,7 +102,14 @@ func (r *RefPointer) DataPtr() uintptr {
 	meta := r.metadata()
 
 	if !meta.nextFree.IsNil() {
-		panic(fmt.Errorf("attempted to get freed allocation %v", r))
+		// NB: We make a copy of r here - otherwise the compiler
+		// believes that r itself escapes to the heap (not strictly
+		// wrong) and will allocate it to the heap, even if this path
+		// is not taken. This panic path _does_ allocate due to the fmt
+		// call, but if we don't take a copy of r in the fmt call, then
+		// every call will allocate regardless of whether the method
+		// panics or not
+		panic(fmt.Errorf("attempted to get freed allocation %v", *r))
 	}
 
 	if meta.gen != r.Gen() {
