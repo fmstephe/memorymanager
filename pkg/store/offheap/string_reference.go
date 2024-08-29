@@ -108,10 +108,14 @@ func newRefString(length int, ref pointerstore.RefPointer) RefString {
 // Care must be taken not to use this string after FreeString(...) has been
 // called on this RefString.
 func (r *RefString) Value() string {
+	if r.IsNil() {
+		return ""
+	}
 	return unsafe.String((*byte)((unsafe.Pointer)(r.ref.DataPtr())), r.length)
 }
 
-// Returns true if this RefString does not point to an allocated string, false otherwise.
+// Returns true if this RefString does not point to an allocated string, false
+// otherwise.
 func (r *RefString) IsNil() bool {
 	return r.ref.IsNil()
 }
