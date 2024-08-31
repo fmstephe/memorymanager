@@ -1,5 +1,7 @@
 *.swp
 *.swo
+*.test
 .vscode
 temp
 memprofile
+cpuprofile
