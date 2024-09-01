@@ -9,7 +9,7 @@ import (
 )
 
 func TestTimeInterner_Interned(t *testing.T) {
-	interner := NewTimeInterner(64, 1024, time.RFC1123)
+	interner := NewTimeInterner(Config{MaxLen: 64, MaxBytes: 1024}, time.RFC1123)
 
 	// A string is returned with the same value as timestamp
 	timestamp := time.Now()
@@ -36,7 +36,7 @@ func TestTimeInterner_Interned(t *testing.T) {
 }
 
 func TestTimeInterner_NotInternedMaxLen(t *testing.T) {
-	interner := NewTimeInterner(3, 1024, time.RFC1123)
+	interner := NewTimeInterner(Config{MaxLen: 3, MaxBytes: 1024}, time.RFC1123)
 
 	// A string is returned with the same value as timestamp
 	timestamp := time.Now()
@@ -63,7 +63,7 @@ func TestTimeInterner_NotInternedMaxLen(t *testing.T) {
 }
 
 func TestTimeInterner_NotInternedUsedInt(t *testing.T) {
-	interner := NewTimeInterner(64, 3, time.RFC1123)
+	interner := NewTimeInterner(Config{MaxLen: 64, MaxBytes: 3}, time.RFC1123)
 
 	// A string is returned with the same value as timestamp
 	timestamp := time.Now()
@@ -94,7 +94,7 @@ func TestTimeInterner_NotInternedUsedInt(t *testing.T) {
 // returning those as strings, then running out of usedBytes but continuing to
 // return previously interned timestamp values.
 func TestTimeInterner_Complex(t *testing.T) {
-	interner := NewTimeInterner(1024, 1024*1024, time.RFC1123)
+	interner := NewTimeInterner(Config{MaxLen: 1024, MaxBytes: 1024 * 1024}, time.RFC1123)
 	numberOfTimestamps := 100
 
 	timestamps := make([]time.Time, 0, numberOfTimestamps)
@@ -180,7 +180,7 @@ func TestTimeInterner_Complex(t *testing.T) {
 // This benchmark is intended to demonstrate that getting string values for
 // time.Time values that have already been interned does not allocate
 func BenchmarkTimeInterner(b *testing.B) {
-	interner := NewTimeInterner(0, 0, time.RFC1123)
+	interner := NewTimeInterner(Config{MaxLen: 0, MaxBytes: 0}, time.RFC1123)
 
 	now := time.Now()
 	timestamps := make([]time.Time, 10_000)

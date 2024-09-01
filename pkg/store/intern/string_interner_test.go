@@ -9,7 +9,7 @@ import (
 )
 
 func TestStringInterner_Interned_EmptySlice(t *testing.T) {
-	interner := NewStringInterner(64, 1024)
+	interner := NewStringInterner(Config{MaxLen: 64, MaxBytes: 1024})
 
 	internedString := interner.Get("")
 	assert.Equal(t, "", internedString)
@@ -21,7 +21,7 @@ func TestStringInterner_Interned_EmptySlice(t *testing.T) {
 }
 
 func TestStringInterner_Interned(t *testing.T) {
-	interner := NewStringInterner(64, 1024)
+	interner := NewStringInterner(Config{MaxLen: 64, MaxBytes: 1024})
 
 	// A string value is returned with the same value as expectedString
 	expectedString := "interned string"
@@ -48,7 +48,7 @@ func TestStringInterner_Interned(t *testing.T) {
 }
 
 func TestStringInterner_NotInternedMaxLen(t *testing.T) {
-	interner := NewStringInterner(3, 1024)
+	interner := NewStringInterner(Config{MaxLen: 3, MaxBytes: 1024})
 
 	// A string is returned with the same value as expectedString
 	expectedString := "interned string"
@@ -75,7 +75,7 @@ func TestStringInterner_NotInternedMaxLen(t *testing.T) {
 }
 
 func TestStringInterner_NotInternedUsedBytes(t *testing.T) {
-	interner := NewStringInterner(64, 3)
+	interner := NewStringInterner(Config{MaxLen: 64, MaxBytes: 3})
 
 	// A string is returned with the same value as expectedString
 	expectedString := "interned string"
@@ -112,7 +112,7 @@ func TestStringInterner_NotInternedHashCollision(t *testing.T) {
 // returning those strings, then running out of usedString but continuing to
 // return previously interned string values.
 func TestStringInterner_Complex(t *testing.T) {
-	interner := NewStringInterner(1024, 1024)
+	interner := NewStringInterner(Config{MaxLen: 1024, MaxBytes: 1024})
 	strings := []string{
 		"Heavens!",
 		"what",
@@ -280,7 +280,7 @@ func TestStringInterner_Complex(t *testing.T) {
 // This benchmark is intended to demonstrate that getting string values for
 // strings that have already been interned does not allocate
 func BenchmarkStringInterner(b *testing.B) {
-	interner := NewStringInterner(0, 0)
+	interner := NewStringInterner(Config{MaxLen: 0, MaxBytes: 0})
 
 	strings := make([]string, 10_000)
 	for i := range strings {

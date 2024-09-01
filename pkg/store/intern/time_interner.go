@@ -9,9 +9,9 @@ type TimeInterner struct {
 	format   string
 }
 
-func NewTimeInterner(maxLen, maxBytes int, format string) *TimeInterner {
+func NewTimeInterner(config Config, format string) *TimeInterner {
 	return &TimeInterner{
-		interner: NewInternerWithUint64Id[TimeConverter](maxLen, maxBytes),
+		interner: NewInternerWithUint64Id[TimeConverter](config),
 		format:   format,
 	}
 }

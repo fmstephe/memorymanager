@@ -4,9 +4,9 @@ type BytesInterner struct {
 	interner InternerWithBytesId[BytesConverter]
 }
 
-func NewBytesInterner(maxLen, maxBytes int) *BytesInterner {
+func NewBytesInterner(config Config) *BytesInterner {
 	return &BytesInterner{
-		interner: NewInternerWithBytesId[BytesConverter](maxLen, maxBytes),
+		interner: NewInternerWithBytesId[BytesConverter](config),
 	}
 }
 

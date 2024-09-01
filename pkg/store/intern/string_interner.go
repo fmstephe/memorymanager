@@ -6,9 +6,9 @@ type StringInterner struct {
 	interner InternerWithBytesId[StringConverter]
 }
 
-func NewStringInterner(maxLen, maxString int) *StringInterner {
+func NewStringInterner(config Config) *StringInterner {
 	return &StringInterner{
-		interner: NewInternerWithBytesId[StringConverter](maxLen, maxString),
+		interner: NewInternerWithBytesId[StringConverter](config),
 	}
 }
 

@@ -9,7 +9,7 @@ import (
 )
 
 func TestFloat64Interner_Interned(t *testing.T) {
-	interner := NewFloat64Interner(64, 1024, 'f', -1, 64)
+	interner := NewFloat64Interner(Config{MaxLen: 64, MaxBytes: 1024}, 'f', -1, 64)
 
 	// A string is returned with the same value as floatVal
 	floatVal := float64(12.34)
@@ -36,7 +36,7 @@ func TestFloat64Interner_Interned(t *testing.T) {
 }
 
 func TestFloat64Interner_NotInternedMaxLen(t *testing.T) {
-	interner := NewFloat64Interner(3, 1024, 'f', -1, 64)
+	interner := NewFloat64Interner(Config{MaxLen: 3, MaxBytes: 1024}, 'f', -1, 64)
 
 	// A string is returned with the same value as floatVal
 	floatVal := float64(12.34)
@@ -63,7 +63,7 @@ func TestFloat64Interner_NotInternedMaxLen(t *testing.T) {
 }
 
 func TestFloat64Interner_NotInternedUsedInt(t *testing.T) {
-	interner := NewFloat64Interner(64, 3, 'f', -1, 64)
+	interner := NewFloat64Interner(Config{MaxLen: 64, MaxBytes: 3}, 'f', -1, 64)
 
 	// A string is returned with the same value as floatVal
 	floatVal := float64(12.34)
@@ -94,7 +94,7 @@ func TestFloat64Interner_NotInternedUsedInt(t *testing.T) {
 // returning those as strings, then running out of usedBytes but continuing to
 // return previously interned float values.
 func TestFloat64Interner_Complex(t *testing.T) {
-	interner := NewFloat64Interner(1024, 1024, 'f', -1, 64)
+	interner := NewFloat64Interner(Config{MaxLen: 1024, MaxBytes: 1024}, 'f', -1, 64)
 	numberOfFloats := 100
 
 	// When we intern all these floats, each one is unique and is interned
@@ -175,7 +175,7 @@ func TestFloat64Interner_Complex(t *testing.T) {
 // This benchmark is intended to demonstrate that getting string values for
 // floats that have already been interned does not allocate
 func BenchmarkFloat64Interner(b *testing.B) {
-	interner := NewFloat64Interner(0, 0, 'f', -1, 64)
+	interner := NewFloat64Interner(Config{MaxLen: 0, MaxBytes: 0}, 'f', -1, 64)
 
 	floats := make([]float64, 10_000)
 	for i := range floats {

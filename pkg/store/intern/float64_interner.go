@@ -12,9 +12,9 @@ type Float64Interner struct {
 	bitSize  int
 }
 
-func NewFloat64Interner(maxLen, maxBytes int, fmt byte, prec, bitSize int) *Float64Interner {
+func NewFloat64Interner(config Config, fmt byte, prec, bitSize int) *Float64Interner {
 	return &Float64Interner{
-		interner: NewInternerWithUint64Id[Float64Converter](maxLen, maxBytes),
+		interner: NewInternerWithUint64Id[Float64Converter](config),
 		fmt:      fmt,
 		prec:     prec,
 		bitSize:  bitSize,

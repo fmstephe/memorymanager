@@ -9,7 +9,7 @@ import (
 )
 
 func TestInt64Interner_Interned(t *testing.T) {
-	interner := NewInt64Interner(64, 1024, 10)
+	interner := NewInt64Interner(Config{MaxLen: 64, MaxBytes: 1024}, 10)
 
 	// A string is returned with the same value as intVal
 	intVal := int64(1234)
@@ -36,7 +36,7 @@ func TestInt64Interner_Interned(t *testing.T) {
 }
 
 func TestInt64Interner_NotInternedMaxLen(t *testing.T) {
-	interner := NewInt64Interner(3, 1024, 10)
+	interner := NewInt64Interner(Config{MaxLen: 3, MaxBytes: 1024}, 10)
 
 	// A string is returned with the same value as intVal
 	intVal := int64(1234)
@@ -63,7 +63,7 @@ func TestInt64Interner_NotInternedMaxLen(t *testing.T) {
 }
 
 func TestInt64Interner_NotInternedUsedInt(t *testing.T) {
-	interner := NewInt64Interner(64, 3, 10)
+	interner := NewInt64Interner(Config{MaxLen: 64, MaxBytes: 3}, 10)
 
 	// A string is returned with the same value as intVal
 	intVal := int64(1234)
@@ -94,7 +94,7 @@ func TestInt64Interner_NotInternedUsedInt(t *testing.T) {
 // returning those as strings, then running out of usedBytes but continuing to
 // return previously interned int values.
 func TestInt64Interner_Complex(t *testing.T) {
-	interner := NewInt64Interner(1024, 1024, 10)
+	interner := NewInt64Interner(Config{MaxLen: 1024, MaxBytes: 1024}, 10)
 	numberOfInts := 100
 
 	// When we intern all these ints, each one is unique and is interned
@@ -175,7 +175,7 @@ func TestInt64Interner_Complex(t *testing.T) {
 // This benchmark is intended to demonstrate that getting string values for
 // integers that have already been interned does not allocate
 func BenchmarkInt64Interner(b *testing.B) {
-	interner := NewInt64Interner(0, 0, 10)
+	interner := NewInt64Interner(Config{MaxLen: 0, MaxBytes: 0}, 10)
 
 	ints := make([]int64, 10_000)
 	for i := range ints {

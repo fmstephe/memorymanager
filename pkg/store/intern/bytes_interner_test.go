@@ -9,7 +9,7 @@ import (
 )
 
 func TestBytesInterner_Interned_EmptySlice(t *testing.T) {
-	interner := NewBytesInterner(64, 1024)
+	interner := NewBytesInterner(Config{MaxLen: 64, MaxBytes: 1024})
 
 	internedString := interner.Get([]byte{})
 	assert.Equal(t, "", internedString)
@@ -21,7 +21,7 @@ func TestBytesInterner_Interned_EmptySlice(t *testing.T) {
 }
 
 func TestBytesInterner_Interned(t *testing.T) {
-	interner := NewBytesInterner(64, 1024)
+	interner := NewBytesInterner(Config{MaxLen: 64, MaxBytes: 1024})
 
 	// A string value is returned with the same value as expectedString
 	expectedString := "interned string"
@@ -48,7 +48,7 @@ func TestBytesInterner_Interned(t *testing.T) {
 }
 
 func TestBytesInterner_NotInternedMaxLen(t *testing.T) {
-	interner := NewBytesInterner(3, 1024)
+	interner := NewBytesInterner(Config{MaxLen: 3, MaxBytes: 1024})
 
 	// A string is returned with the same value as expectedString
 	expectedString := "interned string"
@@ -75,7 +75,7 @@ func TestBytesInterner_NotInternedMaxLen(t *testing.T) {
 }
 
 func TestBytesInterner_NotInternedUsedBytes(t *testing.T) {
-	interner := NewBytesInterner(64, 3)
+	interner := NewBytesInterner(Config{MaxLen: 64, MaxBytes: 3})
 
 	// A string is returned with the same value as expectedString
 	expectedString := "interned string"
@@ -112,7 +112,7 @@ func TestBytesInterner_NotInternedHashCollision(t *testing.T) {
 // returning those strings, then running out of usedBytes but continuing to
 // return previously interned string values.
 func TestBytesInterner_Complex(t *testing.T) {
-	interner := NewBytesInterner(1024, 1024)
+	interner := NewBytesInterner(Config{MaxLen: 1024, MaxBytes: 1024})
 	strings := []string{
 		"Heavens!",
 		"what",
@@ -280,7 +280,7 @@ func TestBytesInterner_Complex(t *testing.T) {
 // This benchmark is intended to demonstrate that getting string values for
 // []byte that have already been interned does not allocate
 func BenchmarkBytesInterner(b *testing.B) {
-	interner := NewBytesInterner(0, 0)
+	interner := NewBytesInterner(Config{MaxLen: 0, MaxBytes: 0})
 
 	bytes := make([][]byte, 10_000)
 	for i := range bytes {

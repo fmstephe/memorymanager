@@ -9,9 +9,9 @@ type Int64Interner struct {
 	base     int
 }
 
-func NewInt64Interner(maxLen, maxBytes, base int) *Int64Interner {
+func NewInt64Interner(config Config, base int) *Int64Interner {
 	return &Int64Interner{
-		interner: NewInternerWithUint64Id[Int64Converter](maxLen, maxBytes),
+		interner: NewInternerWithUint64Id[Int64Converter](config),
 		base:     base,
 	}
 }

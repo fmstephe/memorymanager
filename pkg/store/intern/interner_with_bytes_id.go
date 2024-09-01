@@ -1,7 +1,6 @@
 package intern
 
 import (
-	"runtime"
 	"sync"
 	"unsafe"
 
@@ -33,21 +32,11 @@ type InternerWithBytesId[C ConverterWithBytesId] struct {
 	shards     []internerWithBytesIdShard
 }
 
-// Construct a new InternerWithBytesId.
-//
-// maxLen defines the longest string length which will be interned. 0 means no
-// limit.
-//
-// maxBytes defines the maximum accumulated bytes interned, i.e. sum of
-// len(string) for all interned strings. 0 means no limit (this may result in
-// memory exhaustion if too many unique strings are interned)
-//
-// Internally the number of shards will be configured automatically based on
-// the number CPUs available.
-func NewInternerWithBytesId[C ConverterWithBytesId](maxLen, maxBytes int) InternerWithBytesId[C] {
-	shardCount := runtime.NumCPU()
-	controller := newController(maxLen, maxBytes)
-	store := offheap.New()
+// Construct a new InternerWithBytesId with the provided config.
+func NewInternerWithBytesId[C ConverterWithBytesId](config Config) InternerWithBytesId[C] {
+	controller := newController(config.getMaxLen(), config.getMaxBytes())
+	store := config.getStore()
+	shardCount := config.getShards()
 
 	shards := make([]internerWithBytesIdShard, nextPowerOfTwo(shardCount))
 	for i := range shards {

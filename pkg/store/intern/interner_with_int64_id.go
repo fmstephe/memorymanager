@@ -1,8 +1,6 @@
 package intern
 
 import (
-	"math/bits"
-	"runtime"
 	"sync"
 
 	"github.com/fmstephe/location-system/pkg/store/offheap"
@@ -26,23 +24,13 @@ type InternerWithUint64Id[C ConverterWithUint64Id] struct {
 	shards     []internerWithUint64IdShard[C]
 }
 
-// Construct a new InternerWithUint64Id.
-//
-// maxLen defines the longest string length which will be interned. 0 means no
-// limit.
-//
-// maxBytes defines the maximum accumulated bytes interned, i.e. sum of
-// len(string) for all interned strings. 0 means no limit (this may result in
-// memory exhaustion if too many unique strings are interned)
-//
-// Internally the number of shards will be configured automatically based on
-// the number CPUs available.
-func NewInternerWithUint64Id[C ConverterWithUint64Id](maxLen, maxBytes int) InternerWithUint64Id[C] {
-	shardCount := runtime.NumCPU()
-	controller := newController(maxLen, maxBytes)
-	store := offheap.New()
+// Construct a new InternerWithUint64Id with the provided config.
+func NewInternerWithUint64Id[C ConverterWithUint64Id](config Config) InternerWithUint64Id[C] {
+	controller := newController(config.getMaxLen(), config.getMaxBytes())
+	store := config.getStore()
+	shardCount := config.getShards()
 
-	shards := make([]internerWithUint64IdShard[C], nextPowerOfTwo(shardCount))
+	shards := make([]internerWithUint64IdShard[C], shardCount)
 	for i := range shards {
 		shards[i] = newInternerWithUint64IdShard[C](controller, store)
 	}
@@ -133,16 +121,4 @@ func (i *internerWithUint64IdShard[C]) getStats() Stats {
 	defer i.lock.Unlock()
 
 	return i.stats
-}
-
-// Returns the smallest power of two >= val
-func nextPowerOfTwo(val int) int {
-	if val <= 1 {
-		return 1
-	}
-	// Test if val is a power of two
-	if val > 0 && val&(val-1) == 0 {
-		return val
-	}
-	return 1 << bits.Len64(uint64(val))
 }
