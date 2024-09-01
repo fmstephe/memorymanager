@@ -1,4 +1,4 @@
-module github.com/fmstephe/offheap
+module github.com/fmstephe/memorymanager
 
 go 1.22
 

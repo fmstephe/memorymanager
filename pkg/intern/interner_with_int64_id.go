@@ -3,7 +3,7 @@ package intern
 import (
 	"sync"
 
-	"github.com/fmstephe/offheap/offheap"
+	"github.com/fmstephe/memorymanager/offheap"
 )
 
 // An ConverterWithUint64Id converts types to strings which are able to be canonically

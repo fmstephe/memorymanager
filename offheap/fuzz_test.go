@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/fmstephe/offheap/testpkg/fuzzutil"
+	"github.com/fmstephe/memorymanager/testpkg/fuzzutil"
 )
 
 // The single fuzzer test for offheap

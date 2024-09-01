@@ -4,7 +4,7 @@ import (
 	"unsafe"
 
 	"github.com/fmstephe/flib/funsafe"
-	"github.com/fmstephe/offheap/offheap/internal/pointerstore"
+	"github.com/fmstephe/memorymanager/offheap/internal/pointerstore"
 )
 
 // Allocates a new string whose size and contents will be the same as found in

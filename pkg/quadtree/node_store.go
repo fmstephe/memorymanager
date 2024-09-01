@@ -1,7 +1,7 @@
 package quadtree
 
 import (
-	"github.com/fmstephe/offheap/offheap"
+	"github.com/fmstephe/memorymanager/offheap"
 )
 
 type nodeStore[T any] struct {

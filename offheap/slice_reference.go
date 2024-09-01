@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/fmstephe/offheap/offheap/internal/pointerstore"
+	"github.com/fmstephe/memorymanager/offheap/internal/pointerstore"
 )
 
 // Allocates a new slice with the desired length and capacity. The capacity of

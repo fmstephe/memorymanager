@@ -3,7 +3,7 @@ package offheap_test
 import (
 	"fmt"
 
-	"github.com/fmstephe/offheap/offheap"
+	"github.com/fmstephe/memorymanager/offheap"
 )
 
 // Calling AllocSlice allocates a slice and returns a RefSlice which acts like

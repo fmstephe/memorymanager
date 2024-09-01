@@ -3,7 +3,7 @@ package offheap_test
 import (
 	"fmt"
 
-	"github.com/fmstephe/offheap/offheap"
+	"github.com/fmstephe/memorymanager/offheap"
 )
 
 // Calling AllocStringFromString allocates a string and returns a RefString

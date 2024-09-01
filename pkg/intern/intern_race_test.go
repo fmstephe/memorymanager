@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fmstephe/offheap/testpkg/testutil"
+	"github.com/fmstephe/memorymanager/testpkg/testutil"
 )
 
 func TestInterner_Race(t *testing.T) {
