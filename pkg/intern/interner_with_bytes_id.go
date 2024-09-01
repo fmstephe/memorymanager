@@ -5,7 +5,7 @@ import (
 	"unsafe"
 
 	xxhash "github.com/cespare/xxhash/v2"
-	"github.com/fmstephe/location-system/pkg/store/offheap"
+	"github.com/fmstephe/offheap/offheap"
 )
 
 // An ConverterWithBytesId converts types to strings which are able to be canonically

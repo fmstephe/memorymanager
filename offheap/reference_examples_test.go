@@ -3,7 +3,7 @@ package offheap_test
 import (
 	"fmt"
 
-	"github.com/fmstephe/location-system/pkg/store/offheap"
+	"github.com/fmstephe/offheap/offheap"
 )
 
 // Here we store and retrieve a RefString using a Reference typed container. We

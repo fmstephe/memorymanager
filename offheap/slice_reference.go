@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
+	"github.com/fmstephe/offheap/offheap/internal/pointerstore"
 )
 
 // Allocates a new slice with the desired length and capacity. The capacity of

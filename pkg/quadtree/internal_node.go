@@ -3,7 +3,7 @@ package quadtree
 import (
 	"fmt"
 
-	"github.com/fmstephe/location-system/pkg/store/offheap"
+	"github.com/fmstephe/offheap/offheap"
 )
 
 // A point with a list of stored elements
