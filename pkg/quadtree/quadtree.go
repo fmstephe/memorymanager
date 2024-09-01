@@ -3,7 +3,7 @@ package quadtree
 import (
 	"fmt"
 
-	"github.com/fmstephe/location-system/pkg/store/offheap"
+	"github.com/fmstephe/memorymanager/offheap"
 )
 
 // This struct is the exported root of a quad tree

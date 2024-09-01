@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
+	"github.com/fmstephe/memorymanager/offheap/internal/pointerstore"
 )
 
 // Allocates an object of type T. The type T must not contain any pointers in

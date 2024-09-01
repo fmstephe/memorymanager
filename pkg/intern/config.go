@@ -4,7 +4,7 @@ import (
 	"math/bits"
 	"runtime"
 
-	"github.com/fmstephe/location-system/pkg/store/offheap"
+	"github.com/fmstephe/memorymanager/offheap"
 )
 
 type Config struct {

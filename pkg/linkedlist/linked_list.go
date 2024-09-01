@@ -1,7 +1,7 @@
 package linkedlist
 
 import (
-	"github.com/fmstephe/location-system/pkg/store/offheap"
+	"github.com/fmstephe/memorymanager/offheap"
 )
 
 // A node contains the list data as well as the forward and previous References

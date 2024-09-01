@@ -1,7 +1,7 @@
 package offheap
 
 import (
-	"github.com/fmstephe/location-system/pkg/store/internal/pointerstore"
+	"github.com/fmstephe/memorymanager/offheap/internal/pointerstore"
 )
 
 const defaultSlabSize = 1 << 13
