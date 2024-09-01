@@ -1,18 +1,28 @@
-// The intern package allows users to intern string values. These strings can
-// be converted from either a []byte, int64 or Float64 value. The intention of
-// this package is to allow the reuse of common string values and avoid
-// allocating strings unnecessarily.
+// The intern package allows users to intern string values.
+//
+// Importantly the interners built using this package can take types which are
+// _not_ strings but which can be used to generate strings. This has the
+// advantage that when the string representation of an object has already been
+// interned we can skip generating the string and just return the interned
+// string.
+//
+// An example where this would be advantageous would be in a system which
+// converts a lot of integers to strings. If a lot of those integer values are
+// common values then this package would avoid a lot of those string
+// allocations.
+//
+// The basic interface of an interner is a single method which looks like
+//
+//	someTypeInterner.Get(someTypeValue) string
 //
 // The string value returned may be either a newly allocated string, or a
-// previously allocated interned string from the cache. Intered strings are
-// stored in an offheap manually managed store. This means that there is no
-// garbage collection cost associated with keeping interned strings.
+// previously allocated interned string from the cache. Interned strings are
+// stored in an *offheap.Store. This means that there is no garbage collection
+// cost associated with keeping large numbers of interned strings.
 //
-// It is expected that shorter strings are typically better targets for
-// interning than longer strings (although the degree to which this is true
-// will depend on the data being processed). To reflect this intuition we allow
-// a per-string length limit to be set for a StringInterner instance. Strings
-// which are longer than this value will not be interned.
+// This package contains a number of pre-made interners for the types int64,
+// float64, time.Time, []byte and string. But this package also includes the
+// tools to build custom interners for other types.
 //
 // Because the interned strings are manually managed, and we don't have a
 // mechanism for knowing when to free interned string values, interned strings
@@ -29,12 +39,4 @@
 // byte limit is reached. If strings to be interned evolve over time and don't
 // have a stable set of common string values, then this interning approach will
 // be less effective.
-//
-// Right now we have a very inflexible system for interning []byte, int64 and
-// float64. It seems to me that there will likely be a desire to provide
-// interning of string conversions for other types, time.Time comes to mind
-// immediately. It seems unlikely that we can or should attempt to anticipate
-// every internable conversion point. We must find a way to allow user
-// implemented string conversions with interning. Probably not easy, but
-// potentially valuable.
 package intern
