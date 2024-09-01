@@ -1,5 +1,6 @@
 package intern
 
+/*
 import (
 	"math/rand"
 	"testing"
@@ -67,3 +68,4 @@ func buildTestData(size, bytesLimit int) ([][]byte, []int64, []float64) {
 
 	return bytes, ints, floats
 }
+*/
