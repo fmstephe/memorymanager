@@ -277,9 +277,9 @@ func TestBytesInterner_Complex(t *testing.T) {
 	}
 }
 
-// This benchmark is intended to demonstrate that getting string values for
-// []byte that have already been interned does not allocate
-func BenchmarkBytesInterner(b *testing.B) {
+// Assert that getting a string, where the value has already been interned,
+// does not allocate
+func TestBytesInterner_NoAllocations(t *testing.T) {
 	interner := NewBytesInterner(Config{MaxLen: 0, MaxBytes: 0})
 
 	bytes := make([][]byte, 10_000)
@@ -291,17 +291,12 @@ func BenchmarkBytesInterner(b *testing.B) {
 		interner.Get(bytesVal)
 	}
 
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	count := 0
-	for {
+	avgAllocs := testing.AllocsPerRun(100, func() {
 		for _, bytesVal := range bytes {
 			interner.Get(bytesVal)
-			count++
-			if count >= b.N {
-				return
-			}
 		}
-	}
+	})
+	// getting strings for bytes which have already been interned does not
+	// allocate
+	assert.Equal(t, 0.0, avgAllocs)
 }

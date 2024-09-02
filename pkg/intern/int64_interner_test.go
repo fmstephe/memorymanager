@@ -172,9 +172,9 @@ func TestInt64Interner_Complex(t *testing.T) {
 	}
 }
 
-// This benchmark is intended to demonstrate that getting string values for
-// integers that have already been interned does not allocate
-func BenchmarkInt64Interner(b *testing.B) {
+// Assert that getting a string, where the value has already been interned,
+// does not allocate
+func TestInt64Interner_NoAllocations(t *testing.T) {
 	interner := NewInt64Interner(Config{MaxLen: 0, MaxBytes: 0}, 10)
 
 	ints := make([]int64, 10_000)
@@ -186,17 +186,12 @@ func BenchmarkInt64Interner(b *testing.B) {
 		interner.Get(intVal)
 	}
 
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	count := 0
-	for {
+	avgAllocs := testing.AllocsPerRun(100, func() {
 		for _, intVal := range ints {
 			interner.Get(intVal)
-			count++
-			if count >= b.N {
-				return
-			}
 		}
-	}
+	})
+	// getting strings for ints which have already been interned does not
+	// allocate
+	assert.Equal(t, 0.0, avgAllocs)
 }
