@@ -5,15 +5,15 @@ import (
 	"strconv"
 )
 
-type Float64Interner struct {
+type float64Interner struct {
 	interner InternerWithUint64Id[Float64Converter]
 	fmt      byte
 	prec     int
 	bitSize  int
 }
 
-func NewFloat64Interner(config Config, fmt byte, prec, bitSize int) *Float64Interner {
-	return &Float64Interner{
+func NewFloat64Interner(config Config, fmt byte, prec, bitSize int) Interner[float64] {
+	return &float64Interner{
 		interner: NewInternerWithUint64Id[Float64Converter](config),
 		fmt:      fmt,
 		prec:     prec,
@@ -21,11 +21,11 @@ func NewFloat64Interner(config Config, fmt byte, prec, bitSize int) *Float64Inte
 	}
 }
 
-func (i *Float64Interner) Get(value float64) string {
+func (i *float64Interner) Get(value float64) string {
 	return i.interner.Get(NewFloat64Converter(value, i.fmt, i.prec, i.bitSize))
 }
 
-func (i *Float64Interner) GetStats() StatsSummary {
+func (i *float64Interner) GetStats() StatsSummary {
 	return i.interner.GetStats()
 }
 

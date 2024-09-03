@@ -1,20 +1,20 @@
 package intern
 
-type BytesInterner struct {
+type bytesInterner struct {
 	interner InternerWithBytesId[BytesConverter]
 }
 
-func NewBytesInterner(config Config) *BytesInterner {
-	return &BytesInterner{
+func NewBytesInterner(config Config) Interner[[]byte] {
+	return &bytesInterner{
 		interner: NewInternerWithBytesId[BytesConverter](config),
 	}
 }
 
-func (i *BytesInterner) Get(bytes []byte) string {
+func (i *bytesInterner) Get(bytes []byte) string {
 	return i.interner.Get(NewBytesConverter(bytes))
 }
 
-func (i *BytesInterner) GetStats() StatsSummary {
+func (i *bytesInterner) GetStats() StatsSummary {
 	return i.interner.GetStats()
 }
 

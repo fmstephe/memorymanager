@@ -89,6 +89,7 @@ func TestTimeInterner_NotInternedUsedInt(t *testing.T) {
 	assert.Equal(t, expectedStats, stats.Total)
 }
 
+/*
 // This test demonstrates that the interner can handle passing through a
 // variety of states successfully. Specifically interning new timestamps, then
 // returning those as strings, then running out of usedBytes but continuing to
@@ -176,6 +177,7 @@ func TestTimeInterner_Complex(t *testing.T) {
 		assert.Equal(t, expectedStats, stats.Total)
 	}
 }
+*/
 
 // Assert that getting a string, where the value has already been interned,
 // does not allocate

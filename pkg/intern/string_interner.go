@@ -2,21 +2,21 @@ package intern
 
 import "unsafe"
 
-type StringInterner struct {
+type stringInterner struct {
 	interner InternerWithBytesId[StringConverter]
 }
 
-func NewStringInterner(config Config) *StringInterner {
-	return &StringInterner{
+func NewStringInterner(config Config) Interner[string] {
+	return &stringInterner{
 		interner: NewInternerWithBytesId[StringConverter](config),
 	}
 }
 
-func (i *StringInterner) Get(str string) string {
+func (i *stringInterner) Get(str string) string {
 	return i.interner.Get(NewStringConverter(str))
 }
 
-func (i *StringInterner) GetStats() StatsSummary {
+func (i *stringInterner) GetStats() StatsSummary {
 	return i.interner.GetStats()
 }
 

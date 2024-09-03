@@ -4,23 +4,23 @@ import (
 	"strconv"
 )
 
-type Int64Interner struct {
+type int64Interner struct {
 	interner InternerWithUint64Id[Int64Converter]
 	base     int
 }
 
-func NewInt64Interner(config Config, base int) *Int64Interner {
-	return &Int64Interner{
+func NewInt64Interner(config Config, base int) Interner[int64] {
+	return &int64Interner{
 		interner: NewInternerWithUint64Id[Int64Converter](config),
 		base:     base,
 	}
 }
 
-func (i *Int64Interner) Get(value int64) string {
+func (i *int64Interner) Get(value int64) string {
 	return i.interner.Get(NewInt64Converter(value, i.base))
 }
 
-func (i *Int64Interner) GetStats() StatsSummary {
+func (i *int64Interner) GetStats() StatsSummary {
 	return i.interner.GetStats()
 }
 
