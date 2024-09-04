@@ -3,90 +3,30 @@ package intern
 import (
 	"testing"
 	"time"
-	"unsafe"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestTimeInterner_Interned(t *testing.T) {
 	interner := NewTimeInterner(Config{MaxLen: 64, MaxBytes: 1024}, time.RFC1123)
-
-	// A string is returned with the same value as timestamp
 	timestamp := time.Now()
-	internedTime := interner.Get(timestamp)
-	assert.Equal(t, timestamp.Format(time.RFC1123), internedTime)
+	internedTimestamp := timestamp.Format(time.RFC1123)
 
-	// a new int value has been interned
-	expectedStats := Stats{Interned: 1}
-	stats := interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
-
-	// A string is returned with the same value as timestamp
-	internedTime2 := interner.Get(timestamp)
-	assert.Equal(t, timestamp.Format(time.RFC1123), internedTime2)
-	// The string returned uses the same memory allocation as the first
-	// value returned i.e. the string is interned as is being reused as
-	// intended
-	assert.Equal(t, unsafe.StringData(internedTime), unsafe.StringData(internedTime2))
-
-	// An interned string has been returned
-	expectedStats = Stats{Interned: 1, Returned: 1}
-	stats = interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
+	DoTestGenericInterner_Interned(t, interner, timestamp, internedTimestamp)
 }
 
 func TestTimeInterner_NotInternedMaxLen(t *testing.T) {
 	interner := NewTimeInterner(Config{MaxLen: 3, MaxBytes: 1024}, time.RFC1123)
-
-	// A string is returned with the same value as timestamp
 	timestamp := time.Now()
-	notInternedInt := interner.Get(timestamp)
-	assert.Equal(t, timestamp.Format(time.RFC1123), notInternedInt)
+	internedTimestamp := timestamp.Format(time.RFC1123)
 
-	// The int passed in was too long, so maxLenExceeded should be recorded
-	expectedStats := Stats{MaxLenExceeded: 1}
-	stats := interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
-
-	// A string is returned with the same value as timestamp
-	notInternedInt2 := interner.Get(timestamp)
-	assert.Equal(t, timestamp.Format(time.RFC1123), notInternedInt2)
-	// The string returned uses a different memory allocation from the
-	// first value returned i.e. the strings were not interned, and a new
-	// string is being allocated each time
-	assert.NotSame(t, unsafe.StringData(notInternedInt), unsafe.StringData(notInternedInt2))
-
-	// The int passed in was too long, so maxLenExceeded should be recorded
-	expectedStats = Stats{MaxLenExceeded: 2}
-	stats = interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
+	DoTestGenericInterner_NotInternedMaxLen(t, interner, timestamp, internedTimestamp)
 }
 
-func TestTimeInterner_NotInternedUsedInt(t *testing.T) {
+func TestTimeInterner_NotInternedMaxBytes(t *testing.T) {
 	interner := NewTimeInterner(Config{MaxLen: 64, MaxBytes: 3}, time.RFC1123)
-
-	// A string is returned with the same value as timestamp
 	timestamp := time.Now()
-	notInternedInt := interner.Get(timestamp)
-	assert.Equal(t, timestamp.Format(time.RFC1123), notInternedInt)
+	internedTimestamp := timestamp.Format(time.RFC1123)
 
-	// The int passed in was too long, so usedBytesExceeded should be recorded
-	expectedStats := Stats{UsedBytesExceeded: 1}
-	stats := interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
-
-	// A string is returned with the same value as timestamp
-	notInternedInt2 := interner.Get(timestamp)
-	assert.Equal(t, timestamp.Format(time.RFC1123), notInternedInt2)
-	// The string returned uses a different memory allocation from the
-	// first value returned i.e. the strings were not interned, and a new
-	// string is being allocated each time
-	assert.NotSame(t, unsafe.StringData(notInternedInt), unsafe.StringData(notInternedInt2))
-
-	// The int passed in was too long, so usedBytesExceeded should be recorded
-	expectedStats = Stats{UsedBytesExceeded: 2}
-	stats = interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
+	DoTestGenericInterner_NotInternedMaxBytes(t, interner, timestamp, internedTimestamp)
 }
 
 /*
@@ -190,16 +130,5 @@ func TestTimeInterner_NoAllocations(t *testing.T) {
 		timestamps[i] = now.Add(time.Nanosecond)
 	}
 
-	for _, timestamp := range timestamps {
-		interner.Get(timestamp)
-	}
-
-	avgAllocs := testing.AllocsPerRun(100, func() {
-		for _, timestamp := range timestamps {
-			interner.Get(timestamp)
-		}
-	})
-	// getting strings for timestamps which have already been interned does not
-	// allocate
-	assert.Equal(t, 0.0, avgAllocs)
+	DoTestGenericInterner_NoAllocations(t, interner, timestamps)
 }
