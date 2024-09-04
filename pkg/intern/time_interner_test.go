@@ -139,7 +139,7 @@ func TestTimeInterner_Complex(t *testing.T) {
 		interner.interner.controller.usedBytes.Store(1024 * 1024)
 	}
 
-	// When we attempt to intern new floats there aren't enough bytes left
+	// When we attempt to intern new timestamps there aren't enough bytes left
 	// to intern any of them
 	{
 		for _, timestamp := range timestamps {
@@ -177,32 +177,27 @@ func TestTimeInterner_Complex(t *testing.T) {
 	}
 }
 
-// This benchmark is intended to demonstrate that getting string values for
-// time.Time values that have already been interned does not allocate
-func BenchmarkTimeInterner(b *testing.B) {
+// Assert that getting a string, where the value has already been interned,
+// does not allocate
+func TestTimeInterner_NoAllocations(t *testing.T) {
 	interner := NewTimeInterner(Config{MaxLen: 0, MaxBytes: 0}, time.RFC1123)
 
-	now := time.Now()
 	timestamps := make([]time.Time, 10_000)
+	now := time.Now()
 	for i := range timestamps {
-		timestamps[i] = now.Add(time.Duration(i))
+		timestamps[i] = now.Add(time.Nanosecond)
 	}
 
 	for _, timestamp := range timestamps {
 		interner.Get(timestamp)
 	}
 
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	count := 0
-	for {
+	avgAllocs := testing.AllocsPerRun(100, func() {
 		for _, timestamp := range timestamps {
 			interner.Get(timestamp)
-			count++
-			if count >= b.N {
-				return
-			}
 		}
-	}
+	})
+	// getting strings for timestamps which have already been interned does not
+	// allocate
+	assert.Equal(t, 0.0, avgAllocs)
 }

@@ -172,9 +172,9 @@ func TestFloat64Interner_Complex(t *testing.T) {
 	}
 }
 
-// This benchmark is intended to demonstrate that getting string values for
-// floats that have already been interned does not allocate
-func BenchmarkFloat64Interner(b *testing.B) {
+// Assert that getting a string, where the value has already been interned,
+// does not allocate
+func TestFloat64Interner_NoAllocations(t *testing.T) {
 	interner := NewFloat64Interner(Config{MaxLen: 0, MaxBytes: 0}, 'f', -1, 64)
 
 	floats := make([]float64, 10_000)
@@ -186,17 +186,12 @@ func BenchmarkFloat64Interner(b *testing.B) {
 		interner.Get(floatVal)
 	}
 
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	count := 0
-	for {
+	avgAllocs := testing.AllocsPerRun(100, func() {
 		for _, floatVal := range floats {
 			interner.Get(floatVal)
-			count++
-			if count >= b.N {
-				return
-			}
 		}
-	}
+	})
+	// getting strings for floats which have already been interned does not
+	// allocate
+	assert.Equal(t, 0.0, avgAllocs)
 }
