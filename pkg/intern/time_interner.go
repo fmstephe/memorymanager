@@ -4,23 +4,23 @@ import (
 	"time"
 )
 
-type TimeInterner struct {
+type timeInterner struct {
 	interner InternerWithUint64Id[TimeConverter]
 	format   string
 }
 
-func NewTimeInterner(config Config, format string) *TimeInterner {
-	return &TimeInterner{
+func NewTimeInterner(config Config, format string) Interner[time.Time] {
+	return &timeInterner{
 		interner: NewInternerWithUint64Id[TimeConverter](config),
 		format:   format,
 	}
 }
 
-func (i *TimeInterner) Get(value time.Time) string {
+func (i *timeInterner) Get(value time.Time) string {
 	return i.interner.Get(NewTimeConverter(value, i.format))
 }
 
-func (i *TimeInterner) GetStats() StatsSummary {
+func (i *timeInterner) GetStats() StatsSummary {
 	return i.interner.GetStats()
 }
 

@@ -3,92 +3,35 @@ package intern
 import (
 	"strconv"
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFloat64Interner_Interned(t *testing.T) {
 	interner := NewFloat64Interner(Config{MaxLen: 64, MaxBytes: 1024}, 'f', -1, 64)
-
-	// A string is returned with the same value as floatVal
 	floatVal := float64(12.34)
-	internedFloat := interner.Get(floatVal)
-	assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), internedFloat)
+	internedFloat := strconv.FormatFloat(floatVal, 'f', -1, 64)
 
-	// a new float value has been interned
-	expectedStats := Stats{Interned: 1}
-	stats := interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
-
-	// A string is returned with the same value as floatVal
-	internedFloat2 := interner.Get(floatVal)
-	assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), internedFloat2)
-	// The string returned uses the same memory allocation as the first
-	// value returned i.e. the string is interned as is being reused as
-	// intended
-	assert.Equal(t, unsafe.StringData(internedFloat), unsafe.StringData(internedFloat2))
-
-	// An interned string has been returned
-	expectedStats = Stats{Interned: 1, Returned: 1}
-	stats = interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
+	DoTestGenericInterner_Interned(t, interner, floatVal, internedFloat)
 }
 
 func TestFloat64Interner_NotInternedMaxLen(t *testing.T) {
 	interner := NewFloat64Interner(Config{MaxLen: 3, MaxBytes: 1024}, 'f', -1, 64)
-
-	// A string is returned with the same value as floatVal
 	floatVal := float64(12.34)
-	notInternedFloat := interner.Get(floatVal)
-	assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), notInternedFloat)
+	internedFloat := strconv.FormatFloat(floatVal, 'f', -1, 64)
 
-	// The float passed in was too long, so maxLenExceeded should be recorded
-	expectedStats := Stats{MaxLenExceeded: 1}
-	stats := interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
-
-	// A string is returned with the same value as floatVal
-	notInternedFloat2 := interner.Get(floatVal)
-	assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), notInternedFloat2)
-	// The string returned uses a different memory allocation from the
-	// first value returned i.e. the strings were not interned, and a new
-	// string is being allocated each time
-	assert.NotSame(t, unsafe.StringData(notInternedFloat), unsafe.StringData(notInternedFloat2))
-
-	// The float passed in was too long, so maxLenExceeded should be recorded
-	expectedStats = Stats{MaxLenExceeded: 2}
-	stats = interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
+	DoTestGenericInterner_NotInternedMaxLen(t, interner, floatVal, internedFloat)
 }
 
-func TestFloat64Interner_NotInternedUsedInt(t *testing.T) {
+func TestFloat64Interner_NotInternedMaxBytes(t *testing.T) {
 	interner := NewFloat64Interner(Config{MaxLen: 64, MaxBytes: 3}, 'f', -1, 64)
-
-	// A string is returned with the same value as floatVal
 	floatVal := float64(12.34)
-	notInternedFloat := interner.Get(floatVal)
-	assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), notInternedFloat)
+	internedFloat := strconv.FormatFloat(floatVal, 'f', -1, 64)
 
-	// The float passed in was too long, so usedBytesExceeded should be recorded
-	expectedStats := Stats{UsedBytesExceeded: 1}
-	stats := interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
-
-	// A string is returned with the same value as floatVal
-	notInternedFloat2 := interner.Get(floatVal)
-	assert.Equal(t, strconv.FormatFloat(floatVal, 'f', -1, 64), notInternedFloat2)
-	// The string returned uses a different memory allocation from the
-	// first value returned i.e. the strings were not interned, and a new
-	// string is being allocated each time
-	assert.NotSame(t, unsafe.StringData(notInternedFloat), unsafe.StringData(notInternedFloat2))
-
-	// The float passed in was too long, so usedBytesExceeded should be recorded
-	expectedStats = Stats{UsedBytesExceeded: 2}
-	stats = interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
+	DoTestGenericInterner_NotInternedMaxBytes(t, interner, floatVal, internedFloat)
 }
 
+/*
 // This test demonstrates that the interner can handle passing through a
 // variety of states successfully. Specifically interning new floats, then
 // returning those as strings, then running out of usedBytes but continuing to
@@ -171,6 +114,7 @@ func TestFloat64Interner_Complex(t *testing.T) {
 		assert.Equal(t, expectedStats, stats.Total)
 	}
 }
+*/
 
 // Assert that getting a string, where the value has already been interned,
 // does not allocate

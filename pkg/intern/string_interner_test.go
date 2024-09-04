@@ -3,7 +3,6 @@ package intern
 import (
 	"strconv"
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -22,83 +21,23 @@ func TestStringInterner_Interned_EmptySlice(t *testing.T) {
 
 func TestStringInterner_Interned(t *testing.T) {
 	interner := NewStringInterner(Config{MaxLen: 64, MaxBytes: 1024})
+	str := "interned string"
 
-	// A string value is returned with the same value as expectedString
-	expectedString := "interned string"
-	internedString := interner.Get(expectedString)
-	assert.Equal(t, expectedString, internedString)
-
-	// a new string value has been interned
-	expectedStats := Stats{Interned: 1}
-	stats := interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
-
-	// A string value is returned with the same value as expectedString
-	internedString2 := interner.Get(expectedString)
-	assert.Equal(t, expectedString, internedString2)
-	// The string returned uses the same memory allocation as the first
-	// value returned i.e. the string is interned as is being reused as
-	// intended
-	assert.Equal(t, unsafe.StringData(internedString), unsafe.StringData(internedString2))
-
-	// An interned string value has been returned
-	expectedStats = Stats{Interned: 1, Returned: 1}
-	stats = interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
+	DoTestGenericInterner_Interned(t, interner, str, str)
 }
 
 func TestStringInterner_NotInternedMaxLen(t *testing.T) {
 	interner := NewStringInterner(Config{MaxLen: 3, MaxBytes: 1024})
+	str := "interned string"
 
-	// A string is returned with the same value as expectedString
-	expectedString := "interned string"
-	notInternedString := interner.Get(expectedString)
-	assert.Equal(t, expectedString, notInternedString)
-
-	// The bytes passed in was too long, so maxLenExceeded should be recorded
-	expectedStats := Stats{MaxLenExceeded: 1}
-	stats := interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
-
-	// A string is returned with the same value as expectedString
-	notInternedString2 := interner.Get(expectedString)
-	assert.Equal(t, expectedString, notInternedString2)
-	// The string returned uses a different memory allocation from the
-	// first value returned i.e. the strings were not interned, and a new
-	// string is being allocated each time
-	assert.NotSame(t, unsafe.StringData(notInternedString), unsafe.StringData(notInternedString2))
-
-	// The bytes passed in was too long, so maxLenExceeded should be recorded
-	expectedStats = Stats{MaxLenExceeded: 2}
-	stats = interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
+	DoTestGenericInterner_NotInternedMaxLen(t, interner, str, str)
 }
 
-func TestStringInterner_NotInternedUsedBytes(t *testing.T) {
+func TestStringInterner_NotInternedMaxBytes(t *testing.T) {
 	interner := NewStringInterner(Config{MaxLen: 64, MaxBytes: 3})
+	str := "interned string"
 
-	// A string is returned with the same value as expectedString
-	expectedString := "interned string"
-	notInternedString := interner.Get(expectedString)
-	assert.Equal(t, expectedString, notInternedString)
-
-	// The bytes passed in was too long, so usedStringExceeded should be recorded
-	expectedStats := Stats{UsedBytesExceeded: 1}
-	stats := interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
-
-	// A string is returned with the same value as expectedString
-	notInternedString2 := interner.Get(expectedString)
-	assert.Equal(t, expectedString, notInternedString2)
-	// The string returned uses a different memory allocation from the
-	// first value returned i.e. the strings were not interned, and a new
-	// string is being allocated each time
-	assert.NotSame(t, unsafe.StringData(notInternedString), unsafe.StringData(notInternedString2))
-
-	// The bytes passed in was too long, so usedStringExceeded should be recorded
-	expectedStats = Stats{UsedBytesExceeded: 2}
-	stats = interner.GetStats()
-	assert.Equal(t, expectedStats, stats.Total)
+	DoTestGenericInterner_NotInternedMaxBytes(t, interner, str, str)
 }
 
 func TestStringInterner_NotInternedHashCollision(t *testing.T) {
@@ -287,16 +226,5 @@ func TestStringInterner_NoAllocations(t *testing.T) {
 		strings[i] = strconv.Itoa(i)
 	}
 
-	for _, stringVal := range strings {
-		interner.Get(stringVal)
-	}
-
-	avgAllocs := testing.AllocsPerRun(100, func() {
-		for _, stringVal := range strings {
-			interner.Get(stringVal)
-		}
-	})
-	// getting strings for string which have already been interned does not
-	// allocate
-	assert.Equal(t, 0.0, avgAllocs)
+	DoTestGenericInterner_NoAllocations(t, interner, strings)
 }
