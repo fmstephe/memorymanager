@@ -8,6 +8,8 @@ import (
 )
 
 func DoTestGenericInterner_Interned[T any](t *testing.T, interner Interner[T], val T, strVal string) {
+	t.Helper()
+
 	// A string is returned with the same value as intVal
 	internedVal := interner.Get(val)
 	assert.Equal(t, strVal, internedVal)
@@ -23,7 +25,7 @@ func DoTestGenericInterner_Interned[T any](t *testing.T, interner Interner[T], v
 	// The string returned uses the same memory allocation as the first
 	// value returned i.e. the string is interned as is being reused as
 	// intended
-	assert.Equal(t, unsafe.StringData(internedVal), unsafe.StringData(internedVal2))
+	assert.Same(t, unsafe.StringData(internedVal), unsafe.StringData(internedVal2))
 
 	// An interned string has been returned
 	expectedStats = Stats{Interned: 1, Returned: 1}
@@ -32,6 +34,8 @@ func DoTestGenericInterner_Interned[T any](t *testing.T, interner Interner[T], v
 }
 
 func DoTestGenericInterner_NotInternedMaxLen[T any](t *testing.T, interner Interner[T], val T, strVal string) {
+	t.Helper()
+
 	// A string is returned with the same value as intVal
 	notInternedInt := interner.Get(val)
 	assert.Equal(t, strVal, notInternedInt)
@@ -56,6 +60,8 @@ func DoTestGenericInterner_NotInternedMaxLen[T any](t *testing.T, interner Inter
 }
 
 func DoTestGenericInterner_NotInternedMaxBytes[T any](t *testing.T, interner Interner[T], val T, strVal string) {
+	t.Helper()
+
 	// A string is returned with the same value as intVal
 	notInternedInt := interner.Get(val)
 	assert.Equal(t, strVal, notInternedInt)
@@ -167,6 +173,8 @@ func TestGenericInterner_Complex(t *testing.T) {
 // Assert that getting a string, where the value has already been interned,
 // does not allocate
 func DoTestGenericInterner_NoAllocations[T any](t *testing.T, interner Interner[T], vals []T) {
+	t.Helper()
+
 	for _, val := range vals {
 		interner.Get(val)
 	}
