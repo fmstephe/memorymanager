@@ -287,7 +287,9 @@ func TestIndexForType(t *testing.T) {
 // times.
 func TestSizedStats(t *testing.T) {
 	os := New()
-	defer os.Destroy()
+	defer func() {
+		assert.NoError(t, os.Destroy())
+	}()
 
 	testSizedStats[SizedArrayZero](t, os)
 	testSizedStats[SizedArray1](t, os)
@@ -337,7 +339,9 @@ func testSizedStats[T any](t *testing.T, os *Store) {
 // to store all objects.
 func Test_Object_NewModifyGet_Multitype(t *testing.T) {
 	os := NewSized(1 << 8)
-	defer os.Destroy()
+	defer func() {
+		assert.NoError(t, os.Destroy())
+	}()
 
 	allocConf := ConfForType[SizedArray0](os)
 	// perform a number of allocations which will force the creation of extra slabs
@@ -363,7 +367,9 @@ func Test_Object_NewModifyGet_Multitype(t *testing.T) {
 // to store all objects.
 func Test_Object_GetModifyGet_Multitype(t *testing.T) {
 	os := NewSized(1 << 8)
-	defer os.Destroy()
+	defer func() {
+		assert.NoError(t, os.Destroy())
+	}()
 
 	allocConf := ConfForType[SizedArray0](os)
 	// perform a number of allocations which will force the creation of extra slabs

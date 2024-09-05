@@ -17,7 +17,7 @@ import (
 func Test_String_AllocateAndGet_Simple(t *testing.T) {
 	ss := NewSized(1 << 8)
 	defer func() {
-		ss.Destroy()
+		assert.NoError(t, ss.Destroy())
 	}()
 
 	// Create string
@@ -46,7 +46,7 @@ func Test_String_AllocateAndGet_Simple(t *testing.T) {
 func Test_String_AllocateAndGet(t *testing.T) {
 	ss := NewSized(1 << 8)
 	defer func() {
-		ss.Destroy()
+		assert.NoError(t, ss.Destroy())
 	}()
 
 	rsm := testutil.NewRandomStringMaker()
@@ -80,7 +80,7 @@ func Test_String_AllocateAndGet(t *testing.T) {
 func Test_String_NewFreeGet_Panic(t *testing.T) {
 	ss := NewSized(1 << 8)
 	defer func() {
-		ss.Destroy()
+		assert.NoError(t, ss.Destroy())
 	}()
 
 	// Allocate and free a string value
@@ -98,7 +98,7 @@ func Test_String_NewFreeGet_Panic(t *testing.T) {
 func Test_String_NewFreeFree_Panic(t *testing.T) {
 	ss := NewSized(1 << 8)
 	defer func() {
-		ss.Destroy()
+		assert.NoError(t, ss.Destroy())
 	}()
 
 	// Allocate and free a string value
@@ -113,7 +113,9 @@ func Test_String_NewFreeFree_Panic(t *testing.T) {
 // Demonstrate that when we double free a re-allocated string we still panic.
 func Test_String_NewFreeAllocFree_Panic(t *testing.T) {
 	os := NewSized(1 << 8)
-	defer os.Destroy()
+	defer func() {
+		assert.NoError(t, os.Destroy())
+	}()
 
 	value := "test string"
 	r := AllocStringFromString(os, value)
@@ -127,7 +129,9 @@ func Test_String_NewFreeAllocFree_Panic(t *testing.T) {
 // Demonstrate that when we call Value() on a re-allocated RefStr we still panic
 func Test_String_NewFreeAllocGet_Panic(t *testing.T) {
 	os := NewSized(1 << 8)
-	defer os.Destroy()
+	defer func() {
+		assert.NoError(t, os.Destroy())
+	}()
 
 	value := "test string"
 	r := AllocStringFromString(os, value)
@@ -145,7 +149,9 @@ func Test_String_NewFreeAllocGet_Panic(t *testing.T) {
 // times.
 func Test_String_SizedStats(t *testing.T) {
 	os := New()
-	defer os.Destroy()
+	defer func() {
+		assert.NoError(t, os.Destroy())
+	}()
 
 	rsm := testutil.NewRandomStringMaker()
 
@@ -196,7 +202,9 @@ func Test_String_SizedStats(t *testing.T) {
 
 func Test_String_AppendString(t *testing.T) {
 	os := New()
-	defer os.Destroy()
+	defer func() {
+		assert.NoError(t, os.Destroy())
+	}()
 
 	rsm := testutil.NewRandomStringMaker()
 
@@ -220,7 +228,9 @@ func Test_String_AppendString(t *testing.T) {
 
 func Test_String_ConcatStrings(t *testing.T) {
 	os := New()
-	defer os.Destroy()
+	defer func() {
+		assert.NoError(t, os.Destroy())
+	}()
 
 	for _, testCase := range []struct {
 		strs []string
