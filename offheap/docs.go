@@ -2,6 +2,8 @@
 // source code is governed by an MIT license that can be found in the LICENSE
 // file.
 
+// # Usage
+//
 // The offheap package allows us to allocate, free and retrieve Go objects
 // manually. The objects allocated in this way are not visible to the garbage
 // collector, allowing us to build very large datastructures like trees and
