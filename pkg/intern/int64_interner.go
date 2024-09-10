@@ -11,44 +11,44 @@ import (
 )
 
 type int64Interner struct {
-	interner internbase.InternerWithUint64Id[Int64Converter]
+	interner internbase.InternerWithUint64Id[int64Converter]
 	base     int
 }
 
 func NewInt64Interner(config internbase.Config, base int) Interner[int64] {
 	return &int64Interner{
-		interner: internbase.NewInternerWithUint64Id[Int64Converter](config),
+		interner: internbase.NewInternerWithUint64Id[int64Converter](config),
 		base:     base,
 	}
 }
 
 func (i *int64Interner) Get(value int64) string {
-	return i.interner.Get(NewInt64Converter(value, i.base))
+	return i.interner.Get(newInt64Converter(value, i.base))
 }
 
 func (i *int64Interner) GetStats() internbase.StatsSummary {
 	return i.interner.GetStats()
 }
 
-var _ internbase.ConverterWithUint64Id = Int64Converter{}
+var _ internbase.ConverterWithUint64Id = int64Converter{}
 
 // A converter for int64 values. Here the identity is just the value itself.
-type Int64Converter struct {
+type int64Converter struct {
 	value int64
 	base  int
 }
 
-func NewInt64Converter(value int64, base int) Int64Converter {
-	return Int64Converter{
+func newInt64Converter(value int64, base int) int64Converter {
+	return int64Converter{
 		value: value,
 		base:  base,
 	}
 }
 
-func (c Int64Converter) Identity() uint64 {
+func (c int64Converter) Identity() uint64 {
 	return uint64(c.value)
 }
 
-func (c Int64Converter) String() string {
+func (c int64Converter) String() string {
 	return strconv.FormatInt(c.value, c.base)
 }

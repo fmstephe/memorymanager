@@ -11,35 +11,35 @@ import (
 )
 
 type stringInterner struct {
-	interner internbase.InternerWithBytesId[StringConverter]
+	interner internbase.InternerWithBytesId[stringConverter]
 }
 
 func NewStringInterner(config internbase.Config) Interner[string] {
 	return &stringInterner{
-		interner: internbase.NewInternerWithBytesId[StringConverter](config),
+		interner: internbase.NewInternerWithBytesId[stringConverter](config),
 	}
 }
 
 func (i *stringInterner) Get(str string) string {
-	return i.interner.Get(NewStringConverter(str))
+	return i.interner.Get(newStringConverter(str))
 }
 
 func (i *stringInterner) GetStats() internbase.StatsSummary {
 	return i.interner.GetStats()
 }
 
-var _ internbase.ConverterWithBytesId = StringConverter{}
+var _ internbase.ConverterWithBytesId = stringConverter{}
 
-type StringConverter struct {
+type stringConverter struct {
 	str string
 }
 
-func NewStringConverter(str string) StringConverter {
-	return StringConverter{
+func newStringConverter(str string) stringConverter {
+	return stringConverter{
 		str: str,
 	}
 }
 
-func (c StringConverter) Identity() []byte {
+func (c stringConverter) Identity() []byte {
 	return unsafe.Slice(unsafe.StringData(c.str), len(c.str))
 }
