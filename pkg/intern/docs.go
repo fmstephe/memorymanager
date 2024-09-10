@@ -43,4 +43,8 @@
 // byte limit is reached. If strings to be interned evolve over time and don't
 // have a stable set of common string values, then this interning approach will
 // be less effective.
+//
+// It should be reasonably easy to create new interners using the types found
+// in the internbase package. Just following the implementation of the
+// interners found in this package.
 package intern
