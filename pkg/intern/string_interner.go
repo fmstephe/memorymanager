@@ -4,15 +4,19 @@
 
 package intern
 
-import "unsafe"
+import (
+	"unsafe"
+
+	"github.com/fmstephe/memorymanager/pkg/intern/internbase"
+)
 
 type stringInterner struct {
-	interner InternerWithBytesId[StringConverter]
+	interner internbase.InternerWithBytesId[StringConverter]
 }
 
-func NewStringInterner(config Config) Interner[string] {
+func NewStringInterner(config internbase.Config) Interner[string] {
 	return &stringInterner{
-		interner: NewInternerWithBytesId[StringConverter](config),
+		interner: internbase.NewInternerWithBytesId[StringConverter](config),
 	}
 }
 
@@ -20,11 +24,11 @@ func (i *stringInterner) Get(str string) string {
 	return i.interner.Get(NewStringConverter(str))
 }
 
-func (i *stringInterner) GetStats() StatsSummary {
+func (i *stringInterner) GetStats() internbase.StatsSummary {
 	return i.interner.GetStats()
 }
 
-var _ ConverterWithBytesId = StringConverter{}
+var _ internbase.ConverterWithBytesId = StringConverter{}
 
 type StringConverter struct {
 	str string

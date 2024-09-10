@@ -4,7 +4,9 @@
 
 package intern
 
+import "github.com/fmstephe/memorymanager/pkg/intern/internbase"
+
 type Interner[T any] interface {
 	Get(t T) string
-	GetStats() StatsSummary
+	GetStats() internbase.StatsSummary
 }

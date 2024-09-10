@@ -6,16 +6,18 @@ package intern
 
 import (
 	"time"
+
+	"github.com/fmstephe/memorymanager/pkg/intern/internbase"
 )
 
 type timeInterner struct {
-	interner InternerWithUint64Id[TimeConverter]
+	interner internbase.InternerWithUint64Id[TimeConverter]
 	format   string
 }
 
-func NewTimeInterner(config Config, format string) Interner[time.Time] {
+func NewTimeInterner(config internbase.Config, format string) Interner[time.Time] {
 	return &timeInterner{
-		interner: NewInternerWithUint64Id[TimeConverter](config),
+		interner: internbase.NewInternerWithUint64Id[TimeConverter](config),
 		format:   format,
 	}
 }
@@ -24,11 +26,11 @@ func (i *timeInterner) Get(value time.Time) string {
 	return i.interner.Get(NewTimeConverter(value, i.format))
 }
 
-func (i *timeInterner) GetStats() StatsSummary {
+func (i *timeInterner) GetStats() internbase.StatsSummary {
 	return i.interner.GetStats()
 }
 
-var _ ConverterWithUint64Id = TimeConverter{}
+var _ internbase.ConverterWithUint64Id = TimeConverter{}
 
 // Converter for time.Time. The int64 UnixNano() value is used to uniquely
 // identify each time.Time. If time.Time values are used with different time

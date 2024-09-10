@@ -7,10 +7,12 @@ package intern
 import (
 	"testing"
 	"time"
+
+	"github.com/fmstephe/memorymanager/pkg/intern/internbase"
 )
 
 func BenchmarkTimeInterner_NoneInterned(b *testing.B) {
-	interner := NewTimeInterner(Config{MaxLen: 0, MaxBytes: 0}, time.RFC1123)
+	interner := NewTimeInterner(internbase.Config{MaxLen: 0, MaxBytes: 0}, time.RFC1123)
 
 	timestamps := make([]time.Time, b.N)
 	now := time.Now()
@@ -26,7 +28,7 @@ func BenchmarkTimeInterner_NoneInterned(b *testing.B) {
 }
 
 func BenchmarkTimeInterner_AllInterned(b *testing.B) {
-	interner := NewTimeInterner(Config{MaxLen: 0, MaxBytes: 0}, time.RFC1123)
+	interner := NewTimeInterner(internbase.Config{MaxLen: 0, MaxBytes: 0}, time.RFC1123)
 
 	timestamps := make([]time.Time, b.N)
 	now := time.Now()
@@ -50,7 +52,7 @@ func BenchmarkTimeInterner_AllInterned(b *testing.B) {
 //
 // This simulates the behaviour when the interner is used on a smallish fixed set of common values.
 func BenchmarkTimeInterner_AllInterned10K(b *testing.B) {
-	interner := NewTimeInterner(Config{MaxLen: 0, MaxBytes: 0}, time.RFC1123)
+	interner := NewTimeInterner(internbase.Config{MaxLen: 0, MaxBytes: 0}, time.RFC1123)
 
 	timestamps := make([]time.Time, 10_000)
 	now := time.Now()
