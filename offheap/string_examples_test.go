@@ -13,7 +13,7 @@ import (
 // Calling AllocStringFromString allocates a string and returns a RefString
 // which acts like a conventional pointer through which you can retrieve the
 // allocated string via RefString.Value()
-func ExampleAllocFromString() {
+func ExampleAllocStringFromString() {
 	var store *offheap.Store = offheap.New()
 
 	var ref offheap.RefString = offheap.AllocStringFromString(store, "allocated")

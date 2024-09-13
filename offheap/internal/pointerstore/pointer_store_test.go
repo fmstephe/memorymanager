@@ -60,7 +60,9 @@ func TestSlabIntegrity(t *testing.T) {
 		t.Run(fmt.Sprintf("Test allocation integrity for %d", objectSize), func(t *testing.T) {
 			conf := NewAllocConfigBySize(objectSize, 1<<16)
 			store := New(conf)
-			defer store.Destroy()
+			defer func() {
+				assert.NoError(t, store.Destroy())
+			}()
 
 			// Force 3 slabs to be created for this object size
 			// Test that the allocations for each slab are correct

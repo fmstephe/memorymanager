@@ -33,7 +33,7 @@ var testSizeRanges = []int{
 func Test_Slice_AllocateModifyAndGet(t *testing.T) {
 	ss := NewSized(1 << 8)
 	defer func() {
-		ss.Destroy()
+		assert.NoError(t, ss.Destroy())
 	}()
 
 	// Allocate it
@@ -63,7 +63,7 @@ func Test_Slice_AllocateModifyAndGet(t *testing.T) {
 func Test_Slice_AllocateModifyAndGet_ManySizes(t *testing.T) {
 	ss := NewSized(1 << 8)
 	defer func() {
-		ss.Destroy()
+		assert.NoError(t, ss.Destroy())
 	}()
 
 	for _, length := range testSizeRanges {
@@ -101,7 +101,7 @@ func Test_Slice_AllocateModifyAndGet_ManySizes(t *testing.T) {
 func Test_Slice_NewFreeGet_Panic(t *testing.T) {
 	ss := NewSized(1 << 8)
 	defer func() {
-		ss.Destroy()
+		assert.NoError(t, ss.Destroy())
 	}()
 
 	// Allocate and free a slice value
@@ -117,7 +117,7 @@ func Test_Slice_NewFreeGet_Panic(t *testing.T) {
 func Test_Slice_NewFreeFree_Panic(t *testing.T) {
 	ss := NewSized(1 << 8)
 	defer func() {
-		ss.Destroy()
+		assert.NoError(t, ss.Destroy())
 	}()
 
 	// Allocate and free a slice value
@@ -131,7 +131,9 @@ func Test_Slice_NewFreeFree_Panic(t *testing.T) {
 // Demonstrate that when we double free a re-allocated slice we still panic.
 func Test_Slice_NewFreeAllocFree_Panic(t *testing.T) {
 	os := NewSized(1 << 8)
-	defer os.Destroy()
+	defer func() {
+		assert.NoError(t, os.Destroy())
+	}()
 
 	r := AllocSlice[MutableStruct](os, 10, 10)
 	FreeSlice(os, r)
@@ -144,7 +146,9 @@ func Test_Slice_NewFreeAllocFree_Panic(t *testing.T) {
 // Demonstrate that when we call Value() on a re-allocated RefSlice we still panic
 func Test_Slice_NewFreeAllocGet_Panic(t *testing.T) {
 	os := NewSized(1 << 8)
-	defer os.Destroy()
+	defer func() {
+		assert.NoError(t, os.Destroy())
+	}()
 
 	r := AllocSlice[MutableStruct](os, 10, 10)
 	FreeSlice(os, r)
@@ -161,7 +165,9 @@ func Test_Slice_NewFreeAllocGet_Panic(t *testing.T) {
 // times.
 func Test_Slice_SizedStats(t *testing.T) {
 	os := New()
-	defer os.Destroy()
+	defer func() {
+		assert.NoError(t, os.Destroy())
+	}()
 
 	for _, capacity := range []int{
 		0,
@@ -208,7 +214,9 @@ func Test_Slice_SizedStats(t *testing.T) {
 
 func Test_Slice_Append(t *testing.T) {
 	os := New()
-	defer os.Destroy()
+	defer func() {
+		assert.NoError(t, os.Destroy())
+	}()
 
 	for _, length := range testSizeRanges {
 		for _, extraCapacity := range testSizeRanges {
@@ -296,7 +304,9 @@ func doSliceAppendTest[T any](t *testing.T, os *Store, length, extraCapacity int
 
 func Test_Slice_AppendSlice(t *testing.T) {
 	os := New()
-	defer os.Destroy()
+	defer func() {
+		assert.NoError(t, os.Destroy())
+	}()
 
 	for _, length := range testSizeRanges {
 		for _, extraCapacity := range testSizeRanges {
@@ -391,7 +401,9 @@ func doSliceAppendSliceTest[T any](t *testing.T, os *Store, length, extraCapacit
 
 func Test_Slice_ConcatSlices(t *testing.T) {
 	os := New()
-	defer os.Destroy()
+	defer func() {
+		assert.NoError(t, os.Destroy())
+	}()
 
 	for _, testCase := range []struct {
 		slices [][]int64
