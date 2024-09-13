@@ -8,6 +8,7 @@ import (
 	"testing"
 	"unsafe"
 
+	"github.com/fmstephe/memorymanager/pkg/intern/internbase"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +20,7 @@ func DoTestGenericInterner_Interned[T any](t *testing.T, interner Interner[T], v
 	assert.Equal(t, strVal, internedVal)
 
 	// a new int value has been interned
-	expectedStats := Stats{Interned: 1}
+	expectedStats := internbase.Stats{Interned: 1}
 	stats := interner.GetStats()
 	assert.Equal(t, expectedStats, stats.Total)
 
@@ -32,7 +33,7 @@ func DoTestGenericInterner_Interned[T any](t *testing.T, interner Interner[T], v
 	assert.Same(t, unsafe.StringData(internedVal), unsafe.StringData(internedVal2))
 
 	// An interned string has been returned
-	expectedStats = Stats{Interned: 1, Returned: 1}
+	expectedStats = internbase.Stats{Interned: 1, Returned: 1}
 	stats = interner.GetStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
@@ -45,7 +46,7 @@ func DoTestGenericInterner_NotInternedMaxLen[T any](t *testing.T, interner Inter
 	assert.Equal(t, strVal, notInternedInt)
 
 	// The int passed in was too long, so maxLenExceeded should be recorded
-	expectedStats := Stats{MaxLenExceeded: 1}
+	expectedStats := internbase.Stats{MaxLenExceeded: 1}
 	stats := interner.GetStats()
 	assert.Equal(t, expectedStats, stats.Total)
 
@@ -58,7 +59,7 @@ func DoTestGenericInterner_NotInternedMaxLen[T any](t *testing.T, interner Inter
 	assert.NotSame(t, unsafe.StringData(notInternedInt), unsafe.StringData(notInternedInt2))
 
 	// The int passed in was too long, so maxLenExceeded should be recorded
-	expectedStats = Stats{MaxLenExceeded: 2}
+	expectedStats = internbase.Stats{MaxLenExceeded: 2}
 	stats = interner.GetStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
@@ -71,7 +72,7 @@ func DoTestGenericInterner_NotInternedMaxBytes[T any](t *testing.T, interner Int
 	assert.Equal(t, strVal, notInternedInt)
 
 	// The int passed in was too long, so usedBytesExceeded should be recorded
-	expectedStats := Stats{UsedBytesExceeded: 1}
+	expectedStats := internbase.Stats{UsedBytesExceeded: 1}
 	stats := interner.GetStats()
 	assert.Equal(t, expectedStats, stats.Total)
 
@@ -84,7 +85,7 @@ func DoTestGenericInterner_NotInternedMaxBytes[T any](t *testing.T, interner Int
 	assert.NotSame(t, unsafe.StringData(notInternedInt), unsafe.StringData(notInternedInt2))
 
 	// The int passed in was too long, so usedBytesExceeded should be recorded
-	expectedStats = Stats{UsedBytesExceeded: 2}
+	expectedStats = internbase.Stats{UsedBytesExceeded: 2}
 	stats = interner.GetStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }

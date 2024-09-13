@@ -7,10 +7,12 @@ package intern
 import (
 	"testing"
 	"time"
+
+	"github.com/fmstephe/memorymanager/pkg/intern/internbase"
 )
 
 func TestTimeInterner_Interned(t *testing.T) {
-	interner := NewTimeInterner(Config{MaxLen: 64, MaxBytes: 1024}, time.RFC1123)
+	interner := NewTimeInterner(internbase.Config{MaxLen: 64, MaxBytes: 1024}, time.RFC1123)
 	timestamp := time.Now()
 	internedTimestamp := timestamp.Format(time.RFC1123)
 
@@ -18,7 +20,7 @@ func TestTimeInterner_Interned(t *testing.T) {
 }
 
 func TestTimeInterner_NotInternedMaxLen(t *testing.T) {
-	interner := NewTimeInterner(Config{MaxLen: 3, MaxBytes: 1024}, time.RFC1123)
+	interner := NewTimeInterner(internbase.Config{MaxLen: 3, MaxBytes: 1024}, time.RFC1123)
 	timestamp := time.Now()
 	internedTimestamp := timestamp.Format(time.RFC1123)
 
@@ -26,7 +28,7 @@ func TestTimeInterner_NotInternedMaxLen(t *testing.T) {
 }
 
 func TestTimeInterner_NotInternedMaxBytes(t *testing.T) {
-	interner := NewTimeInterner(Config{MaxLen: 64, MaxBytes: 3}, time.RFC1123)
+	interner := NewTimeInterner(internbase.Config{MaxLen: 64, MaxBytes: 3}, time.RFC1123)
 	timestamp := time.Now()
 	internedTimestamp := timestamp.Format(time.RFC1123)
 
@@ -39,7 +41,7 @@ func TestTimeInterner_NotInternedMaxBytes(t *testing.T) {
 // returning those as strings, then running out of usedBytes but continuing to
 // return previously interned timestamp values.
 func TestTimeInterner_Complex(t *testing.T) {
-	interner := NewTimeInterner(Config{MaxLen: 1024, MaxBytes: 1024 * 1024}, time.RFC1123)
+	interner := NewTimeInterner(internbase.Config{MaxLen: 1024, MaxBytes: 1024 * 1024}, time.RFC1123)
 	numberOfTimestamps := 100
 
 	timestamps := make([]time.Time, 0, numberOfTimestamps)
@@ -126,7 +128,7 @@ func TestTimeInterner_Complex(t *testing.T) {
 // Assert that getting a string, where the value has already been interned,
 // does not allocate
 func TestTimeInterner_NoAllocations(t *testing.T) {
-	interner := NewTimeInterner(Config{MaxLen: 0, MaxBytes: 0}, time.RFC1123)
+	interner := NewTimeInterner(internbase.Config{MaxLen: 0, MaxBytes: 0}, time.RFC1123)
 
 	timestamps := make([]time.Time, 10_000)
 	now := time.Now()

@@ -2,7 +2,7 @@
 // source code is governed by an MIT license that can be found in the LICENSE
 // file.
 
-package intern
+package internbase
 
 import (
 	"sync"
@@ -63,7 +63,7 @@ func (i *InternerWithUint64Id[C]) GetStats() StatsSummary {
 	for idx := range i.shards {
 		intShards = append(intShards, i.shards[idx].getStats())
 	}
-	return makeSummary(intShards, i.controller)
+	return MakeSummary(intShards, i.controller.getUsedBytes())
 }
 
 func (i *InternerWithUint64Id[C]) getIndex(hash uint64) uint64 {

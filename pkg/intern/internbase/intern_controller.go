@@ -2,7 +2,7 @@
 // source code is governed by an MIT license that can be found in the LICENSE
 // file.
 
-package intern
+package internbase
 
 import "sync/atomic"
 

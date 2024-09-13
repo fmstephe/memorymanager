@@ -7,10 +7,12 @@ package intern
 import (
 	"strconv"
 	"testing"
+
+	"github.com/fmstephe/memorymanager/pkg/intern/internbase"
 )
 
 func BenchmarkBytesInterner_NoneInterned(b *testing.B) {
-	interner := NewBytesInterner(Config{MaxLen: 0, MaxBytes: 0})
+	interner := NewBytesInterner(internbase.Config{MaxLen: 0, MaxBytes: 0})
 
 	bytes := make([][]byte, b.N)
 	for i := range bytes {
@@ -25,7 +27,7 @@ func BenchmarkBytesInterner_NoneInterned(b *testing.B) {
 }
 
 func BenchmarkBytesInterner_AllInterned(b *testing.B) {
-	interner := NewBytesInterner(Config{MaxLen: 0, MaxBytes: 0})
+	interner := NewBytesInterner(internbase.Config{MaxLen: 0, MaxBytes: 0})
 
 	bytes := make([][]byte, b.N)
 	for i := range bytes {
@@ -48,7 +50,7 @@ func BenchmarkBytesInterner_AllInterned(b *testing.B) {
 //
 // This simulates the behaviour when the interner is used on a smallish fixed set of common values.
 func BenchmarkBytesInterner_AllInterned10K(b *testing.B) {
-	interner := NewBytesInterner(Config{MaxLen: 0, MaxBytes: 0})
+	interner := NewBytesInterner(internbase.Config{MaxLen: 0, MaxBytes: 0})
 
 	bytes := make([][]byte, 10_000)
 	for i := range bytes {

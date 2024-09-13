@@ -4,36 +4,40 @@
 
 package intern
 
+import (
+	"github.com/fmstephe/memorymanager/pkg/intern/internbase"
+)
+
 type bytesInterner struct {
-	interner InternerWithBytesId[BytesConverter]
+	interner internbase.InternerWithBytesId[bytesConverter]
 }
 
-func NewBytesInterner(config Config) Interner[[]byte] {
+func NewBytesInterner(config internbase.Config) Interner[[]byte] {
 	return &bytesInterner{
-		interner: NewInternerWithBytesId[BytesConverter](config),
+		interner: internbase.NewInternerWithBytesId[bytesConverter](config),
 	}
 }
 
 func (i *bytesInterner) Get(bytes []byte) string {
-	return i.interner.Get(NewBytesConverter(bytes))
+	return i.interner.Get(newBytesConverter(bytes))
 }
 
-func (i *bytesInterner) GetStats() StatsSummary {
+func (i *bytesInterner) GetStats() internbase.StatsSummary {
 	return i.interner.GetStats()
 }
 
-var _ ConverterWithBytesId = BytesConverter{}
+var _ internbase.ConverterWithBytesId = bytesConverter{}
 
-type BytesConverter struct {
+type bytesConverter struct {
 	bytes []byte
 }
 
-func NewBytesConverter(bytes []byte) BytesConverter {
-	return BytesConverter{
+func newBytesConverter(bytes []byte) bytesConverter {
+	return bytesConverter{
 		bytes: bytes,
 	}
 }
 
-func (c BytesConverter) Identity() []byte {
+func (c bytesConverter) Identity() []byte {
 	return c.bytes
 }

@@ -2,6 +2,8 @@
 // source code is governed by an MIT license that can be found in the LICENSE
 // file.
 
+// # Usage
+//
 // The intern package allows users to intern string values.
 //
 // Importantly the interners built using this package can take types which are
@@ -43,4 +45,8 @@
 // byte limit is reached. If strings to be interned evolve over time and don't
 // have a stable set of common string values, then this interning approach will
 // be less effective.
+//
+// It should be reasonably easy to create new interners using the types found
+// in the internbase package. Just following the implementation of the
+// interners found in this package.
 package intern

@@ -8,23 +8,24 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/fmstephe/memorymanager/pkg/intern/internbase"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestBytesInterner_Interned_EmptySlice(t *testing.T) {
-	interner := NewBytesInterner(Config{MaxLen: 64, MaxBytes: 1024})
+	interner := NewBytesInterner(internbase.Config{MaxLen: 64, MaxBytes: 1024})
 
 	internedString := interner.Get([]byte{})
 	assert.Equal(t, "", internedString)
 
 	// a new string value has been interned
-	expectedStats := Stats{Returned: 1}
+	expectedStats := internbase.Stats{Returned: 1}
 	stats := interner.GetStats()
 	assert.Equal(t, expectedStats, stats.Total)
 }
 
 func TestBytesInterner_Interned(t *testing.T) {
-	interner := NewBytesInterner(Config{MaxLen: 64, MaxBytes: 1024})
+	interner := NewBytesInterner(internbase.Config{MaxLen: 64, MaxBytes: 1024})
 	internedBytes := "interned string"
 	bytes := []byte(internedBytes)
 
@@ -32,7 +33,7 @@ func TestBytesInterner_Interned(t *testing.T) {
 }
 
 func TestBytesInterner_NotInternedMaxLen(t *testing.T) {
-	interner := NewBytesInterner(Config{MaxLen: 3, MaxBytes: 1024})
+	interner := NewBytesInterner(internbase.Config{MaxLen: 3, MaxBytes: 1024})
 	internedBytes := "interned string"
 	bytes := []byte(internedBytes)
 
@@ -40,7 +41,7 @@ func TestBytesInterner_NotInternedMaxLen(t *testing.T) {
 }
 
 func TestBytesInterner_NotInternedMaxBytes(t *testing.T) {
-	interner := NewBytesInterner(Config{MaxLen: 64, MaxBytes: 3})
+	interner := NewBytesInterner(internbase.Config{MaxLen: 64, MaxBytes: 3})
 	internedBytes := "interned string"
 	bytes := []byte(internedBytes)
 
@@ -58,7 +59,7 @@ func TestBytesInterner_NotInternedHashCollision(t *testing.T) {
 // returning those strings, then running out of usedBytes but continuing to
 // return previously interned string values.
 func TestBytesInterner_Complex(t *testing.T) {
-	interner := NewBytesInterner(Config{MaxLen: 1024, MaxBytes: 1024})
+	interner := NewBytesInterner(internbase.Config{MaxLen: 1024, MaxBytes: 1024})
 	strings := []string{
 		"Heavens!",
 		"what",
@@ -144,7 +145,7 @@ func TestBytesInterner_Complex(t *testing.T) {
 			assert.Equal(t, expectedString, internedString)
 		}
 
-		expectedStats := Stats{
+		expectedStats := internbase.Stats{
 			Interned: len(strings),
 		}
 		stats := interner.GetStats()
@@ -160,7 +161,7 @@ func TestBytesInterner_Complex(t *testing.T) {
 			assert.Equal(t, expectedString, internedString)
 		}
 
-		expectedStats := Stats{
+		expectedStats := internbase.Stats{
 			Interned: len(strings),
 			Returned: len(strings),
 		}
@@ -177,7 +178,7 @@ func TestBytesInterner_Complex(t *testing.T) {
 		fillerStr := interner.Get(filler)
 		assert.Equal(t, string(filler), fillerStr)
 
-		expectedStats := Stats{
+		expectedStats := internbase.Stats{
 			Interned: len(strings) + 1,
 			Returned: len(strings),
 		}
@@ -195,7 +196,7 @@ func TestBytesInterner_Complex(t *testing.T) {
 			assert.Equal(t, expectedString, internedString)
 		}
 
-		expectedStats := Stats{
+		expectedStats := internbase.Stats{
 			Interned:          len(strings) + 1,
 			Returned:          len(strings),
 			UsedBytesExceeded: len(strings),
@@ -213,7 +214,7 @@ func TestBytesInterner_Complex(t *testing.T) {
 			assert.Equal(t, expectedString, internedString)
 		}
 
-		expectedStats := Stats{
+		expectedStats := internbase.Stats{
 			Interned:          len(strings) + 1,
 			Returned:          len(strings) * 2,
 			UsedBytesExceeded: len(strings),
@@ -226,7 +227,7 @@ func TestBytesInterner_Complex(t *testing.T) {
 // Assert that getting a string, where the value has already been interned,
 // does not allocate
 func TestBytesInterner_NoAllocations(t *testing.T) {
-	interner := NewBytesInterner(Config{MaxLen: 0, MaxBytes: 0})
+	interner := NewBytesInterner(internbase.Config{MaxLen: 0, MaxBytes: 0})
 
 	byteVals := make([][]byte, 10_000)
 	for i := range byteVals {

@@ -6,10 +6,12 @@ package intern
 
 import (
 	"testing"
+
+	"github.com/fmstephe/memorymanager/pkg/intern/internbase"
 )
 
 func BenchmarkFloat64Interner_NoneInterned(b *testing.B) {
-	interner := NewFloat64Interner(Config{MaxLen: 0, MaxBytes: 0}, 'f', -1, 64)
+	interner := NewFloat64Interner(internbase.Config{MaxLen: 0, MaxBytes: 0}, 'f', -1, 64)
 
 	floats := make([]float64, b.N)
 	for i := range floats {
@@ -24,7 +26,7 @@ func BenchmarkFloat64Interner_NoneInterned(b *testing.B) {
 }
 
 func BenchmarkFloat64Interner_AllInterned(b *testing.B) {
-	interner := NewFloat64Interner(Config{MaxLen: 0, MaxBytes: 0}, 'f', -1, 64)
+	interner := NewFloat64Interner(internbase.Config{MaxLen: 0, MaxBytes: 0}, 'f', -1, 64)
 
 	floats := make([]float64, b.N)
 	for i := range floats {
@@ -47,7 +49,7 @@ func BenchmarkFloat64Interner_AllInterned(b *testing.B) {
 //
 // This simulates the behaviour when the interner is used on a smallish fixed set of common values.
 func BenchmarkFloat64Interner_AllInterned10K(b *testing.B) {
-	interner := NewFloat64Interner(Config{MaxLen: 0, MaxBytes: 0}, 'f', -1, 64)
+	interner := NewFloat64Interner(internbase.Config{MaxLen: 0, MaxBytes: 0}, 'f', -1, 64)
 
 	floats := make([]float64, 10_000)
 	for i := range floats {

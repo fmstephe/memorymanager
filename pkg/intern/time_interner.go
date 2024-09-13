@@ -6,29 +6,31 @@ package intern
 
 import (
 	"time"
+
+	"github.com/fmstephe/memorymanager/pkg/intern/internbase"
 )
 
 type timeInterner struct {
-	interner InternerWithUint64Id[TimeConverter]
+	interner internbase.InternerWithUint64Id[timeConverter]
 	format   string
 }
 
-func NewTimeInterner(config Config, format string) Interner[time.Time] {
+func NewTimeInterner(config internbase.Config, format string) Interner[time.Time] {
 	return &timeInterner{
-		interner: NewInternerWithUint64Id[TimeConverter](config),
+		interner: internbase.NewInternerWithUint64Id[timeConverter](config),
 		format:   format,
 	}
 }
 
 func (i *timeInterner) Get(value time.Time) string {
-	return i.interner.Get(NewTimeConverter(value, i.format))
+	return i.interner.Get(newTimeConverter(value, i.format))
 }
 
-func (i *timeInterner) GetStats() StatsSummary {
+func (i *timeInterner) GetStats() internbase.StatsSummary {
 	return i.interner.GetStats()
 }
 
-var _ ConverterWithUint64Id = TimeConverter{}
+var _ internbase.ConverterWithUint64Id = timeConverter{}
 
 // Converter for time.Time. The int64 UnixNano() value is used to uniquely
 // identify each time.Time. If time.Time values are used with different time
@@ -37,22 +39,22 @@ var _ ConverterWithUint64Id = TimeConverter{}
 //
 // Having a converter/interner per timezone is currently the best way to handle
 // this.
-type TimeConverter struct {
+type timeConverter struct {
 	value  time.Time
 	format string
 }
 
-func NewTimeConverter(value time.Time, format string) TimeConverter {
-	return TimeConverter{
+func newTimeConverter(value time.Time, format string) timeConverter {
+	return timeConverter{
 		value:  value,
 		format: format,
 	}
 }
 
-func (c TimeConverter) Identity() uint64 {
+func (c timeConverter) Identity() uint64 {
 	return uint64(c.value.UnixNano())
 }
 
-func (c TimeConverter) String() string {
+func (c timeConverter) String() string {
 	return c.value.Format(c.format)
 }

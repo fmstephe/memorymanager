@@ -2,7 +2,7 @@
 // source code is governed by an MIT license that can be found in the LICENSE
 // file.
 
-package intern
+package internbase
 
 // A summary of the stats for a specific type of interned converter.
 //
@@ -40,7 +40,7 @@ type Stats struct {
 	HashCollision     int
 }
 
-func makeSummary(shards []Stats, controller *internController) StatsSummary {
+func MakeSummary(shards []Stats, usedBytes int) StatsSummary {
 	total := Stats{}
 
 	for i := range shards {
@@ -52,7 +52,7 @@ func makeSummary(shards []Stats, controller *internController) StatsSummary {
 	}
 
 	return StatsSummary{
-		UsedBytes: controller.getUsedBytes(),
+		UsedBytes: usedBytes,
 		Total:     total,
 		Shards:    shards,
 	}
