@@ -4,6 +4,7 @@ go 1.22
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0
+	github.com/dolthub/maphash v0.1.0
 	github.com/fmstephe/flib v0.0.1
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/sys v0.18.0
