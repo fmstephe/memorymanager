@@ -34,3 +34,6 @@ jobs:
 
     - name: Check code quality
       uses: dominikh/staticcheck-action@v1
+
+    - name: Run gcassert
+      run: fmstephe/gcassert-action@latest
