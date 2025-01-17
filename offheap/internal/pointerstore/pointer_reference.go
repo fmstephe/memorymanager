@@ -13,12 +13,23 @@ const maskShift = 56 // This leaves 8 bits for the generation data
 const genMask = uint64(0xFF << maskShift)
 const pointerMask = ^genMask
 
-// The address field holds a pointer to an object, but also sneaks a
-// generation value in the top 8 bits of the metaAddress field.
+// The address field holds a pointer to an object, but also sneaks a generation
+// value in the top 8 bits of the metaAddress field.
 //
 // The generation must be masked out to get a usable pointer value. The object
 // pointed to must have the same generation value in order to access/free that
 // object.
+//
+// Because the Refpointer struct is two words (on 64 bit systems) in size, all
+// method receivers are pointers to avoid copying two words in method calls.
+// However, the RefPointer is _always_ used as a value. This means that having
+// a pointer receiver could potentially cause the RefPointer to be allocated if
+// its receiver escapes to the heap (according to escape analysis). We assert
+// that all methods do not allow their receiver variable to escape to the heap.
+//
+// This is all very nice and good, but the idea that avoiding copying two words
+// is a meaningful improvement are speculative and haven't been tested. This
+// would be a good target for future performance testing.
 type RefPointer struct {
 	dataAddress uint64
 	metaAddress uint64
@@ -60,6 +71,7 @@ func NewReference(pAddress, pMetadata uintptr) RefPointer {
 	}
 }
 
+//gcassert:noescape
 func (r *RefPointer) AllocFromFree() (nextFree RefPointer) {
 	// Grab the nextFree reference, and nil it for this metadata
 	meta := r.metadata()
@@ -80,11 +92,14 @@ func (r *RefPointer) AllocFromFree() (nextFree RefPointer) {
 	return nextFree
 }
 
+//gcassert:noescape
 func (r *RefPointer) Free(oldFree RefPointer) {
 	meta := r.metadata()
 
 	if !meta.nextFree.IsNil() {
-		panic(fmt.Errorf("attempted to Free freed allocation %v", r))
+		// NB: The odd-looking *r here actually prevents an allocation.
+		// Fuller explanation found in DataPtr()
+		panic(fmt.Errorf("attempted to Free freed allocation %v", *r))
 	}
 
 	if meta.gen != r.Gen() {
@@ -98,10 +113,12 @@ func (r *RefPointer) Free(oldFree RefPointer) {
 	}
 }
 
+//gcassert:noescape
 func (r *RefPointer) IsNil() bool {
 	return r.metadataPtr() == 0
 }
 
+//gcassert:noescape
 func (r *RefPointer) DataPtr() uintptr {
 	meta := r.metadata()
 
@@ -123,23 +140,29 @@ func (r *RefPointer) DataPtr() uintptr {
 }
 
 // Convenient method to retrieve raw data of an allocation
+//
+//gcassert:noescape
 func (r *RefPointer) Bytes(size int) []byte {
 	ptr := r.DataPtr()
 	return pointerToBytes(ptr, size)
 }
 
+//gcassert:noescape
 func (r *RefPointer) metadataPtr() uintptr {
 	return (uintptr)(r.metaAddress & pointerMask)
 }
 
+//gcassert:noescape
 func (r *RefPointer) metadata() *metadata {
 	return (*metadata)(unsafe.Pointer(r.metadataPtr()))
 }
 
+//gcassert:noescape
 func (r *RefPointer) Gen() uint8 {
 	return (uint8)((r.metaAddress & genMask) >> maskShift)
 }
 
+//gcassert:noescape
 func (r *RefPointer) setGen(gen uint8) {
 	r.metaAddress = (r.metaAddress & pointerMask) | (uint64(gen) << maskShift)
 }
