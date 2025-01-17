@@ -97,7 +97,9 @@ func (r *RefPointer) Free(oldFree RefPointer) {
 	meta := r.metadata()
 
 	if !meta.nextFree.IsNil() {
-		panic(fmt.Errorf("attempted to Free freed allocation %v", r))
+		// NB: The odd-looking *r here actually prevents an allocation.
+		// Fuller explanation found in DataPtr()
+		panic(fmt.Errorf("attempted to Free freed allocation %v", *r))
 	}
 
 	if meta.gen != r.Gen() {
