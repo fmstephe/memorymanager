@@ -27,5 +27,10 @@ jobs:
     - name: Test
       run: go test -v -short ./...
 
+    - name: Run gcassert
+      run: |
+        go install github.com/jordanlewis/gcassert/cmd/gcassert@latest
+        $(go env GOPATH)/bin/gcassert ./...
+
     - name: Check code quality
       uses: dominikh/staticcheck-action@v1
