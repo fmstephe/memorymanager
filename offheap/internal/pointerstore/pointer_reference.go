@@ -58,12 +58,10 @@ func (m *metadata) setGen(gen uint8) {
 //
 //gcassert:noescape
 func (m *metadata) checkReference(r *RefPointer) {
-	if m.gen() != r.Gen() {
-		panic(fmt.Errorf("attempt to get value (%d) using stale reference (%d)", m.gen(), r.Gen()))
-	}
-
 	if m.dataAddressAndGen != r.dataAddressAndGen {
-		panic(fmt.Errorf("attempt to get value where reference's data-address (%d) and metadata's data-address (%d) are different", r.dataAddressAndGen, m.dataAddressAndGen))
+		const hexWidth = 16
+		panic(fmt.Errorf("attempt to get value where reference's taggedAddress (%#0*X) and metadata's taggedAddress (%#0*X) are different", hexWidth, r.dataAddressAndGen, hexWidth, m.dataAddressAndGen))
+
 	}
 }
 
