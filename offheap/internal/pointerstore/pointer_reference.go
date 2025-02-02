@@ -76,6 +76,10 @@ func NewReference(dataAddress, metaAddress uintptr) RefPointer {
 		panic("cannot create new Reference with nil data pointer")
 	}
 
+	if metaAddress == (uintptr)(unsafe.Pointer(nil)) {
+		panic("cannot create new Reference with nil metadata pointer")
+	}
+
 	r := RefPointer{
 		dataAddressAndGen: uint64(dataAddress),
 		metaAddress:       uint64(metaAddress),

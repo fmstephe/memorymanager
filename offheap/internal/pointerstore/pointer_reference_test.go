@@ -6,6 +6,7 @@ package pointerstore
 
 import (
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -16,9 +17,16 @@ func TestIsNil(t *testing.T) {
 	assert.True(t, r.IsNil())
 }
 
-// Calling newReference() with nil will panic
+// Calling newReference() with any nil uintptr parameter will panic
 func TestNewReferenceWithNilPanics(t *testing.T) {
-	assert.Panics(t, func() { NewReference(0, 0) })
+	nilPtr := uintptr(unsafe.Pointer(nil))
+
+	allocConfig := NewAllocConfigBySize(8, 8)
+	objects, metadata := MmapSlab(allocConfig)
+
+	assert.Panics(t, func() { NewReference(objects[0], nilPtr) })
+	assert.Panics(t, func() { NewReference(nilPtr, metadata[0]) })
+	assert.Panics(t, func() { NewReference(nilPtr, nilPtr) })
 }
 
 // Demonstrate that a pointer with any non-0 field is not nil
