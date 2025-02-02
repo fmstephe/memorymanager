@@ -31,8 +31,8 @@ const pointerMask = ^genMask
 // is a meaningful improvement are speculative and haven't been tested. This
 // would be a good target for future performance testing.
 type RefPointer struct {
-	dataAddress uint64
-	metaAddress uint64
+	dataAddressAndGen uint64
+	metaAddress       uint64
 }
 
 // If the object's metadata has a non-nil nextFree pointer then the object is
@@ -66,8 +66,8 @@ func NewReference(pAddress, pMetadata uintptr) RefPointer {
 	// NB: The gen on a brand new Reference is always 0
 	// So we don't set it
 	return RefPointer{
-		dataAddress: maskedAddress,
-		metaAddress: uint64(pMetadata),
+		dataAddressAndGen: maskedAddress,
+		metaAddress:       uint64(pMetadata),
 	}
 }
 
@@ -136,7 +136,7 @@ func (r *RefPointer) DataPtr() uintptr {
 	if meta.gen != r.Gen() {
 		panic(fmt.Errorf("attempt to get value (%d) using stale reference (%d)", meta.gen, r.Gen()))
 	}
-	return (uintptr)(r.dataAddress & pointerMask)
+	return (uintptr)(r.dataAddressAndGen & pointerMask)
 }
 
 // Convenient method to retrieve raw data of an allocation
@@ -159,12 +159,12 @@ func (r *RefPointer) metadata() *metadata {
 
 //gcassert:noescape
 func (r *RefPointer) Gen() uint8 {
-	return (uint8)((r.dataAddress & genMask) >> maskShift)
+	return (uint8)((r.dataAddressAndGen & genMask) >> maskShift)
 }
 
 //gcassert:noescape
 func (r *RefPointer) setGen(gen uint8) {
-	r.dataAddress = (r.dataAddress & pointerMask) | (uint64(gen) << maskShift)
+	r.dataAddressAndGen = (r.dataAddressAndGen & pointerMask) | (uint64(gen) << maskShift)
 }
 
 // This method re-allocates the memory location. When this method returns r
