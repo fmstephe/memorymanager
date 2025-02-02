@@ -29,6 +29,19 @@ func TestNewReferenceWithNilPanics(t *testing.T) {
 	assert.Panics(t, func() { NewReference(nilPtr, nilPtr) })
 }
 
+// Calling newReference() with any uintptr parameter with generation tag bits set will panic
+func TestNewReferenceWithGenerationBitsSetPanics(t *testing.T) {
+	allocConfig := NewAllocConfigBySize(8, 8)
+	objects, metadata := MmapSlab(allocConfig)
+
+	badObject := objects[0] | (1 << maskShift)
+	badMeta := metadata[0] | (1 << maskShift)
+
+	assert.Panics(t, func() { NewReference(objects[0], badMeta) })
+	assert.Panics(t, func() { NewReference(badObject, metadata[0]) })
+	assert.Panics(t, func() { NewReference(badObject, badMeta) })
+}
+
 // Demonstrate that a pointer with any non-0 field is not nil
 func TestNewReference(t *testing.T) {
 	allocConfig := NewAllocConfigBySize(8, 32*8)

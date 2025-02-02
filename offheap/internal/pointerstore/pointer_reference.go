@@ -9,10 +9,6 @@ import (
 	"unsafe"
 )
 
-const maskShift = 56 // This leaves 8 bits for the generation data
-const genMask = uint64(0xFF << maskShift)
-const pointerMask = ^genMask
-
 // The address field holds a pointer to an object, but also sneaks a generation
 // value in the top 8 bits of the dataAddress field.
 //
@@ -31,8 +27,8 @@ const pointerMask = ^genMask
 // is a meaningful improvement are speculative and haven't been tested. This
 // would be a good target for future performance testing.
 type RefPointer struct {
-	dataAddressAndGen uint64
-	metaAddress       uint64
+	dataAddressAndGen taggedAddress
+	metaAddress       taggedAddress
 }
 
 // If the object's metadata has a non-nil nextFree pointer then the object is
@@ -44,17 +40,17 @@ type RefPointer struct {
 // check to try to catch use-after-free type errors.
 type metadata struct {
 	nextFree          RefPointer
-	dataAddressAndGen uint64
+	dataAddressAndGen taggedAddress
 }
 
 //gcassert:noescape
 func (m *metadata) gen() uint8 {
-	return (uint8)((m.dataAddressAndGen & genMask) >> maskShift)
+	return m.dataAddressAndGen.gen()
 }
 
 //gcassert:noescape
 func (m *metadata) setGen(gen uint8) {
-	m.dataAddressAndGen = (m.dataAddressAndGen & pointerMask) | (uint64(gen) << maskShift)
+	m.dataAddressAndGen = m.dataAddressAndGen.withGen(gen)
 }
 
 // Check that the metadata for a reference agrees with the generation tag and the data address.
@@ -81,12 +77,8 @@ func NewReference(dataAddress, metaAddress uintptr) RefPointer {
 	}
 
 	r := RefPointer{
-		dataAddressAndGen: uint64(dataAddress),
-		metaAddress:       uint64(metaAddress),
-	}
-
-	if r.Gen() != 0 {
-		panic(fmt.Errorf("the data pointer (%d) contains a non-zero generation tag (%d)", dataAddress, r.Gen()))
+		dataAddressAndGen: newTaggedAddress(dataAddress),
+		metaAddress:       newTaggedAddress(metaAddress),
 	}
 
 	// Set the dataAddressAndGen in this reference's metadata.
@@ -143,7 +135,7 @@ func (r *RefPointer) Free(oldFree RefPointer) {
 
 //gcassert:noescape
 func (r *RefPointer) IsNil() bool {
-	return r.metadataPtr() == 0
+	return r.dataAddressAndGen.isNil()
 }
 
 //gcassert:noescape
@@ -163,20 +155,19 @@ func (r *RefPointer) DataPtr() uintptr {
 
 	meta.checkReference(r)
 
-	return (uintptr)(r.dataAddressAndGen & pointerMask)
+	return r.dataAddressAndGen.address()
 }
 
 // Convenient method to retrieve raw data of an allocation
 //
 //gcassert:noescape
 func (r *RefPointer) Bytes(size int) []byte {
-	ptr := r.DataPtr()
-	return pointerToBytes(ptr, size)
+	return r.dataAddressAndGen.bytes(size)
 }
 
 //gcassert:noescape
 func (r *RefPointer) metadataPtr() uintptr {
-	return (uintptr)(r.metaAddress & pointerMask)
+	return r.metaAddress.address()
 }
 
 //gcassert:noescape
@@ -186,12 +177,12 @@ func (r *RefPointer) metadata() *metadata {
 
 //gcassert:noescape
 func (r *RefPointer) Gen() uint8 {
-	return (uint8)((r.dataAddressAndGen & genMask) >> maskShift)
+	return r.dataAddressAndGen.gen()
 }
 
 //gcassert:noescape
 func (r *RefPointer) setGen(gen uint8) {
-	r.dataAddressAndGen = (r.dataAddressAndGen & pointerMask) | (uint64(gen) << maskShift)
+	r.dataAddressAndGen = r.dataAddressAndGen.withGen(gen)
 }
 
 // This method re-allocates the memory location. When this method returns r
