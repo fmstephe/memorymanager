@@ -22,7 +22,7 @@ func TestNewReferenceWithNilPanics(t *testing.T) {
 }
 
 // Demonstrate that a pointer with any non-0 field is not nil
-func TestIsNotNil(t *testing.T) {
+func TestNewReference(t *testing.T) {
 	allocConfig := NewAllocConfigBySize(8, 32*8)
 	objects, metadata := MmapSlab(allocConfig)
 	for i := range objects {
@@ -35,6 +35,9 @@ func TestIsNotNil(t *testing.T) {
 		assert.Equal(t, metadata[i], r.metadataPtr())
 		// Generation of a new Reference is always 0
 		assert.Equal(t, uint8(0), r.Gen())
+		// The dataAddressAndGen matches in both the reference and the metadata
+		meta := r.metadata()
+		assert.Equal(t, r.dataAddressAndGen, meta.dataAddressAndGen)
 	}
 }
 
@@ -62,7 +65,7 @@ func TestGenerationDoesNotAppearInOtherFields(t *testing.T) {
 	metadata := r.metadata()
 
 	gen := uint8(255)
-	metadata.gen = gen
+	metadata.setGen(gen)
 	r.setGen(gen)
 
 	assert.Equal(t, dataPtr, r.DataPtr())
@@ -75,11 +78,19 @@ func TestRealloc(t *testing.T) {
 	objects, metadatas := MmapSlab(allocConfig)
 
 	r1 := NewReference(objects[0], metadatas[0])
+	meta1 := r1.metadata()
+
 	dataPtr := r1.DataPtr()
 	metaPtr := r1.metadataPtr()
 	gen := r1.Gen()
 
 	r2 := r1.Realloc()
+	meta2 := r2.metadata()
+
+	// The dataAddressAndGen matches in both the reference and the metadata
+	assert.Equal(t, r2.dataAddressAndGen, meta2.dataAddressAndGen)
+	// The dataAddressAndGen of the original metadata has been updated to match r2
+	assert.Equal(t, r2.dataAddressAndGen, meta1.dataAddressAndGen)
 
 	// Assert that the data/metadata pointed to by r1 and r2 is the same
 	assert.Equal(t, dataPtr, r2.DataPtr())

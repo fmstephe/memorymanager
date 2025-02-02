@@ -43,32 +43,56 @@ type RefPointer struct {
 // value can access/free objects they point to. This is a best-effort safety
 // check to try to catch use-after-free type errors.
 type metadata struct {
-	nextFree RefPointer
-	gen      uint8
+	nextFree          RefPointer
+	dataAddressAndGen uint64
 }
 
-func NewReference(pAddress, pMetadata uintptr) RefPointer {
-	if pAddress == (uintptr)(unsafe.Pointer(nil)) {
-		panic("cannot create new Reference with nil pointer")
+//gcassert:noescape
+func (m *metadata) gen() uint8 {
+	return (uint8)((m.dataAddressAndGen & genMask) >> maskShift)
+}
+
+//gcassert:noescape
+func (m *metadata) setGen(gen uint8) {
+	m.dataAddressAndGen = (m.dataAddressAndGen & pointerMask) | (uint64(gen) << maskShift)
+}
+
+// Check that the metadata for a reference agrees with the generation tag and the data address.
+// Failure results in a panic.
+//
+//gcassert:noescape
+func (m *metadata) checkReference(r *RefPointer) {
+	if m.gen() != r.Gen() {
+		panic(fmt.Errorf("attempt to get value (%d) using stale reference (%d)", m.gen(), r.Gen()))
 	}
 
-	address := uint64(pAddress)
-	// This sets the generation to 0 by clearing the smuggled bits
-	maskedAddress := address & pointerMask
+	if m.dataAddressAndGen != r.dataAddressAndGen {
+		panic(fmt.Errorf("attempt to get value where reference's data-address (%d) and metadata's data-address (%d) are different", r.dataAddressAndGen, m.dataAddressAndGen))
+	}
+}
 
-	// Setting the generation 0 shouldn't actually change the address
-	// If there were any 1s in the top part of the address our generation
-	// smuggling system will break this pointer. This is an unrecoverable error.
-	if address != maskedAddress {
-		panic(fmt.Errorf("the raw pointer (%d) uses more than %d bits", address, maskShift))
+func NewReference(dataAddress, metaAddress uintptr) RefPointer {
+	if dataAddress == (uintptr)(unsafe.Pointer(nil)) {
+		panic("cannot create new Reference with nil data pointer")
 	}
 
-	// NB: The gen on a brand new Reference is always 0
-	// So we don't set it
-	return RefPointer{
-		dataAddressAndGen: maskedAddress,
-		metaAddress:       uint64(pMetadata),
+	r := RefPointer{
+		dataAddressAndGen: uint64(dataAddress),
+		metaAddress:       uint64(metaAddress),
 	}
+
+	if r.Gen() != 0 {
+		panic(fmt.Errorf("the data pointer (%d) contains a non-zero generation tag (%d)", dataAddress, r.Gen()))
+	}
+
+	// Set the dataAddressAndGen in this reference's metadata.
+	//
+	// In one of the next steps we will use this to look up the actual data
+	// _and_ verify the generation of the reference.
+	meta := r.metadata()
+	meta.dataAddressAndGen = r.dataAddressAndGen
+
+	return r
 }
 
 //gcassert:noescape
@@ -84,10 +108,12 @@ func (r *RefPointer) AllocFromFree() (nextFree RefPointer) {
 		nextFree = RefPointer{}
 	}
 
-	// Increment the generation for the object and set that generation in
-	// the Reference
-	meta.gen++
-	r.setGen(meta.gen)
+	// Increment the generation for the allocation and set that generation in
+	// the Metadata and Reference
+	gen := meta.gen()
+	gen++
+	meta.setGen(gen)
+	r.setGen(gen)
 
 	return nextFree
 }
@@ -102,9 +128,7 @@ func (r *RefPointer) Free(oldFree RefPointer) {
 		panic(fmt.Errorf("attempted to Free freed allocation %v", *r))
 	}
 
-	if meta.gen != r.Gen() {
-		panic(fmt.Errorf("attempt to free allocation (%d) using stale reference (%d)", meta.gen, r.Gen()))
-	}
+	meta.checkReference(r)
 
 	if oldFree.IsNil() {
 		meta.nextFree = *r
@@ -130,12 +154,11 @@ func (r *RefPointer) DataPtr() uintptr {
 		// call, but if we don't take a copy of r in the fmt call, then
 		// every call will allocate regardless of whether the method
 		// panics or not
-		panic(fmt.Errorf("attempted to get freed allocation %v", *r))
+		panic(fmt.Errorf("attempt to get freed allocation %v", *r))
 	}
 
-	if meta.gen != r.Gen() {
-		panic(fmt.Errorf("attempt to get value (%d) using stale reference (%d)", meta.gen, r.Gen()))
-	}
+	meta.checkReference(r)
+
 	return (uintptr)(r.dataAddressAndGen & pointerMask)
 }
 
@@ -172,8 +195,14 @@ func (r *RefPointer) setGen(gen uint8) {
 // valid reference to the same location.
 func (r *RefPointer) Realloc() RefPointer {
 	newRef := *r
+
+	// Get metadata generation tag and increment it
 	meta := r.metadata()
-	meta.gen++
-	newRef.setGen(meta.gen)
+	gen := meta.gen()
+	gen++
+
+	// Set the new generation tag in both the metadata and reference
+	meta.setGen(gen)
+	newRef.setGen(gen)
 	return newRef
 }
