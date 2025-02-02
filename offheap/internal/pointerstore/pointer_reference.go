@@ -14,7 +14,7 @@ const genMask = uint64(0xFF << maskShift)
 const pointerMask = ^genMask
 
 // The address field holds a pointer to an object, but also sneaks a generation
-// value in the top 8 bits of the metaAddress field.
+// value in the top 8 bits of the dataAddress field.
 //
 // The generation must be masked out to get a usable pointer value. The object
 // pointed to must have the same generation value in order to access/free that
@@ -159,12 +159,12 @@ func (r *RefPointer) metadata() *metadata {
 
 //gcassert:noescape
 func (r *RefPointer) Gen() uint8 {
-	return (uint8)((r.metaAddress & genMask) >> maskShift)
+	return (uint8)((r.dataAddress & genMask) >> maskShift)
 }
 
 //gcassert:noescape
 func (r *RefPointer) setGen(gen uint8) {
-	r.metaAddress = (r.metaAddress & pointerMask) | (uint64(gen) << maskShift)
+	r.dataAddress = (r.dataAddress & pointerMask) | (uint64(gen) << maskShift)
 }
 
 // This method re-allocates the memory location. When this method returns r
