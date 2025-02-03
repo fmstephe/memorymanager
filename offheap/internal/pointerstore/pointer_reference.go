@@ -51,22 +51,18 @@ func NewReference(dataAddress, metaAddress uintptr) RefPointer {
 	// _and_ verify the generation of the reference.
 	meta := r.metadata()
 	meta.dataAddressAndGen = r.dataAddressAndGen
+	// The value defaults to false, but we write it here for readability
+	meta.isFree = false
 
 	return r
 }
 
 //gcassert:noescape
-func (r *RefPointer) AllocFromFree() (nextFree RefPointer) {
-	// Grab the nextFree reference, and nil it for this metadata
+func (r *RefPointer) allocFromFree() {
 	meta := r.metadata()
-	nextFree = meta.nextFree
-	meta.nextFree = RefPointer{}
 
-	// If the nextFree pointer points back to this Reference, then there
-	// are no more freed slots available
-	if nextFree == *r {
-		nextFree = RefPointer{}
-	}
+	// This object is now allocated and is no long free
+	meta.isFree = false
 
 	// Increment the generation for the allocation and set that generation in
 	// the Metadata and Reference
@@ -74,15 +70,13 @@ func (r *RefPointer) AllocFromFree() (nextFree RefPointer) {
 	gen++
 	meta.setGen(gen)
 	r.setGen(gen)
-
-	return nextFree
 }
 
 //gcassert:noescape
-func (r *RefPointer) Free(oldFree RefPointer) {
+func (r *RefPointer) free() {
 	meta := r.metadata()
 
-	if !meta.nextFree.IsNil() {
+	if meta.isFree {
 		// NB: The odd-looking *r here actually prevents an allocation.
 		// Fuller explanation found in DataPtr()
 		panic(fmt.Errorf("attempted to Free freed allocation %v", *r))
@@ -90,11 +84,8 @@ func (r *RefPointer) Free(oldFree RefPointer) {
 
 	meta.checkReference(r)
 
-	if oldFree.IsNil() {
-		meta.nextFree = *r
-	} else {
-		meta.nextFree = oldFree
-	}
+	// Mark the object as free
+	meta.isFree = true
 }
 
 //gcassert:noescape
@@ -106,7 +97,7 @@ func (r *RefPointer) IsNil() bool {
 func (r *RefPointer) DataPtr() uintptr {
 	meta := r.metadata()
 
-	if !meta.nextFree.IsNil() {
+	if meta.isFree {
 		// NB: We make a copy of r here - otherwise the compiler
 		// believes that r itself escapes to the heap (not strictly
 		// wrong) and will allocate it to the heap, even if this path

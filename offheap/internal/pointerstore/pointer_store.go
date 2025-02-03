@@ -32,7 +32,7 @@ type Store struct {
 
 	// freeRWLock protects rootFree
 	freeLock sync.Mutex
-	rootFree RefPointer
+	freeList []RefPointer
 
 	// objectsLock protects objects
 	// Allocating to an existing slab with a free slot only needs a read lock
@@ -67,8 +67,9 @@ func (s *Store) Free(r RefPointer) {
 	s.freeLock.Lock()
 	defer s.freeLock.Unlock()
 
-	r.Free(s.rootFree)
-	s.rootFree = r
+	// Set up the reference to be 'free'
+	r.free()
+	s.freeList = append(s.freeList, r)
 
 	s.frees.Add(1)
 }
@@ -124,15 +125,19 @@ func (s *Store) allocFromFree() (RefPointer, bool) {
 	defer s.freeLock.Unlock()
 
 	// No free objects available - allocFromFree failed
-	if s.rootFree.IsNil() {
+	if len(s.freeList) == 0 {
 		return RefPointer{}, false
 	}
 
-	// Get pointer to the next available freed slot
-	alloc := s.rootFree
-	s.rootFree = alloc.AllocFromFree()
+	// pop the most recently freed reference off the free list
+	// TODO might be worth writing a small stack for this
+	r := s.freeList[len(s.freeList)-1]
+	s.freeList = s.freeList[:len(s.freeList)-1]
 
-	return alloc, true
+	// set up the reference to be 'allocated'
+	r.allocFromFree()
+
+	return r, true
 }
 
 func (s *Store) allocFromOffset() RefPointer {

@@ -14,8 +14,8 @@ import "fmt"
 // value can access/free objects they point to. This is a best-effort safety
 // check to try to catch use-after-free type errors.
 type metadata struct {
-	nextFree          RefPointer
 	dataAddressAndGen taggedAddress
+	isFree            bool
 }
 
 //gcassert:noescape

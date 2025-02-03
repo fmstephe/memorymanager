@@ -345,10 +345,10 @@ func Test_Object_CannotAllocateVeryBigStruct(t *testing.T) {
 //
 // This test should alert us if this problem ever reappears.
 //
-// NB: In the future meta-data will likely be moved to a separate allocation
-// space and some details described above will become out of date. The test
-// will still be useful though. Zero sized types are a likely source of
-// edge-case bugs for all eternity.
+// NB: At time of update meta-data has been moved to a separate allocation
+// space and some details described above are out of date. The test is still
+// useful though. Zero sized types are a likely source of edge-case bugs for
+// all eternity.
 func Test_Object_ZeroSizedType_FullSlab(t *testing.T) {
 	os := New()
 	defer func() {
