@@ -72,11 +72,11 @@ func (r *RefPointer) free() {
 	meta.setGen(gen)
 }
 
-// NB: In the future this method should return a new RefPointer with updated
-// generation tag instead of modifying the method receiver.
+// Sets the RefPointer's metadata to not-free and creates a new RefPointer with
+// the correct generation tag.
 //
 //gcassert:noescape
-func (r *RefPointer) allocFromFree() {
+func (r *RefPointer) allocFromFree() RefPointer {
 	meta := r.metadata()
 
 	if !meta.isFree() {
@@ -86,8 +86,8 @@ func (r *RefPointer) allocFromFree() {
 	// This object is now allocated and is no long free
 	meta.setNotFree()
 
-	// Update this reference so it's generatation tag matches the metadata
-	r.setGen(meta.gen())
+	// Create new RefPointer with correct generation tag
+	return r.withGen(meta.gen())
 }
 
 // This method re-allocates the memory location. When this method returns r
@@ -99,8 +99,6 @@ func (r *RefPointer) Realloc() RefPointer {
 	// Test that this reference is actually allowed to access the allocation
 	r.accessibleActiveAddress()
 
-	newRef := *r
-
 	// Get metadata generation tag and increment it
 	meta := r.metadata()
 	gen := meta.gen()
@@ -108,13 +106,7 @@ func (r *RefPointer) Realloc() RefPointer {
 
 	// Set the new generation tag in both the metadata and reference
 	meta.setGen(gen)
-	newRef.setGen(gen)
-	return newRef
-}
-
-//gcassert:noescape
-func (r *RefPointer) IsNil() bool {
-	return r.address.isNil()
+	return r.withGen(gen)
 }
 
 //gcassert:noescape
@@ -127,6 +119,11 @@ func (r *RefPointer) DataPtr() uintptr {
 //gcassert:noescape
 func (r *RefPointer) Bytes(size int) []byte {
 	return r.accessibleActiveAddress().bytes(size)
+}
+
+//gcassert:noescape
+func (r *RefPointer) IsNil() bool {
+	return r.address.isNil()
 }
 
 // Calling this method
@@ -178,6 +175,8 @@ func (r *RefPointer) Gen() uint8 {
 }
 
 //gcassert:noescape
-func (r *RefPointer) setGen(gen uint8) {
-	r.address = r.address.withGen(gen)
+func (r *RefPointer) withGen(gen uint8) RefPointer {
+	return RefPointer{
+		address: r.address.withGen(gen),
+	}
 }

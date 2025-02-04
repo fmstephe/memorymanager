@@ -129,9 +129,8 @@ func (s *Store) allocFromFree() (RefPointer, bool) {
 		return RefPointer{}, false
 	}
 
-	// set up the reference to be 'allocated'
-	r.allocFromFree()
-	return r, true
+	// Create new allocated reference
+	return r.allocFromFree(), true
 }
 
 func (s *Store) allocFromOffset() RefPointer {

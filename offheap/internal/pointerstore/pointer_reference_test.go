@@ -88,7 +88,7 @@ func TestGenerationDoesNotAppearInOtherFields(t *testing.T) {
 	metadata := r.metadata()
 
 	metadata.setGen(maxGen)
-	r.setGen(maxGen)
+	r = r.withGen(maxGen)
 
 	assert.Equal(t, dataPtr, r.DataPtr())
 	assert.Equal(t, metaPtr, r.metaPtr())
@@ -141,7 +141,7 @@ func TestAllocFromFree(t *testing.T) {
 	assert.Equal(t, uint8(0), r.Gen())
 
 	r.free()
-	r.allocFromFree()
+	r = r.allocFromFree()
 
 	// The reference still points to the same metadata location
 	assert.Equal(t, meta, r.metadata())
