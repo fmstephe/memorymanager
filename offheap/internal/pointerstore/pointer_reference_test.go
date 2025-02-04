@@ -100,7 +100,7 @@ func TestFree(t *testing.T) {
 	r := NewReference(objects[0], metadatas[0])
 	meta := r.metadata()
 
-	assert.False(t, meta.isFree)
+	assert.False(t, meta.isFree())
 	assert.Equal(t, uint8(0), meta.dataAddressAndGen.gen())
 	assert.Equal(t, uint8(0), r.Gen())
 
@@ -110,7 +110,7 @@ func TestFree(t *testing.T) {
 	assert.Equal(t, meta, r.metadata())
 
 	// The metadata is now marked as free
-	assert.True(t, meta.isFree)
+	assert.True(t, meta.isFree())
 	// After free is called the metadata for this reference has a new
 	// generation tag, while the reference has the same old generation tag
 	assert.Equal(t, uint8(1), meta.dataAddressAndGen.gen())
@@ -130,7 +130,7 @@ func TestAllocFromFree(t *testing.T) {
 	r := NewReference(objects[0], metadatas[0])
 	meta := r.metadata()
 
-	assert.False(t, meta.isFree)
+	assert.False(t, meta.isFree())
 	assert.Equal(t, uint8(0), meta.dataAddressAndGen.gen())
 	assert.Equal(t, uint8(0), r.Gen())
 
@@ -141,7 +141,7 @@ func TestAllocFromFree(t *testing.T) {
 	assert.Equal(t, meta, r.metadata())
 
 	// The metadata is now marked as not free
-	assert.False(t, meta.isFree)
+	assert.False(t, meta.isFree())
 	// After allocFromFree is called the reference's generation will match the metadata's generation
 	assert.Equal(t, uint8(1), meta.dataAddressAndGen.gen())
 	assert.Equal(t, uint8(1), r.Gen())

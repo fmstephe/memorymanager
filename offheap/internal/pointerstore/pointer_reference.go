@@ -52,7 +52,7 @@ func NewReference(dataAddress, metaAddress uintptr) RefPointer {
 	meta := r.metadata()
 	meta.dataAddressAndGen = r.dataAddressAndGen
 	// The value defaults to false, but we write it here for readability
-	meta.isFree = false
+	meta.setNotFree()
 
 	return r
 }
@@ -61,7 +61,7 @@ func NewReference(dataAddress, metaAddress uintptr) RefPointer {
 func (r *RefPointer) free() {
 	meta := r.metadata()
 
-	if meta.isFree {
+	if meta.isFree() {
 		// NB: The odd-looking *r here actually prevents an allocation.
 		// Fuller explanation found in DataPtr()
 		panic(fmt.Errorf("attempted to Free freed allocation %v", *r))
@@ -70,7 +70,7 @@ func (r *RefPointer) free() {
 	meta.checkReference(r)
 
 	// Mark the object as free
-	meta.isFree = true
+	meta.setFree()
 
 	// Increment the generation for the allocation and set that generation in
 	// the Metadata and Reference
@@ -87,7 +87,7 @@ func (r *RefPointer) allocFromFree() {
 	meta := r.metadata()
 
 	// This object is now allocated and is no long free
-	meta.isFree = false
+	meta.setNotFree()
 	// Update this reference so it's generatation tag matches the metadata
 	r.setGen(meta.gen())
 }
@@ -118,7 +118,7 @@ func (r *RefPointer) IsNil() bool {
 func (r *RefPointer) DataPtr() uintptr {
 	meta := r.metadata()
 
-	if meta.isFree {
+	if meta.isFree() {
 		// NB: We make a copy of r here - otherwise the compiler
 		// believes that r itself escapes to the heap (not strictly
 		// wrong) and will allocate it to the heap, even if this path

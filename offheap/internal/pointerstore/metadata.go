@@ -15,7 +15,6 @@ import "fmt"
 // check to try to catch use-after-free type errors.
 type metadata struct {
 	dataAddressAndGen taggedAddress
-	isFree            bool
 }
 
 //gcassert:noescape
@@ -26,6 +25,21 @@ func (m *metadata) gen() uint8 {
 //gcassert:noescape
 func (m *metadata) setGen(gen uint8) {
 	m.dataAddressAndGen = m.dataAddressAndGen.withGen(gen)
+}
+
+//gcassert:noescape
+func (m *metadata) isFree() bool {
+	return m.dataAddressAndGen.isFree()
+}
+
+//gcassert:noescape
+func (m *metadata) setFree() {
+	m.dataAddressAndGen = m.dataAddressAndGen.withFree()
+}
+
+//gcassert:noescape
+func (m *metadata) setNotFree() {
+	m.dataAddressAndGen = m.dataAddressAndGen.withNotFree()
 }
 
 // Check that the metadata for a reference agrees with the generation tag and the data address.

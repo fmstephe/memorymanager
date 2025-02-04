@@ -11,14 +11,13 @@ import (
 
 const nilPtr = uintptr(0)
 const maxGen = 0x7F
-
 const maskShift = 56                                // This leaves 8 bits for the generation and isFree tags
 const isFreeMask = taggedAddress(0x80 << maskShift) // Highest bit indicates if address is free
-const genMask = taggedAddress(0x7F << maskShift)    // Next 7 bits indicate generation tag
-const tagMask = isFreeMask | genMask
-const pointerMask = ^tagMask
+const genMask = taggedAddress(maxGen << maskShift)  // Next 7 bits indicate generation tag
+const tagMask = isFreeMask | genMask                // Mask revealing all 8 tag bits
+const pointerMask = ^tagMask                        // Mask revealing 56 address bits
 
-const setFree = taggedAddress(0x80 << maskShift)
+const setFree = isFreeMask
 const setNotFree = ^setFree
 
 type taggedAddress uint64
@@ -52,7 +51,7 @@ func (a taggedAddress) isNil() bool {
 }
 
 func (a taggedAddress) withGen(gen uint8) taggedAddress {
-	return (a & pointerMask) | (taggedAddress(gen) << maskShift)
+	return (a & (pointerMask | isFreeMask)) | (taggedAddress(gen) << maskShift)
 }
 
 func (a taggedAddress) withFree() taggedAddress {

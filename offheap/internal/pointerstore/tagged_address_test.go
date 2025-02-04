@@ -92,6 +92,17 @@ func TestTaggedAddress_IsFree(t *testing.T) {
 		assert.Equal(t, address, ta.address())
 		assert.Equal(t, gen, ta.gen())
 
+		// Side-quest, set the generation tag and ensure this doesn't
+		// interfere with the is-free bit
+		ta = ta.withGen(maxGen)
+		assert.True(t, ta.isFree())
+		// Neither the address nor the generation tag are changed by the is-free bit
+		assert.Equal(t, address, ta.address())
+		assert.Equal(t, uint8(maxGen), ta.gen())
+
+		// Set the generation back
+		ta = ta.withGen(gen)
+
 		ta = ta.withNotFree()
 		assert.False(t, ta.isFree())
 		// Neither the address nor the generation tag are changed by the is-free bit
