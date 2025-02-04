@@ -31,11 +31,11 @@ type RefPointer struct {
 }
 
 func NewReference(dataAddress, metaAddress uintptr) RefPointer {
-	if dataAddress == (uintptr)(unsafe.Pointer(nil)) {
+	if dataAddress == nilPtr {
 		panic("cannot create new Reference with nil data pointer")
 	}
 
-	if metaAddress == (uintptr)(unsafe.Pointer(nil)) {
+	if metaAddress == nilPtr {
 		panic("cannot create new Reference with nil metadata pointer")
 	}
 
