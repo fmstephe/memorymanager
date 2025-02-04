@@ -42,8 +42,11 @@ func (m *metadata) setNotFree() {
 	m.dataAddressAndGen = m.dataAddressAndGen.withNotFree()
 }
 
-// Check that the metadata for a reference agrees with the generation tag and the data address.
-// Failure results in a panic.
+// Check that the metadata for a reference agrees with the generation tag and
+// the data address.  Failure results in a panic.
+//
+// Please note, we never set the is-free bit in the taggedAddress of the
+// RefPointer. So we don't expect them to match and don't check that here.
 //
 //gcassert:noescape
 func (m *metadata) checkReference(r *RefPointer) {
