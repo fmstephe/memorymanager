@@ -9,9 +9,17 @@ import (
 	"unsafe"
 )
 
-const maskShift = 56 // This leaves 8 bits for the generation data
-const genMask = taggedAddress(0xFF << maskShift)
-const pointerMask = ^genMask
+const nilPtr = uintptr(0)
+const maxGen = 0x7F
+
+const maskShift = 56                                // This leaves 8 bits for the generation and isFree tags
+const isFreeMask = taggedAddress(0x80 << maskShift) // Highest bit indicates if address is free
+const genMask = taggedAddress(0x7F << maskShift)    // Next 7 bits indicate generation tag
+const tagMask = isFreeMask | genMask
+const pointerMask = ^tagMask
+
+const setFree = taggedAddress(0x80 << maskShift)
+const setNotFree = ^setFree
 
 type taggedAddress uint64
 
@@ -31,14 +39,26 @@ func (a taggedAddress) address() uintptr {
 	return uintptr(a & pointerMask)
 }
 
-func (a taggedAddress) withGen(gen uint8) taggedAddress {
-	return (a & pointerMask) | (taggedAddress(gen) << maskShift)
-}
-
 func (a taggedAddress) bytes(size int) []byte {
 	return ([]byte)(unsafe.Slice((*byte)((unsafe.Pointer)(a.address())), size))
 }
 
+func (a taggedAddress) isFree() bool {
+	return a&setFree == setFree
+}
+
 func (a taggedAddress) isNil() bool {
-	return a.address() == 0
+	return a.address() == nilPtr
+}
+
+func (a taggedAddress) withGen(gen uint8) taggedAddress {
+	return (a & pointerMask) | (taggedAddress(gen) << maskShift)
+}
+
+func (a taggedAddress) withFree() taggedAddress {
+	return a | setFree
+}
+
+func (a taggedAddress) withNotFree() taggedAddress {
+	return a & setNotFree
 }
