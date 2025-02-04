@@ -7,6 +7,7 @@ package pointerstore
 import (
 	"fmt"
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -73,7 +74,7 @@ func TestSlabIntegrity(t *testing.T) {
 				}
 
 				baseSlabData := refs[0].DataPtr()
-				baseSlabMetadata := refs[0].metaPtr()
+				baseSlabMetadata := uintptr(unsafe.Pointer(refs[0].metadata()))
 
 				// Check that the metadata is allocated immediately _after_ the data
 				assert.Equal(t, baseSlabMetadata, baseSlabData+uintptr(conf.TotalObjectSize))
@@ -86,7 +87,7 @@ func TestSlabIntegrity(t *testing.T) {
 					assert.Equal(t, baseSlabData+expectedDataOffset, dataPtr)
 
 					// Check that the metadata allocations are spaced out appropriately
-					metaPtr := ref.metaPtr()
+					metaPtr := uintptr(unsafe.Pointer(ref.metadata()))
 					expectedMetaOffset := uintptr(conf.MetadataSize) * uintptr(i)
 					assert.Equal(t, baseSlabMetadata+expectedMetaOffset, metaPtr)
 				}

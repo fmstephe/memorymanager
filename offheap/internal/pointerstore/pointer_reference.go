@@ -15,17 +15,6 @@ import (
 // The generation must be masked out to get a usable pointer value. The object
 // pointed to must have the same generation value in order to access/free that
 // object.
-//
-// Because the Refpointer struct is two words (on 64 bit systems) in size, all
-// method receivers are pointers to avoid copying two words in method calls.
-// However, the RefPointer is _always_ used as a value. This means that having
-// a pointer receiver could potentially cause the RefPointer to be allocated if
-// its receiver escapes to the heap (according to escape analysis). We assert
-// that all methods do not allow their receiver variable to escape to the heap.
-//
-// This is all very nice and good, but the idea that avoiding copying two words
-// is a meaningful improvement are speculative and haven't been tested. This
-// would be a good target for future performance testing.
 type RefPointer struct {
 	address taggedAddress
 }
@@ -55,8 +44,7 @@ func NewReference(dataAddress, metaAddress uintptr) RefPointer {
 	return r
 }
 
-//gcassert:noescape
-func (r *RefPointer) free() {
+func (r RefPointer) free() {
 	// Check that this reference can access the allocation to free it
 	r.accessibleActiveAddress()
 
@@ -74,13 +62,11 @@ func (r *RefPointer) free() {
 
 // Sets the RefPointer's metadata to not-free and creates a new RefPointer with
 // the correct generation tag.
-//
-//gcassert:noescape
-func (r *RefPointer) allocFromFree() RefPointer {
+func (r RefPointer) allocFromFree() RefPointer {
 	meta := r.metadata()
 
 	if !meta.isFree() {
-		panic(fmt.Errorf("attempt to alloc-from-free active allocation %v", *r))
+		panic(fmt.Errorf("attempt to alloc-from-free active allocation %v", r))
 	}
 
 	// This object is now allocated and is no long free
@@ -93,9 +79,7 @@ func (r *RefPointer) allocFromFree() RefPointer {
 // This method re-allocates the memory location. When this method returns r
 // will no longer be a valid reference.  The reference returned _will_ be a
 // valid reference to the same location.
-//
-//gcassert:noescape
-func (r *RefPointer) Realloc() RefPointer {
+func (r RefPointer) Realloc() RefPointer {
 	// Test that this reference is actually allowed to access the allocation
 	r.accessibleActiveAddress()
 
@@ -109,20 +93,16 @@ func (r *RefPointer) Realloc() RefPointer {
 	return r.withGen(gen)
 }
 
-//gcassert:noescape
-func (r *RefPointer) DataPtr() uintptr {
+func (r RefPointer) DataPtr() uintptr {
 	return r.accessibleActiveAddress().address()
 }
 
 // Convenient method to retrieve raw data of an allocation
-//
-//gcassert:noescape
-func (r *RefPointer) Bytes(size int) []byte {
+func (r RefPointer) Bytes(size int) []byte {
 	return r.accessibleActiveAddress().bytes(size)
 }
 
-//gcassert:noescape
-func (r *RefPointer) IsNil() bool {
+func (r RefPointer) IsNil() bool {
 	return r.address.isNil()
 }
 
@@ -131,20 +111,11 @@ func (r *RefPointer) IsNil() bool {
 // 1: looks up the metadata for this reference
 // 2: Verifies that the reference is _allowed_ to access this data
 // 3: Returns the taggedAddress pointing to the actual data
-//
-//gcassert:noescape
-func (r *RefPointer) accessibleActiveAddress() taggedAddress {
+func (r RefPointer) accessibleActiveAddress() taggedAddress {
 	meta := r.metadata()
 
 	if meta.isFree() {
-		// NB: We make a copy of r here - otherwise the compiler
-		// believes that r itself escapes to the heap (not strictly
-		// wrong) and will allocate it to the heap, even if this path
-		// is not taken. This panic path _does_ allocate due to the fmt
-		// call, but if we don't take a copy of r in the fmt call, then
-		// every call will allocate regardless of whether the method
-		// panics or not
-		panic(fmt.Errorf("attempt to access freed allocation %v", *r))
+		panic(fmt.Errorf("attempt to access freed allocation %v", r))
 	}
 
 	if meta.gen() != r.Gen() {
@@ -154,28 +125,19 @@ func (r *RefPointer) accessibleActiveAddress() taggedAddress {
 	return meta.dataAddressAndGen
 }
 
-//gcassert:noescape
-func (r *RefPointer) metaPtr() uintptr {
-	return r.metaAddress().address()
-}
-
-//gcassert:noescape
-func (r *RefPointer) metadata() *metadata {
+func (r RefPointer) metadata() *metadata {
 	return (*metadata)(unsafe.Pointer(r.metaAddress().address()))
 }
 
-//gcassert:noescape
-func (r *RefPointer) metaAddress() taggedAddress {
+func (r RefPointer) metaAddress() taggedAddress {
 	return r.address
 }
 
-//gcassert:noescape
-func (r *RefPointer) Gen() uint8 {
+func (r RefPointer) Gen() uint8 {
 	return r.address.gen()
 }
 
-//gcassert:noescape
-func (r *RefPointer) withGen(gen uint8) RefPointer {
+func (r RefPointer) withGen(gen uint8) RefPointer {
 	return RefPointer{
 		address: r.address.withGen(gen),
 	}

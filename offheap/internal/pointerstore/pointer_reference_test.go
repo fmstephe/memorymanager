@@ -84,14 +84,13 @@ func TestGenerationDoesNotAppearInOtherFields(t *testing.T) {
 
 	r := NewReference(objects[0], metadatas[0])
 	dataPtr := r.DataPtr()
-	metaPtr := r.metaPtr()
 	metadata := r.metadata()
 
 	metadata.setGen(maxGen)
 	r = r.withGen(maxGen)
 
 	assert.Equal(t, dataPtr, r.DataPtr())
-	assert.Equal(t, metaPtr, r.metaPtr())
+	assert.Equal(t, metadata, r.metadata())
 	assert.Equal(t, uint8(maxGen), r.Gen())
 }
 
@@ -177,7 +176,7 @@ func TestRealloc(t *testing.T) {
 	meta1 := r1.metadata()
 
 	dataPtr := r1.DataPtr()
-	metaPtr := r1.metaPtr()
+	metadata := r1.metadata()
 	gen := r1.Gen()
 
 	r2 := r1.Realloc()
@@ -192,7 +191,7 @@ func TestRealloc(t *testing.T) {
 
 	// Assert that the data/metadata pointed to by r1 and r2 is the same
 	assert.Equal(t, dataPtr, r2.DataPtr())
-	assert.Equal(t, metaPtr, r2.metaPtr())
+	assert.Equal(t, metadata, r2.metadata())
 
 	// Assert that r2 has a different generation than r1
 	assert.NotEqual(t, gen, r2.Gen())
