@@ -96,6 +96,9 @@ func (r *RefPointer) allocFromFree() {
 //
 //gcassert:noescape
 func (r *RefPointer) Realloc() RefPointer {
+	// Test that this reference is actually allowed to access the allocation
+	r.dataAddress()
+
 	newRef := *r
 
 	// Get metadata generation tag and increment it

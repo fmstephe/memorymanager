@@ -122,6 +122,9 @@ func TestFree(t *testing.T) {
 	assert.Panics(t, func() { r.DataPtr() })
 	assert.Panics(t, func() { r.Bytes(8) })
 
+	// Reallocing a freed reference will panic
+	assert.Panics(t, func() { r.Realloc() })
+
 	// Freeing a freed reference will panic
 	assert.Panics(t, func() { r.free() })
 }
