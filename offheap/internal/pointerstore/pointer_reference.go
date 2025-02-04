@@ -57,15 +57,10 @@ func NewReference(dataAddress, metaAddress uintptr) RefPointer {
 
 //gcassert:noescape
 func (r *RefPointer) free() {
+	// Check that this reference can access the allocation to free it
+	r.accessibleActiveAddress()
+
 	meta := r.metadata()
-
-	if meta.isFree() {
-		// NB: The odd-looking *r here actually prevents an allocation.
-		// Fuller explanation found in DataPtr()
-		panic(fmt.Errorf("attempted to Free freed allocation %v", *r))
-	}
-
-	meta.checkReference(r)
 
 	// Mark the object as free
 	meta.setFree()
@@ -90,6 +85,7 @@ func (r *RefPointer) allocFromFree() {
 
 	// This object is now allocated and is no long free
 	meta.setNotFree()
+
 	// Update this reference so it's generatation tag matches the metadata
 	r.setGen(meta.gen())
 }
@@ -101,7 +97,7 @@ func (r *RefPointer) allocFromFree() {
 //gcassert:noescape
 func (r *RefPointer) Realloc() RefPointer {
 	// Test that this reference is actually allowed to access the allocation
-	r.dataAddress()
+	r.accessibleActiveAddress()
 
 	newRef := *r
 
@@ -123,14 +119,14 @@ func (r *RefPointer) IsNil() bool {
 
 //gcassert:noescape
 func (r *RefPointer) DataPtr() uintptr {
-	return r.dataAddress().address()
+	return r.accessibleActiveAddress().address()
 }
 
 // Convenient method to retrieve raw data of an allocation
 //
 //gcassert:noescape
 func (r *RefPointer) Bytes(size int) []byte {
-	return r.dataAddress().bytes(size)
+	return r.accessibleActiveAddress().bytes(size)
 }
 
 // Calling this method
@@ -140,7 +136,7 @@ func (r *RefPointer) Bytes(size int) []byte {
 // 3: Returns the taggedAddress pointing to the actual data
 //
 //gcassert:noescape
-func (r *RefPointer) dataAddress() taggedAddress {
+func (r *RefPointer) accessibleActiveAddress() taggedAddress {
 	meta := r.metadata()
 
 	if meta.isFree() {
@@ -151,10 +147,12 @@ func (r *RefPointer) dataAddress() taggedAddress {
 		// call, but if we don't take a copy of r in the fmt call, then
 		// every call will allocate regardless of whether the method
 		// panics or not
-		panic(fmt.Errorf("attempt to get freed allocation %v", *r))
+		panic(fmt.Errorf("attempt to access freed allocation %v", *r))
 	}
 
-	meta.checkReference(r)
+	if meta.gen() != r.Gen() {
+		panic(fmt.Errorf("generation mismatch between metadata (%d) and reference (%d)", meta.gen(), r.Gen()))
+	}
 
 	return meta.dataAddressAndGen
 }

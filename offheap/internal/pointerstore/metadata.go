@@ -4,8 +4,6 @@
 
 package pointerstore
 
-import "fmt"
-
 // If the object's metadata has a non-nil nextFree pointer then the object is
 // currently free. Object's which have never been allocated are implicitly
 // free, but have a nil nextFree.
@@ -40,17 +38,4 @@ func (m *metadata) setFree() {
 //gcassert:noescape
 func (m *metadata) setNotFree() {
 	m.dataAddressAndGen = m.dataAddressAndGen.withNotFree()
-}
-
-// Check that the metadata for a reference agrees with the generation tag.
-// Failure results in a panic.
-//
-// Please note, we never set the is-free bit in the taggedAddress of the
-// RefPointer. So we don't expect them to match and don't check that here.
-//
-//gcassert:noescape
-func (m *metadata) checkReference(r *RefPointer) {
-	if m.gen() != r.Gen() {
-		panic(fmt.Errorf("generation mismatch between metadata (%d) and reference (%d)", m.gen(), r.Gen()))
-	}
 }
