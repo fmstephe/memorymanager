@@ -160,6 +160,15 @@ func TestAllocFromFree(t *testing.T) {
 	assert.NotPanics(t, func() { r.free() })
 }
 
+func TestAllocFromFree_NoFree(t *testing.T) {
+	allocConfig := NewAllocConfigBySize(8, 32*8)
+	objects, metadatas := MmapSlab(allocConfig)
+
+	r := NewReference(objects[0], metadatas[0])
+
+	assert.Panics(t, func() { r.allocFromFree() })
+}
+
 func TestRealloc(t *testing.T) {
 	allocConfig := NewAllocConfigBySize(8, 32*8)
 	objects, metadatas := MmapSlab(allocConfig)

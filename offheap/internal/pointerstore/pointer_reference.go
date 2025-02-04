@@ -84,6 +84,10 @@ func (r *RefPointer) free() {
 func (r *RefPointer) allocFromFree() {
 	meta := r.metadata()
 
+	if !meta.isFree() {
+		panic(fmt.Errorf("attempt to alloc-from-free active allocation %v", *r))
+	}
+
 	// This object is now allocated and is no long free
 	meta.setNotFree()
 	// Update this reference so it's generatation tag matches the metadata
