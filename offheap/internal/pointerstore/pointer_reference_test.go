@@ -52,6 +52,8 @@ func TestNewReference(t *testing.T) {
 		assert.False(t, r.IsNil())
 		// Data pointer points to the correct location
 		assert.Equal(t, objects[i], r.DataPtr())
+		// Bytes points to data at the correct location
+		assert.Equal(t, objects[i], uintptr(unsafe.Pointer(&r.Bytes(8)[0])))
 		// Metadata pointer points to the correct location
 		assert.Equal(t, metadata[i], r.metadataPtr())
 		// Generation of a new Reference is always 0
@@ -118,6 +120,7 @@ func TestFree(t *testing.T) {
 
 	// Accessng the data of a freed reference will panic
 	assert.Panics(t, func() { r.DataPtr() })
+	assert.Panics(t, func() { r.Bytes(8) })
 
 	// Freeing a freed reference will panic
 	assert.Panics(t, func() { r.free() })
@@ -148,6 +151,7 @@ func TestAllocFromFree(t *testing.T) {
 
 	// Accessng the data of an allocated-from-free reference will not panic
 	assert.NotPanics(t, func() { r.DataPtr() })
+	assert.NotPanics(t, func() { r.Bytes(8) })
 
 	// Freeing an allocated-from-free reference will not panic
 	assert.NotPanics(t, func() { r.free() })
@@ -179,7 +183,11 @@ func TestRealloc(t *testing.T) {
 	// Assert that r2 has a different generation than r1
 	assert.NotEqual(t, gen, r2.Gen())
 
-	// Assert that r1 is no longer valid, but r2 is valid
+	// Assert that data is no longer accessible through r1
 	assert.Panics(t, func() { r1.DataPtr() })
+	assert.Panics(t, func() { r1.Bytes(8) })
+
+	// Assert that data is accessible through r2
 	assert.NotPanics(t, func() { r2.DataPtr() })
+	assert.NotPanics(t, func() { r2.Bytes(8) })
 }

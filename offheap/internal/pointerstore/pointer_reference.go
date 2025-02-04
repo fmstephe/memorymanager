@@ -116,6 +116,17 @@ func (r *RefPointer) IsNil() bool {
 
 //gcassert:noescape
 func (r *RefPointer) DataPtr() uintptr {
+	return r.dataAddress().address()
+}
+
+// Convenient method to retrieve raw data of an allocation
+//
+//gcassert:noescape
+func (r *RefPointer) Bytes(size int) []byte {
+	return r.dataAddress().bytes(size)
+}
+
+func (r *RefPointer) dataAddress() taggedAddress {
 	meta := r.metadata()
 
 	if meta.isFree() {
@@ -131,14 +142,7 @@ func (r *RefPointer) DataPtr() uintptr {
 
 	meta.checkReference(r)
 
-	return r.address.address()
-}
-
-// Convenient method to retrieve raw data of an allocation
-//
-//gcassert:noescape
-func (r *RefPointer) Bytes(size int) []byte {
-	return r.address.bytes(size)
+	return r.address
 }
 
 //gcassert:noescape
