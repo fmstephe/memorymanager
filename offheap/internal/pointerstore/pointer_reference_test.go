@@ -94,6 +94,66 @@ func TestGenerationDoesNotAppearInOtherFields(t *testing.T) {
 	assert.Equal(t, gen, r.Gen())
 }
 
+func TestFree(t *testing.T) {
+	allocConfig := NewAllocConfigBySize(8, 32*8)
+	objects, metadatas := MmapSlab(allocConfig)
+
+	r := NewReference(objects[0], metadatas[0])
+	meta := r.metadata()
+
+	assert.False(t, meta.isFree)
+	assert.Equal(t, uint8(0), meta.dataAddressAndGen.gen())
+	assert.Equal(t, uint8(0), r.Gen())
+
+	r.free()
+
+	// The reference still points to the same metadata location
+	assert.Equal(t, meta, r.metadata())
+
+	// The metadata is now marked as free
+	assert.True(t, meta.isFree)
+	// After free is called the metadata for this reference has a new
+	// generation tag, while the reference has the same old generation tag
+	assert.Equal(t, uint8(1), meta.dataAddressAndGen.gen())
+	assert.Equal(t, uint8(0), r.Gen())
+
+	// Accessng the data of a freed reference will panic
+	assert.Panics(t, func() { r.DataPtr() })
+
+	// Freeing a freed reference will panic
+	assert.Panics(t, func() { r.free() })
+}
+
+func TestAllocFromFree(t *testing.T) {
+	allocConfig := NewAllocConfigBySize(8, 32*8)
+	objects, metadatas := MmapSlab(allocConfig)
+
+	r := NewReference(objects[0], metadatas[0])
+	meta := r.metadata()
+
+	assert.False(t, meta.isFree)
+	assert.Equal(t, uint8(0), meta.dataAddressAndGen.gen())
+	assert.Equal(t, uint8(0), r.Gen())
+
+	r.free()
+	r.allocFromFree()
+
+	// The reference still points to the same metadata location
+	assert.Equal(t, meta, r.metadata())
+
+	// The metadata is now marked as not free
+	assert.False(t, meta.isFree)
+	// After allocFromFree is called the reference's generation will match the metadata's generation
+	assert.Equal(t, uint8(1), meta.dataAddressAndGen.gen())
+	assert.Equal(t, uint8(1), r.Gen())
+
+	// Accessng the data of an allocated-from-free reference will not panic
+	assert.NotPanics(t, func() { r.DataPtr() })
+
+	// Freeing an allocated-from-free reference will not panic
+	assert.NotPanics(t, func() { r.free() })
+}
+
 func TestRealloc(t *testing.T) {
 	allocConfig := NewAllocConfigBySize(8, 32*8)
 	objects, metadatas := MmapSlab(allocConfig)

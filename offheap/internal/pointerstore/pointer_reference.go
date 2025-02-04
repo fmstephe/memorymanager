@@ -58,21 +58,6 @@ func NewReference(dataAddress, metaAddress uintptr) RefPointer {
 }
 
 //gcassert:noescape
-func (r *RefPointer) allocFromFree() {
-	meta := r.metadata()
-
-	// This object is now allocated and is no long free
-	meta.isFree = false
-
-	// Increment the generation for the allocation and set that generation in
-	// the Metadata and Reference
-	gen := meta.gen()
-	gen++
-	meta.setGen(gen)
-	r.setGen(gen)
-}
-
-//gcassert:noescape
 func (r *RefPointer) free() {
 	meta := r.metadata()
 
@@ -86,6 +71,42 @@ func (r *RefPointer) free() {
 
 	// Mark the object as free
 	meta.isFree = true
+
+	// Increment the generation for the allocation and set that generation in
+	// the Metadata and Reference
+	gen := meta.gen()
+	gen++
+	meta.setGen(gen)
+}
+
+// NB: In the future this method should return a new RefPointer with updated
+// generation tag instead of modifying the method receiver.
+//
+//gcassert:noescape
+func (r *RefPointer) allocFromFree() {
+	meta := r.metadata()
+
+	// This object is now allocated and is no long free
+	meta.isFree = false
+	// Update this reference so it's generatation tag matches the metadata
+	r.setGen(meta.gen())
+}
+
+// This method re-allocates the memory location. When this method returns r
+// will no longer be a valid reference.  The reference returned _will_ be a
+// valid reference to the same location.
+func (r *RefPointer) Realloc() RefPointer {
+	newRef := *r
+
+	// Get metadata generation tag and increment it
+	meta := r.metadata()
+	gen := meta.gen()
+	gen++
+
+	// Set the new generation tag in both the metadata and reference
+	meta.setGen(gen)
+	newRef.setGen(gen)
+	return newRef
 }
 
 //gcassert:noescape
@@ -138,21 +159,4 @@ func (r *RefPointer) Gen() uint8 {
 //gcassert:noescape
 func (r *RefPointer) setGen(gen uint8) {
 	r.dataAddressAndGen = r.dataAddressAndGen.withGen(gen)
-}
-
-// This method re-allocates the memory location. When this method returns r
-// will no longer be a valid reference.  The reference returned _will_ be a
-// valid reference to the same location.
-func (r *RefPointer) Realloc() RefPointer {
-	newRef := *r
-
-	// Get metadata generation tag and increment it
-	meta := r.metadata()
-	gen := meta.gen()
-	gen++
-
-	// Set the new generation tag in both the metadata and reference
-	meta.setGen(gen)
-	newRef.setGen(gen)
-	return newRef
 }
