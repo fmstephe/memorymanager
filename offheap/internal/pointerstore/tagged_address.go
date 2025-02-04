@@ -37,7 +37,7 @@ type taggedAddress uint64
 func newTaggedAddress(ptr uintptr) taggedAddress {
 	ta := taggedAddress(ptr)
 	if ta.gen() != 0 {
-		panic(fmt.Errorf("Cannot create tagged address from pointer (%d) with bits set in the generation tag (%d).", ptr, ta.gen()))
+		panic(fmt.Errorf("cannot create tagged address from pointer (%d) with bits set in the generation tag (%d)", ptr, ta.gen()))
 	}
 	return ta
 }

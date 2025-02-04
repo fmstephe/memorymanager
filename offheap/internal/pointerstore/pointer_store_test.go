@@ -73,7 +73,7 @@ func TestSlabIntegrity(t *testing.T) {
 				}
 
 				baseSlabData := refs[0].DataPtr()
-				baseSlabMetadata := refs[0].metadataPtr()
+				baseSlabMetadata := refs[0].metaPtr()
 
 				// Check that the metadata is allocated immediately _after_ the data
 				assert.Equal(t, baseSlabMetadata, baseSlabData+uintptr(conf.TotalObjectSize))
@@ -86,7 +86,7 @@ func TestSlabIntegrity(t *testing.T) {
 					assert.Equal(t, baseSlabData+expectedDataOffset, dataPtr)
 
 					// Check that the metadata allocations are spaced out appropriately
-					metaPtr := ref.metadataPtr()
+					metaPtr := ref.metaPtr()
 					expectedMetaOffset := uintptr(conf.MetadataSize) * uintptr(i)
 					assert.Equal(t, baseSlabMetadata+expectedMetaOffset, metaPtr)
 				}

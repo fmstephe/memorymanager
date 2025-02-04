@@ -55,12 +55,12 @@ func TestNewReference(t *testing.T) {
 		// Bytes points to data at the correct location
 		assert.Equal(t, objects[i], uintptr(unsafe.Pointer(&r.Bytes(8)[0])))
 		// Metadata pointer points to the correct location
-		assert.Equal(t, metadata[i], r.metadataPtr())
+		assert.Equal(t, metadata[i], r.metaAddress().address())
 		// Generation of a new Reference is always 0
 		assert.Equal(t, uint8(0), r.Gen())
-		// The dataAddressAndGen matches in both the reference and the metadata
-		meta := r.metadata()
-		assert.Equal(t, r.address, meta.dataAddressAndGen)
+		// The data should be accessible through this reference
+		assert.NotPanics(t, func() { r.DataPtr() })
+		assert.NotPanics(t, func() { r.Bytes(8) })
 	}
 }
 
@@ -84,14 +84,14 @@ func TestGenerationDoesNotAppearInOtherFields(t *testing.T) {
 
 	r := NewReference(objects[0], metadatas[0])
 	dataPtr := r.DataPtr()
-	metaPtr := r.metadataPtr()
+	metaPtr := r.metaPtr()
 	metadata := r.metadata()
 
 	metadata.setGen(maxGen)
 	r.setGen(maxGen)
 
 	assert.Equal(t, dataPtr, r.DataPtr())
-	assert.Equal(t, metaPtr, r.metadataPtr())
+	assert.Equal(t, metaPtr, r.metaPtr())
 	assert.Equal(t, uint8(maxGen), r.Gen())
 }
 
@@ -165,29 +165,31 @@ func TestRealloc(t *testing.T) {
 	meta1 := r1.metadata()
 
 	dataPtr := r1.DataPtr()
-	metaPtr := r1.metadataPtr()
+	metaPtr := r1.metaPtr()
 	gen := r1.Gen()
 
 	r2 := r1.Realloc()
 	meta2 := r2.metadata()
 
-	// The dataAddressAndGen matches in both the reference and the metadata
-	assert.Equal(t, r2.address, meta2.dataAddressAndGen)
-	// The dataAddressAndGen of the original metadata has been updated to match r2
-	assert.Equal(t, r2.address, meta1.dataAddressAndGen)
+	// The metadata of r1 and r2 is the same location
+	assert.Equal(t, meta1, meta2)
+	// The generation matches in both the r2 and the metadata
+	assert.Equal(t, r2.Gen(), meta2.gen())
+	// The generation does not match between r1 and the metadata
+	assert.NotEqual(t, r1.Gen(), meta2.gen())
 
 	// Assert that the data/metadata pointed to by r1 and r2 is the same
 	assert.Equal(t, dataPtr, r2.DataPtr())
-	assert.Equal(t, metaPtr, r2.metadataPtr())
+	assert.Equal(t, metaPtr, r2.metaPtr())
 
 	// Assert that r2 has a different generation than r1
 	assert.NotEqual(t, gen, r2.Gen())
 
-	// Assert that data is no longer accessible through r1
+	// Assert that data is no longer accessible via r1
 	assert.Panics(t, func() { r1.DataPtr() })
 	assert.Panics(t, func() { r1.Bytes(8) })
 
-	// Assert that data is accessible through r2
+	// Assert that data is accessible via r2
 	assert.NotPanics(t, func() { r2.DataPtr() })
 	assert.NotPanics(t, func() { r2.Bytes(8) })
 }

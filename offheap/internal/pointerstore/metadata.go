@@ -42,32 +42,15 @@ func (m *metadata) setNotFree() {
 	m.dataAddressAndGen = m.dataAddressAndGen.withNotFree()
 }
 
-// Check that the metadata for a reference agrees with the generation tag and
-// the data address.  Failure results in a panic.
+// Check that the metadata for a reference agrees with the generation tag.
+// Failure results in a panic.
 //
 // Please note, we never set the is-free bit in the taggedAddress of the
 // RefPointer. So we don't expect them to match and don't check that here.
 //
 //gcassert:noescape
 func (m *metadata) checkReference(r *RefPointer) {
-	if m.dataAddressAndGen != r.address {
-		mGen := m.gen()
-		rGen := r.Gen()
-		mAddress := m.dataAddressAndGen.address()
-		rAddress := r.address.address()
-
-		genMismatchMessage := fmt.Sprintf("generation mismatch between metadata (%d) and reference (%d)", m.gen(), r.Gen())
-		addressMismatchMessage := fmt.Sprintf("address mismatch between metadata (%#0*X) and reference (%#0*X)", 14, m.dataAddressAndGen.address(), 14, r.address.address())
-
-		switch {
-		case mGen != rGen && mAddress != rAddress:
-			panic(fmt.Errorf(genMismatchMessage + " and " + addressMismatchMessage))
-
-		case mGen != rGen:
-			panic(fmt.Errorf(genMismatchMessage))
-
-		case mAddress != rAddress:
-			panic(fmt.Errorf(addressMismatchMessage))
-		}
+	if m.gen() != r.Gen() {
+		panic(fmt.Errorf("generation mismatch between metadata (%d) and reference (%d)", m.gen(), r.Gen()))
 	}
 }

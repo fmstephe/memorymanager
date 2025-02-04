@@ -27,8 +27,7 @@ import (
 // is a meaningful improvement are speculative and haven't been tested. This
 // would be a good target for future performance testing.
 type RefPointer struct {
-	address     taggedAddress
-	metaAddress taggedAddress
+	address taggedAddress
 }
 
 func NewReference(dataAddress, metaAddress uintptr) RefPointer {
@@ -41,8 +40,7 @@ func NewReference(dataAddress, metaAddress uintptr) RefPointer {
 	}
 
 	r := RefPointer{
-		address:     newTaggedAddress(dataAddress),
-		metaAddress: newTaggedAddress(metaAddress),
+		address: newTaggedAddress(metaAddress),
 	}
 
 	// Set the dataAddressAndGen in this reference's metadata.
@@ -50,7 +48,7 @@ func NewReference(dataAddress, metaAddress uintptr) RefPointer {
 	// In one of the next steps we will use this to look up the actual data
 	// _and_ verify the generation of the reference.
 	meta := r.metadata()
-	meta.dataAddressAndGen = r.address
+	meta.dataAddressAndGen = newTaggedAddress(dataAddress)
 	// The value defaults to false, but we write it here for readability
 	meta.setNotFree()
 
@@ -95,6 +93,8 @@ func (r *RefPointer) allocFromFree() {
 // This method re-allocates the memory location. When this method returns r
 // will no longer be a valid reference.  The reference returned _will_ be a
 // valid reference to the same location.
+//
+//gcassert:noescape
 func (r *RefPointer) Realloc() RefPointer {
 	newRef := *r
 
@@ -126,6 +126,13 @@ func (r *RefPointer) Bytes(size int) []byte {
 	return r.dataAddress().bytes(size)
 }
 
+// Calling this method
+//
+// 1: looks up the metadata for this reference
+// 2: Verifies that the reference is _allowed_ to access this data
+// 3: Returns the taggedAddress pointing to the actual data
+//
+//gcassert:noescape
 func (r *RefPointer) dataAddress() taggedAddress {
 	meta := r.metadata()
 
@@ -142,17 +149,22 @@ func (r *RefPointer) dataAddress() taggedAddress {
 
 	meta.checkReference(r)
 
-	return r.address
+	return meta.dataAddressAndGen
 }
 
 //gcassert:noescape
-func (r *RefPointer) metadataPtr() uintptr {
-	return r.metaAddress.address()
+func (r *RefPointer) metaPtr() uintptr {
+	return r.metaAddress().address()
 }
 
 //gcassert:noescape
 func (r *RefPointer) metadata() *metadata {
-	return (*metadata)(unsafe.Pointer(r.metadataPtr()))
+	return (*metadata)(unsafe.Pointer(r.metaAddress().address()))
+}
+
+//gcassert:noescape
+func (r *RefPointer) metaAddress() taggedAddress {
+	return r.address
 }
 
 //gcassert:noescape
