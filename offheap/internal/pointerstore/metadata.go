@@ -50,14 +50,14 @@ func (m *metadata) setNotFree() {
 //
 //gcassert:noescape
 func (m *metadata) checkReference(r *RefPointer) {
-	if m.dataAddressAndGen != r.dataAddressAndGen {
+	if m.dataAddressAndGen != r.address {
 		mGen := m.gen()
 		rGen := r.Gen()
 		mAddress := m.dataAddressAndGen.address()
-		rAddress := r.dataAddressAndGen.address()
+		rAddress := r.address.address()
 
 		genMismatchMessage := fmt.Sprintf("generation mismatch between metadata (%d) and reference (%d)", m.gen(), r.Gen())
-		addressMismatchMessage := fmt.Sprintf("address mismatch between metadata (%#0*X) and reference (%#0*X)", 14, m.dataAddressAndGen.address(), 14, r.dataAddressAndGen.address())
+		addressMismatchMessage := fmt.Sprintf("address mismatch between metadata (%#0*X) and reference (%#0*X)", 14, m.dataAddressAndGen.address(), 14, r.address.address())
 
 		switch {
 		case mGen != rGen && mAddress != rAddress:

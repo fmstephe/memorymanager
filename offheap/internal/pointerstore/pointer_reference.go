@@ -27,8 +27,8 @@ import (
 // is a meaningful improvement are speculative and haven't been tested. This
 // would be a good target for future performance testing.
 type RefPointer struct {
-	dataAddressAndGen taggedAddress
-	metaAddress       taggedAddress
+	address     taggedAddress
+	metaAddress taggedAddress
 }
 
 func NewReference(dataAddress, metaAddress uintptr) RefPointer {
@@ -41,8 +41,8 @@ func NewReference(dataAddress, metaAddress uintptr) RefPointer {
 	}
 
 	r := RefPointer{
-		dataAddressAndGen: newTaggedAddress(dataAddress),
-		metaAddress:       newTaggedAddress(metaAddress),
+		address:     newTaggedAddress(dataAddress),
+		metaAddress: newTaggedAddress(metaAddress),
 	}
 
 	// Set the dataAddressAndGen in this reference's metadata.
@@ -50,7 +50,7 @@ func NewReference(dataAddress, metaAddress uintptr) RefPointer {
 	// In one of the next steps we will use this to look up the actual data
 	// _and_ verify the generation of the reference.
 	meta := r.metadata()
-	meta.dataAddressAndGen = r.dataAddressAndGen
+	meta.dataAddressAndGen = r.address
 	// The value defaults to false, but we write it here for readability
 	meta.setNotFree()
 
@@ -111,7 +111,7 @@ func (r *RefPointer) Realloc() RefPointer {
 
 //gcassert:noescape
 func (r *RefPointer) IsNil() bool {
-	return r.dataAddressAndGen.isNil()
+	return r.address.isNil()
 }
 
 //gcassert:noescape
@@ -131,14 +131,14 @@ func (r *RefPointer) DataPtr() uintptr {
 
 	meta.checkReference(r)
 
-	return r.dataAddressAndGen.address()
+	return r.address.address()
 }
 
 // Convenient method to retrieve raw data of an allocation
 //
 //gcassert:noescape
 func (r *RefPointer) Bytes(size int) []byte {
-	return r.dataAddressAndGen.bytes(size)
+	return r.address.bytes(size)
 }
 
 //gcassert:noescape
@@ -153,10 +153,10 @@ func (r *RefPointer) metadata() *metadata {
 
 //gcassert:noescape
 func (r *RefPointer) Gen() uint8 {
-	return r.dataAddressAndGen.gen()
+	return r.address.gen()
 }
 
 //gcassert:noescape
 func (r *RefPointer) setGen(gen uint8) {
-	r.dataAddressAndGen = r.dataAddressAndGen.withGen(gen)
+	r.address = r.address.withGen(gen)
 }

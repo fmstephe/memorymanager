@@ -58,7 +58,7 @@ func TestNewReference(t *testing.T) {
 		assert.Equal(t, uint8(0), r.Gen())
 		// The dataAddressAndGen matches in both the reference and the metadata
 		meta := r.metadata()
-		assert.Equal(t, r.dataAddressAndGen, meta.dataAddressAndGen)
+		assert.Equal(t, r.address, meta.dataAddressAndGen)
 	}
 }
 
@@ -168,9 +168,9 @@ func TestRealloc(t *testing.T) {
 	meta2 := r2.metadata()
 
 	// The dataAddressAndGen matches in both the reference and the metadata
-	assert.Equal(t, r2.dataAddressAndGen, meta2.dataAddressAndGen)
+	assert.Equal(t, r2.address, meta2.dataAddressAndGen)
 	// The dataAddressAndGen of the original metadata has been updated to match r2
-	assert.Equal(t, r2.dataAddressAndGen, meta1.dataAddressAndGen)
+	assert.Equal(t, r2.address, meta1.dataAddressAndGen)
 
 	// Assert that the data/metadata pointed to by r1 and r2 is the same
 	assert.Equal(t, dataPtr, r2.DataPtr())
