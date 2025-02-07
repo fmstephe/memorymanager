@@ -46,12 +46,12 @@ func (a taggedAddress) gen() uint8 {
 	return (uint8)((a & genMask) >> maskShift)
 }
 
-func (a taggedAddress) address() uintptr {
+func (a taggedAddress) pointer() uintptr {
 	return uintptr(a & addressMask)
 }
 
 func (a taggedAddress) bytes(size int) []byte {
-	return ([]byte)(unsafe.Slice((*byte)((unsafe.Pointer)(a.address())), size))
+	return ([]byte)(unsafe.Slice((*byte)((unsafe.Pointer)(a.pointer())), size))
 }
 
 func (a taggedAddress) isFree() bool {
@@ -59,7 +59,7 @@ func (a taggedAddress) isFree() bool {
 }
 
 func (a taggedAddress) isNil() bool {
-	return a.address() == nilPtr
+	return a.pointer() == nilPtr
 }
 
 func (a taggedAddress) withGen(gen uint8) taggedAddress {

@@ -20,7 +20,7 @@ func TestTaggedAddress_ZeroValue(t *testing.T) {
 
 	// address and gen are 0
 	assert.True(t, ta.isNil())
-	assert.Equal(t, uintptr(unsafe.Pointer(nil)), ta.address())
+	assert.Equal(t, uintptr(unsafe.Pointer(nil)), ta.pointer())
 	assert.Equal(t, uint8(0), ta.gen())
 }
 
@@ -31,7 +31,7 @@ func TestTaggedAddress_NewTaggedAddress_Zero(t *testing.T) {
 
 	// address and gen are 0
 	assert.True(t, ta.isNil())
-	assert.Equal(t, nilPtr, ta.address())
+	assert.Equal(t, nilPtr, ta.pointer())
 	assert.Equal(t, uint8(0), ta.gen())
 }
 
@@ -50,7 +50,7 @@ func TestTaggedAddress_AddressAndGenAreSeparate(t *testing.T) {
 			// If the address is not 0 then isNil() must be false
 			assert.Equal(t, newPtr == nilPtr, ta.isNil())
 			// Assert that the original address is preserved
-			assert.Equal(t, newPtr, ta.address())
+			assert.Equal(t, newPtr, ta.pointer())
 			// Assert that the generation is preserved
 			assert.Equal(t, gen, ta.gen())
 		}
@@ -77,19 +77,19 @@ func TestTaggedAddress_IsFree(t *testing.T) {
 		newPtr := uintptr(rand.Int63n(maxAddress + 1))
 
 		ta := newTaggedAddress(newPtr)
-		address := ta.address()
+		address := ta.pointer()
 		gen := ta.gen()
 		// A tagged address is created not-free. It is assumed that a
 		// tagged address is only created for an allocation
 		assert.False(t, ta.isFree())
 		// Neither the address nor the generation tag are changed by the is-free bit
-		assert.Equal(t, address, ta.address())
+		assert.Equal(t, address, ta.pointer())
 		assert.Equal(t, gen, ta.gen())
 
 		ta = ta.withFree()
 		assert.True(t, ta.isFree())
 		// Neither the address nor the generation tag are changed by the is-free bit
-		assert.Equal(t, address, ta.address())
+		assert.Equal(t, address, ta.pointer())
 		assert.Equal(t, gen, ta.gen())
 
 		// Side-quest, set the generation tag and ensure this doesn't
@@ -97,7 +97,7 @@ func TestTaggedAddress_IsFree(t *testing.T) {
 		ta = ta.withGen(maxGen)
 		assert.True(t, ta.isFree())
 		// Neither the address nor the generation tag are changed by the is-free bit
-		assert.Equal(t, address, ta.address())
+		assert.Equal(t, address, ta.pointer())
 		assert.Equal(t, uint8(maxGen), ta.gen())
 
 		// Set the generation back
@@ -106,7 +106,7 @@ func TestTaggedAddress_IsFree(t *testing.T) {
 		ta = ta.withNotFree()
 		assert.False(t, ta.isFree())
 		// Neither the address nor the generation tag are changed by the is-free bit
-		assert.Equal(t, address, ta.address())
+		assert.Equal(t, address, ta.pointer())
 		assert.Equal(t, gen, ta.gen())
 	}
 }

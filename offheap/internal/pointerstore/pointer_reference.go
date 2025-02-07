@@ -94,7 +94,7 @@ func (r RefPointer) Realloc() RefPointer {
 }
 
 func (r RefPointer) DataPtr() uintptr {
-	return r.accessibleActiveAddress().address()
+	return r.accessibleActiveAddress().pointer()
 }
 
 // Convenient method to retrieve raw data of an allocation
@@ -126,7 +126,7 @@ func (r RefPointer) accessibleActiveAddress() taggedAddress {
 }
 
 func (r RefPointer) metadata() *metadata {
-	return (*metadata)(unsafe.Pointer(r.address.address()))
+	return (*metadata)(unsafe.Pointer(r.address.pointer()))
 }
 
 func (r RefPointer) Gen() uint8 {
