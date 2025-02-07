@@ -20,6 +20,9 @@ const (
 	isFreeMask = taggedAddress(0x80 << maskShift)
 	// Next 7 bits indicate generation tag
 	genMask = taggedAddress(maxGen << maskShift)
+	// A generation value of one. This is used to increment generation
+	// values
+	genOne = taggedAddress(1 << maskShift)
 	// Mask revealing all 8 tag bits
 	tagMask = isFreeMask | genMask
 	// Mask revealing 56 address bits
@@ -63,7 +66,17 @@ func (a taggedAddress) isNil() bool {
 }
 
 func (a taggedAddress) withGen(gen uint8) taggedAddress {
-	return (a & (addressAndIsFreeMask)) | (taggedAddress(gen) << maskShift)
+	// move the new gen into postion
+	newGen := (taggedAddress(gen) << maskShift) & genMask
+	// Set the new generation value back into the address
+	return (a & addressAndIsFreeMask) | newGen
+}
+
+func (a taggedAddress) withIncGen() taggedAddress {
+	// increment the generation value alone
+	newGen := (a + genOne) & genMask
+	// Set the new generation value back into the address
+	return (a & addressAndIsFreeMask) | newGen
 }
 
 func (a taggedAddress) withFree() taggedAddress {

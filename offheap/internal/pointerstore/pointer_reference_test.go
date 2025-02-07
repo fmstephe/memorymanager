@@ -86,12 +86,14 @@ func TestGenerationDoesNotAppearInOtherFields(t *testing.T) {
 	dataPtr := r.DataPtr()
 	metadata := r.metadata()
 
-	metadata.setGen(maxGen)
-	r = r.withGen(maxGen)
+	for i := 1; i <= maxGen; i++ {
+		gen := metadata.incGen()
+		r = r.withGen(gen)
 
-	assert.Equal(t, dataPtr, r.DataPtr())
-	assert.Equal(t, metadata, r.metadata())
-	assert.Equal(t, uint8(maxGen), r.Gen())
+		assert.Equal(t, dataPtr, r.DataPtr())
+		assert.Equal(t, metadata, r.metadata())
+		assert.Equal(t, uint8(i%128), r.Gen())
+	}
 }
 
 func TestFree(t *testing.T) {

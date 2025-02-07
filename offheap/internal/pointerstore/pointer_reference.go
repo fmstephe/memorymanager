@@ -33,9 +33,6 @@ func NewReference(dataAddress, metaAddress uintptr) RefPointer {
 	}
 
 	// Set the dataAddressAndGen in this reference's metadata.
-	//
-	// In one of the next steps we will use this to look up the actual data
-	// _and_ verify the generation of the reference.
 	meta := r.metadata()
 	meta.dataAddressAndGen = newTaggedAddress(dataAddress)
 	// The value defaults to false, but we write it here for readability
@@ -53,11 +50,8 @@ func (r RefPointer) free() {
 	// Mark the object as free
 	meta.setFree()
 
-	// Increment the generation for the allocation and set that generation in
-	// the Metadata and Reference
-	gen := meta.gen()
-	gen++
-	meta.setGen(gen)
+	// Increment the generation for the allocation's metadata
+	meta.incGen()
 }
 
 // Sets the RefPointer's metadata to not-free and creates a new RefPointer with
@@ -72,8 +66,11 @@ func (r RefPointer) allocFromFree() RefPointer {
 	// This object is now allocated and is no long free
 	meta.setNotFree()
 
+	// Get the metadata generation tag
+	gen := meta.gen()
+
 	// Create new RefPointer with correct generation tag
-	return r.withGen(meta.gen())
+	return r.withGen(gen)
 }
 
 // This method re-allocates the memory location. When this method returns r
@@ -83,13 +80,12 @@ func (r RefPointer) Realloc() RefPointer {
 	// Test that this reference is actually allowed to access the allocation
 	r.accessibleActiveAddress()
 
-	// Get metadata generation tag and increment it
 	meta := r.metadata()
-	gen := meta.gen()
-	gen++
 
-	// Set the new generation tag in both the metadata and reference
-	meta.setGen(gen)
+	// Get and increment the metadata generation tag
+	gen := meta.incGen()
+
+	// Set the new generation tag in the reference
 	return r.withGen(gen)
 }
 

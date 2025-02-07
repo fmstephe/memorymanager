@@ -57,6 +57,64 @@ func TestTaggedAddress_AddressAndGenAreSeparate(t *testing.T) {
 	}
 }
 
+// For any legal address and generation tag combination the address and
+// generation tag are available unaltered
+func TestTaggedAddress_WithGen(t *testing.T) {
+	for range 10 {
+		newPtr := uintptr(rand.Int63n(maxAddress + 1))
+		ta := newTaggedAddress(newPtr)
+		testWithGen(t, ta.withNotFree())
+		testWithGen(t, ta.withFree())
+	}
+}
+
+func testWithGen(t *testing.T, ta taggedAddress) {
+	ptr := ta.pointer()
+	isFree := ta.isFree()
+	for i := 0; i <= maxGen*4; i++ {
+		// increment tagged address generation
+		ta = ta.withGen(uint8(i))
+
+		// If the address is not 0 then isNil() must be false
+		assert.Equal(t, ptr == nilPtr, ta.isNil())
+		// Assert that the original address is preserved
+		assert.Equal(t, ptr, ta.pointer())
+		// Assert if the address remains free or not free
+		assert.Equal(t, isFree, ta.isFree())
+		// Assert that the generation is preserved
+		assert.Equal(t, uint8(i%128), ta.gen())
+	}
+}
+
+// For any legal address and generation tag combination the address and
+// generation tag are available unaltered
+func TestTaggedAddress_IncGen(t *testing.T) {
+	for range 10 {
+		newPtr := uintptr(rand.Int63n(maxAddress + 1))
+		ta := newTaggedAddress(newPtr)
+		testIncGen(t, ta.withNotFree())
+		testIncGen(t, ta.withFree())
+	}
+}
+
+func testIncGen(t *testing.T, ta taggedAddress) {
+	ptr := ta.pointer()
+	isFree := ta.isFree()
+	for i := 0; i <= maxGen*4; i++ {
+		// If the address is not 0 then isNil() must be false
+		assert.Equal(t, ptr == nilPtr, ta.isNil())
+		// Assert that the original address is preserved
+		assert.Equal(t, ptr, ta.pointer())
+		// Assert if the address remains free or not free
+		assert.Equal(t, isFree, ta.isFree())
+		// Assert that the generation is preserved
+		assert.Equal(t, uint8(i%128), ta.gen())
+
+		// increment tagged address generation
+		ta = ta.withIncGen()
+	}
+}
+
 // For any address with bits set in the generation tag region (i.e. upper 8
 // bits) newTaggedAddress() panics
 func TestTaggedAddress_PointerWithGenBitsPanics(t *testing.T) {

@@ -22,8 +22,9 @@ func (m *metadata) gen() uint8 {
 }
 
 //gcassert:noescape
-func (m *metadata) setGen(gen uint8) {
-	m.dataAddressAndGen = m.dataAddressAndGen.withGen(gen)
+func (m *metadata) incGen() uint8 {
+	m.dataAddressAndGen = m.dataAddressAndGen.withIncGen()
+	return m.dataAddressAndGen.gen()
 }
 
 //gcassert:noescape
