@@ -55,7 +55,7 @@ func TestNewReference(t *testing.T) {
 		// Bytes points to data at the correct location
 		assert.Equal(t, objects[i], uintptr(unsafe.Pointer(&r.Bytes(8)[0])))
 		// Metadata pointer points to the correct location
-		assert.Equal(t, metadata[i], r.metaAddress().address())
+		assert.Equal(t, metadata[i], r.address.address())
 		// Generation of a new Reference is always 0
 		assert.Equal(t, uint8(0), r.Gen())
 		// The data should be accessible through this reference

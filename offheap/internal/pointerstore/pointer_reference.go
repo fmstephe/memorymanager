@@ -126,11 +126,7 @@ func (r RefPointer) accessibleActiveAddress() taggedAddress {
 }
 
 func (r RefPointer) metadata() *metadata {
-	return (*metadata)(unsafe.Pointer(r.metaAddress().address()))
-}
-
-func (r RefPointer) metaAddress() taggedAddress {
-	return r.address
+	return (*metadata)(unsafe.Pointer(r.address.address()))
 }
 
 func (r RefPointer) Gen() uint8 {
