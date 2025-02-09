@@ -20,7 +20,7 @@ import (
 // zeroed out.
 func AllocObject[T any](s *Store) RefObject[T] {
 	t := reflect.TypeFor[T]()
-	s.checkType(t)
+	s.checker.checkType(t)
 
 	idx := indexForType[T]()
 

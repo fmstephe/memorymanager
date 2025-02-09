@@ -20,7 +20,7 @@ import (
 // AllocSlice do _not_ have their contents zeroed out.
 func AllocSlice[T any](s *Store, length, requestedCapacity int) RefSlice[T] {
 	t := reflect.TypeFor[T]()
-	s.checkType(t)
+	s.checker.checkType(t)
 
 	// Round the requested capacity up to a power of 2
 	actualCapacity := capacityForSlice(requestedCapacity)
