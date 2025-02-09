@@ -6,6 +6,7 @@ package offheap
 
 import (
 	"fmt"
+	"reflect"
 	"unsafe"
 
 	"github.com/fmstephe/memorymanager/offheap/internal/pointerstore"
@@ -20,7 +21,8 @@ import (
 // zeroed out.
 func AllocObject[T any](s *Store) RefObject[T] {
 	// TODO this is not fast - we _need_ to cache this type data
-	if err := containsNoPointers[T](); err != nil {
+	t := reflect.TypeFor[T]()
+	if err := containsNoPointers(t); err != nil {
 		panic(fmt.Errorf("cannot allocate generic type containing pointers %w", err))
 	}
 

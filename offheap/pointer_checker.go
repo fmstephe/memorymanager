@@ -35,8 +35,7 @@ func (p *typePaths) String() string {
 	return result[:len(result)-1]
 }
 
-func containsNoPointers[O any]() error {
-	t := reflect.TypeFor[O]()
+func containsNoPointers(t reflect.Type) error {
 	paths := &typePaths{}
 	searchForPointers(t, "", paths)
 	if paths.Len() != 0 {

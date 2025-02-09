@@ -5,6 +5,7 @@
 package offheap
 
 import (
+	"reflect"
 	"testing"
 	"unsafe"
 
@@ -50,29 +51,29 @@ type manyPointers struct {
 
 func TestBadTypes(t *testing.T) {
 	// No arrays with pointers in them
-	assert.EqualError(t, containsNoPointers[[32]badStruct](), "found pointer(s): [32](offheap.badStruct)badField<string>")
+	assert.EqualError(t, containsNoPointers(reflect.TypeFor[[32]badStruct]()), "found pointer(s): [32](offheap.badStruct)badField<string>")
 	// No channels
-	assert.EqualError(t, containsNoPointers[chan int](), "found pointer(s): <chan int>")
+	assert.EqualError(t, containsNoPointers(reflect.TypeFor[chan int]()), "found pointer(s): <chan int>")
 	// No functions
-	assert.EqualError(t, containsNoPointers[func(int) int](), "found pointer(s): <func(int) int>")
+	assert.EqualError(t, containsNoPointers(reflect.TypeFor[func(int) int]()), "found pointer(s): <func(int) int>")
 	// No interfaces
-	assert.EqualError(t, containsNoPointers[any](), "found pointer(s): <interface {}>")
+	assert.EqualError(t, containsNoPointers(reflect.TypeFor[any]()), "found pointer(s): <interface {}>")
 	// No maps
-	assert.EqualError(t, containsNoPointers[map[int]int](), "found pointer(s): <map[int]int>")
+	assert.EqualError(t, containsNoPointers(reflect.TypeFor[map[int]int]()), "found pointer(s): <map[int]int>")
 	// No pointer(s)
-	assert.EqualError(t, containsNoPointers[*int](), "found pointer(s): <*int>")
+	assert.EqualError(t, containsNoPointers(reflect.TypeFor[*int]()), "found pointer(s): <*int>")
 	// No slices
-	assert.EqualError(t, containsNoPointers[[]int](), "found pointer(s): <[]int>")
+	assert.EqualError(t, containsNoPointers(reflect.TypeFor[[]int]()), "found pointer(s): <[]int>")
 	// No strings
-	assert.EqualError(t, containsNoPointers[string](), "found pointer(s): <string>")
+	assert.EqualError(t, containsNoPointers(reflect.TypeFor[string]()), "found pointer(s): <string>")
 	// No structs with any pointerful fields
-	assert.EqualError(t, containsNoPointers[badStruct](), "found pointer(s): (offheap.badStruct)badField<string>")
-	assert.EqualError(t, containsNoPointers[deepBadStruct](), "found pointer(s): (offheap.deepBadStruct)badInt<*int>,(offheap.deepBadStruct)deepBadField(offheap.badStruct)badField<string>")
-	// assert.EqualError(t, containsNoPointers[stringSmugglerStruct](), "found pointer(s): ")
+	assert.EqualError(t, containsNoPointers(reflect.TypeFor[badStruct]()), "found pointer(s): (offheap.badStruct)badField<string>")
+	assert.EqualError(t, containsNoPointers(reflect.TypeFor[deepBadStruct]()), "found pointer(s): (offheap.deepBadStruct)badInt<*int>,(offheap.deepBadStruct)deepBadField(offheap.badStruct)badField<string>")
+	// assert.EqualError(t, containsNoPointers(reflect.TypeFor[stringSmugglerStruct]()), "found pointer(s): ")
 	// No unsafe pointer(s)
-	assert.EqualError(t, containsNoPointers[unsafe.Pointer](), "found pointer(s): <unsafe.Pointer>")
+	assert.EqualError(t, containsNoPointers(reflect.TypeFor[unsafe.Pointer]()), "found pointer(s): <unsafe.Pointer>")
 	// We should find all of the bad fields in this struct
-	assert.EqualError(t, containsNoPointers[manyPointers](), "found pointer(s): "+
+	assert.EqualError(t, containsNoPointers(reflect.TypeFor[manyPointers]()), "found pointer(s): "+
 		"(offheap.manyPointers)chanField<chan int>,"+
 		"(offheap.manyPointers)funcField<func(int) int>,"+
 		"(offheap.manyPointers)interfaceField<interface {}>,"+
@@ -100,18 +101,18 @@ type goodStruct struct {
 
 func TestGoodTypes(t *testing.T) {
 	// bool is fine
-	assert.Nil(t, containsNoPointers[bool]())
+	assert.Nil(t, containsNoPointers(reflect.TypeFor[bool]()))
 	// ints are fine
-	assert.Nil(t, containsNoPointers[int]())
+	assert.Nil(t, containsNoPointers(reflect.TypeFor[int]()))
 	// uints are fine
-	assert.Nil(t, containsNoPointers[uint]())
+	assert.Nil(t, containsNoPointers(reflect.TypeFor[uint]()))
 	// floats are fine
-	assert.Nil(t, containsNoPointers[float32]())
+	assert.Nil(t, containsNoPointers(reflect.TypeFor[float32]()))
 	// complex numbers are fine
-	assert.Nil(t, containsNoPointers[complex64]())
+	assert.Nil(t, containsNoPointers(reflect.TypeFor[complex64]()))
 	// arrays are fine
-	assert.Nil(t, containsNoPointers[[32]int]())
+	assert.Nil(t, containsNoPointers(reflect.TypeFor[[32]int]()))
 	// structs with no pointerful fields are fine
-	assert.Nil(t, containsNoPointers[goodStruct]())
-	assert.Nil(t, containsNoPointers[deepGoodStruct]())
+	assert.Nil(t, containsNoPointers(reflect.TypeFor[goodStruct]()))
+	assert.Nil(t, containsNoPointers(reflect.TypeFor[deepGoodStruct]()))
 }
