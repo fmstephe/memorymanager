@@ -19,11 +19,8 @@ import (
 // The contents of the slice will be arbitrary. Unlike Go slices acquired via
 // AllocSlice do _not_ have their contents zeroed out.
 func AllocSlice[T any](s *Store, length, requestedCapacity int) RefSlice[T] {
-	// TODO this is not fast - we _need_ to cache this type data
 	t := reflect.TypeFor[T]()
-	if err := containsNoPointers(t); err != nil {
-		panic(fmt.Errorf("cannot allocate generic type containing pointers %w", err))
-	}
+	s.checkType(t)
 
 	// Round the requested capacity up to a power of 2
 	actualCapacity := capacityForSlice(requestedCapacity)

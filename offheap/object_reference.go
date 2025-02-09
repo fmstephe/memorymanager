@@ -5,7 +5,6 @@
 package offheap
 
 import (
-	"fmt"
 	"reflect"
 	"unsafe"
 
@@ -20,11 +19,8 @@ import (
 // Go allocations objects acquired via AllocObject do _not_ have their contents
 // zeroed out.
 func AllocObject[T any](s *Store) RefObject[T] {
-	// TODO this is not fast - we _need_ to cache this type data
 	t := reflect.TypeFor[T]()
-	if err := containsNoPointers(t); err != nil {
-		panic(fmt.Errorf("cannot allocate generic type containing pointers %w", err))
-	}
+	s.checkType(t)
 
 	idx := indexForType[T]()
 

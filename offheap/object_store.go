@@ -5,12 +5,20 @@
 package offheap
 
 import (
+	"fmt"
+	"reflect"
+	"sync"
+
 	"github.com/fmstephe/memorymanager/offheap/internal/pointerstore"
 )
 
 const defaultSlabSize = 1 << 13
 
 type Store struct {
+	// protects access to typeCache
+	typeCacheLock sync.RWMutex
+	typeCache     map[reflect.Type]struct{}
+
 	sizedStores []*pointerstore.Store
 }
 
@@ -18,9 +26,7 @@ type Store struct {
 //
 // This store manages allocation and freeing of any offheap allocated objects.
 func New() *Store {
-	return &Store{
-		sizedStores: initSizeStore(defaultSlabSize),
-	}
+	return newSized(defaultSlabSize)
 }
 
 // Returns a new *Store.
@@ -35,7 +41,13 @@ func New() *Store {
 // small slab sizes to allow faster tests with reduced memory usage. Most users
 // will probably prefer to use the default New() above.
 func NewSized(slabSize int) *Store {
+	return newSized(slabSize)
+}
+
+// Returns a new *Store
+func newSized(slabSize int) *Store {
 	return &Store{
+		typeCache:   map[reflect.Type]struct{}{},
 		sizedStores: initSizeStore(slabSize),
 	}
 }
@@ -100,4 +112,33 @@ func (s *Store) AllocConfigs() []pointerstore.AllocConfig {
 		sizedAllocConfigs[i] = s.sizedStores[i].AllocConfig()
 	}
 	return sizedAllocConfigs
+}
+
+func (s *Store) checkType(t reflect.Type) {
+	if s.lookupTypeCache(t) {
+		return
+	}
+
+	if err := containsNoPointers(t); err != nil {
+		panic(fmt.Errorf("cannot allocate generic type containing pointers %w", err))
+	}
+
+	s.writeTypeToCache(t)
+	return
+}
+
+func (s *Store) lookupTypeCache(t reflect.Type) bool {
+	s.typeCacheLock.RLock()
+	defer s.typeCacheLock.RUnlock()
+
+	_, ok := s.typeCache[t]
+	return ok
+}
+
+func (s *Store) writeTypeToCache(t reflect.Type) {
+	s.typeCacheLock.Lock()
+	defer s.typeCacheLock.Unlock()
+
+	s.typeCache[t] = struct{}{}
+	return
 }
