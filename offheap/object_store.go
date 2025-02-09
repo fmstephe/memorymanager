@@ -11,6 +11,7 @@ import (
 const defaultSlabSize = 1 << 13
 
 type Store struct {
+	checker     typeChecker
 	sizedStores []*pointerstore.Store
 }
 
@@ -18,9 +19,7 @@ type Store struct {
 //
 // This store manages allocation and freeing of any offheap allocated objects.
 func New() *Store {
-	return &Store{
-		sizedStores: initSizeStore(defaultSlabSize),
-	}
+	return newSized(defaultSlabSize)
 }
 
 // Returns a new *Store.
@@ -35,7 +34,13 @@ func New() *Store {
 // small slab sizes to allow faster tests with reduced memory usage. Most users
 // will probably prefer to use the default New() above.
 func NewSized(slabSize int) *Store {
+	return newSized(slabSize)
+}
+
+// Returns a new *Store
+func newSized(slabSize int) *Store {
 	return &Store{
+		checker:     newTypeChecker(),
 		sizedStores: initSizeStore(slabSize),
 	}
 }

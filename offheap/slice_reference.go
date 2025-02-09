@@ -6,6 +6,7 @@ package offheap
 
 import (
 	"fmt"
+	"reflect"
 	"unsafe"
 
 	"github.com/fmstephe/memorymanager/offheap/internal/pointerstore"
@@ -18,10 +19,8 @@ import (
 // The contents of the slice will be arbitrary. Unlike Go slices acquired via
 // AllocSlice do _not_ have their contents zeroed out.
 func AllocSlice[T any](s *Store, length, requestedCapacity int) RefSlice[T] {
-	// TODO this is not fast - we _need_ to cache this type data
-	if err := containsNoPointers[T](); err != nil {
-		panic(fmt.Errorf("cannot allocate generic type containing pointers %w", err))
-	}
+	t := reflect.TypeFor[T]()
+	s.checker.checkType(t)
 
 	// Round the requested capacity up to a power of 2
 	actualCapacity := capacityForSlice(requestedCapacity)
