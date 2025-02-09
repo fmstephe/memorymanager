@@ -49,7 +49,7 @@ type manyPointers struct {
 	stringField string
 }
 
-func TestBadTypes(t *testing.T) {
+func TestBadTypes_containsNoPointers(t *testing.T) {
 	// No arrays with pointers in them
 	assert.EqualError(t, containsNoPointers(reflect.TypeFor[[32]badStruct]()), "found pointer(s): [32](offheap.badStruct)badField<string>")
 	// No channels
@@ -83,6 +83,35 @@ func TestBadTypes(t *testing.T) {
 		"(offheap.manyPointers)stringField<string>")
 }
 
+func TestBadTypes_checkTypes(t *testing.T) {
+	checker := newTypeChecker()
+
+	// No arrays with pointers in them} )
+	assert.Panics(t, func() { checker.checkType(reflect.TypeFor[[32]badStruct]()) })
+	// No channels} )
+	assert.Panics(t, func() { checker.checkType(reflect.TypeFor[chan int]()) })
+	// No functions} )
+	assert.Panics(t, func() { checker.checkType(reflect.TypeFor[func(int) int]()) })
+	// No interfaces} )
+	assert.Panics(t, func() { checker.checkType(reflect.TypeFor[any]()) })
+	// No maps} )
+	assert.Panics(t, func() { checker.checkType(reflect.TypeFor[map[int]int]()) })
+	// No pointer(s)} )
+	assert.Panics(t, func() { checker.checkType(reflect.TypeFor[*int]()) })
+	// No slices} )
+	assert.Panics(t, func() { checker.checkType(reflect.TypeFor[[]int]()) })
+	// No strings} )
+	assert.Panics(t, func() { checker.checkType(reflect.TypeFor[string]()) })
+	// No structs with any pointerful fields} )
+	assert.Panics(t, func() { checker.checkType(reflect.TypeFor[badStruct]()) })
+	assert.Panics(t, func() { checker.checkType(reflect.TypeFor[deepBadStruct]()) })
+	// assert.Panics(t, func () { checker.checkType(reflect.TypeFor[stringSmugglerStruct]())} )
+	// No unsafe pointer(s)} )
+	assert.Panics(t, func() { checker.checkType(reflect.TypeFor[unsafe.Pointer]()) })
+	// We should find all of the bad fields in this struct} )
+	assert.Panics(t, func() { checker.checkType(reflect.TypeFor[manyPointers]()) })
+}
+
 type deepGoodStruct struct {
 	//lint:ignore U1000 this field looks unused but is observed by reflection
 	boolField bool
@@ -99,7 +128,7 @@ type goodStruct struct {
 	referenceField RefObject[goodStruct]
 }
 
-func TestGoodTypes(t *testing.T) {
+func TestGoodTypes_containsNoPointers(t *testing.T) {
 	// bool is fine
 	assert.Nil(t, containsNoPointers(reflect.TypeFor[bool]()))
 	// ints are fine
@@ -115,4 +144,49 @@ func TestGoodTypes(t *testing.T) {
 	// structs with no pointerful fields are fine
 	assert.Nil(t, containsNoPointers(reflect.TypeFor[goodStruct]()))
 	assert.Nil(t, containsNoPointers(reflect.TypeFor[deepGoodStruct]()))
+}
+
+func TestGoodTypes_checkType(t *testing.T) {
+	checker := newTypeChecker()
+
+	// bool is fine
+	assert.NotPanics(t, func() { checker.checkType(reflect.TypeFor[bool]()) })
+	// ints are fine
+	assert.NotPanics(t, func() { checker.checkType(reflect.TypeFor[int]()) })
+	// uints are fine
+	assert.NotPanics(t, func() { checker.checkType(reflect.TypeFor[uint]()) })
+	// floats are fine
+	assert.NotPanics(t, func() { checker.checkType(reflect.TypeFor[float32]()) })
+	// complex numbers are fine
+	assert.NotPanics(t, func() { checker.checkType(reflect.TypeFor[complex64]()) })
+	// arrays are fine
+	assert.NotPanics(t, func() { checker.checkType(reflect.TypeFor[[32]int]()) })
+	// structs with no pointerful fields are fine
+	assert.NotPanics(t, func() { checker.checkType(reflect.TypeFor[goodStruct]()) })
+	assert.NotPanics(t, func() { checker.checkType(reflect.TypeFor[deepGoodStruct]()) })
+}
+
+func TestTypeCaching(t *testing.T) {
+	checker := newTypeChecker()
+
+	types := []reflect.Type{
+		reflect.TypeFor[bool](),
+		reflect.TypeFor[int](),
+		reflect.TypeFor[uint](),
+		reflect.TypeFor[float32](),
+		reflect.TypeFor[complex64](),
+		reflect.TypeFor[goodStruct](),
+		reflect.TypeFor[deepGoodStruct](),
+	}
+
+	for _, typ := range types {
+		// Initially the type is not in the cache
+		assert.NotContains(t, checker.typeCache, typ)
+		// Check the type
+		checker.checkType(typ)
+		// The type is now in the cache
+		assert.Contains(t, checker.typeCache, typ)
+		// Check the type again, still works
+		checker.checkType(typ)
+	}
 }
