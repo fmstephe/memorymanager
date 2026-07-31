@@ -8,12 +8,16 @@ github.com/davecgh/go-spew/spew
 ## explicit; go 1.19
 github.com/fmstephe/flib/fmath
 github.com/fmstephe/flib/funsafe
+# github.com/fmstephe/fuzzhelper v0.0.0-20251108031235-f698f231bb1d
+## explicit; go 1.22.1
+github.com/fmstephe/fuzzhelper
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
-# github.com/stretchr/testify v1.8.0
-## explicit; go 1.13
+# github.com/stretchr/testify v1.10.0
+## explicit; go 1.17
 github.com/stretchr/testify/assert
+github.com/stretchr/testify/assert/yaml
 github.com/stretchr/testify/require
 # golang.org/x/sys v0.18.0
 ## explicit; go 1.18
