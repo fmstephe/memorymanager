@@ -152,15 +152,15 @@ func allocateAndModifySharedMultitype(
 ) {
 	barrier.Wait()
 
-	for i := 0; i < allocsPerGoroutine; i++ {
+	for i := uint(0); i < allocsPerGoroutine; i++ {
 		allocation := allocAndWrite(os, i)
 		sharedChan <- allocation
 	}
 
-	for i := 0; i < allocsPerGoroutine; i++ {
+	for i := uint(0); i < allocsPerGoroutine; i++ {
 		allocation := <-sharedChan
 		allocSlice := allocation.getSlice()
-		writeToField(allocSlice, i)
+		writeToField(allocSlice, byte(i))
 		allocation.free(os)
 	}
 }

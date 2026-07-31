@@ -172,7 +172,7 @@ func (a *MultitypeAllocation) free(s *Store) {
 	}
 }
 
-func multitypeAllocFunc(selector int) func(*Store) *MultitypeAllocation {
+func multitypeAllocFunc(selector uint) func(*Store) *MultitypeAllocation {
 	switch selector % numberOfTypes {
 	case 0:
 		return func(os *Store) *MultitypeAllocation {
@@ -254,11 +254,11 @@ func multitypeAllocFunc(selector int) func(*Store) *MultitypeAllocation {
 	}
 }
 
-func allocAndWrite(os *Store, selector int) *MultitypeAllocation {
+func allocAndWrite(os *Store, selector uint) *MultitypeAllocation {
 	allocFunc := multitypeAllocFunc(selector)
 	allocation := allocFunc(os)
 	allocSlice := allocation.getSlice()
-	writeToField(allocSlice, selector)
+	writeToField(allocSlice, byte(selector))
 	return allocation
 }
 
@@ -350,14 +350,14 @@ func Test_Object_NewModifyGet_Multitype(t *testing.T) {
 	// Create all the objects and modify field
 	allocs := make([]*MultitypeAllocation, totalAllocations)
 	for i := range allocs {
-		alloc := allocAndWrite(os, i)
+		alloc := allocAndWrite(os, uint(i))
 		allocs[i] = alloc
 	}
 
 	// Assert that all of the modifications are visible
 	for i, alloc := range allocs {
 		s := alloc.getSlice()
-		assert.Equal(t, generateField(len(s), i), s)
+		assert.Equal(t, generateField(len(s), byte(i)), s)
 	}
 }
 
@@ -378,30 +378,30 @@ func Test_Object_GetModifyGet_Multitype(t *testing.T) {
 	// Create all the objects
 	allocs := make([]*MultitypeAllocation, totalAllocations)
 	for i := range allocs {
-		alloc := allocAndWrite(os, i)
+		alloc := allocAndWrite(os, uint(i))
 		allocs[i] = alloc
 	}
 
 	// Get each object and modify field
 	for i, alloc := range allocs {
 		s := alloc.getSlice()
-		writeToField(s, i*2)
+		writeToField(s, byte(i*2))
 	}
 
 	// Assert that all of the modifications are visible
 	for i, alloc := range allocs {
 		s := alloc.getSlice()
-		assert.Equal(t, generateField(len(s), i*2), s)
+		assert.Equal(t, generateField(len(s), byte(i*2)), s)
 	}
 }
 
-func writeToField(field []byte, value int) {
+func writeToField(field []byte, value byte) {
 	for i := range field {
-		field[i] = byte(value)
+		field[i] = value
 	}
 }
 
-func generateField(size int, value int) []byte {
+func generateField(size int, value byte) []byte {
 	field := make([]byte, size)
 	writeToField(field, value)
 	return field
