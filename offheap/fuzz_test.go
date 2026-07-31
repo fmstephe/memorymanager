@@ -6,45 +6,49 @@ package offheap
 
 import (
 	"fmt"
+	"math/rand"
 	"reflect"
 	"testing"
 
-	"github.com/fmstephe/memorymanager/testpkg/fuzzutil"
+	"github.com/fmstephe/fuzzhelper"
 )
 
 // The single fuzzer test for offheap
 func FuzzObjectStore(f *testing.F) {
-	testCases := fuzzutil.MakeRandomTestCases()
+	// Generate a set of test cases to get fuzzing off to a good start
+	r := rand.New(rand.NewSource(1))
+	testCases := [][]byte{
+		[]byte{},
+		randomBytes(r, 1),
+		randomBytes(r, 10),
+		randomBytes(r, 50),
+		randomBytes(r, 100),
+		randomBytes(r, 500),
+		randomBytes(r, 1000),
+		randomBytes(r, 5000),
+		randomBytes(r, 10000),
+		randomBytes(r, 50000),
+	}
 	for _, tc := range testCases {
 		f.Add(tc)
 	}
+
+	// Run the fuzz tests
 	f.Fuzz(func(t *testing.T, bytes []byte) {
-		tr := NewTestRun(bytes)
-		tr.Run()
+		objects := NewObjects()
+		defer objects.Cleanup()
+
+		testSteps := fuzzhelper.MakeSliceOf[TestStep]([]TestStep{&AllocStep{}, &FreeStep{}, &MutateStep{}}, bytes)
+		for _, testStep := range testSteps {
+			testStep.DoStep(objects)
+		}
 	})
 }
 
-func NewTestRun(bytes []byte) *fuzzutil.TestRun {
-	objects := NewObjects()
-
-	stepMaker := func(byteConsumer *fuzzutil.ByteConsumer) fuzzutil.Step {
-		chooser := byteConsumer.Byte()
-		switch chooser % 3 {
-		case 0:
-			return NewAllocStep(objects, byteConsumer)
-		case 1:
-			return NewFreeStep(objects, byteConsumer)
-		case 2:
-			return NewMutateStep(objects, byteConsumer)
-		}
-		panic("Unreachable")
-	}
-
-	cleanup := func() {
-		objects.Cleanup()
-	}
-
-	return fuzzutil.NewTestRun(bytes, stepMaker, cleanup)
+func randomBytes(r *rand.Rand, size int) []byte {
+	bytes := make([]byte, size)
+	r.Read(bytes)
+	return bytes
 }
 
 type Objects struct {
@@ -69,8 +73,8 @@ func (o *Objects) Alloc(allocFunc func(*Store) *MultitypeAllocation, value byte)
 
 	allocation := allocFunc(o.store)
 	allocSlice := allocation.getSlice()
-	writeToField(allocSlice, int(value))
-	expected := generateField(len(allocSlice), int(value))
+	writeToField(allocSlice, value)
+	expected := generateField(len(allocSlice), value)
 	o.allocations = append(o.allocations, allocation)
 	o.expected = append(o.expected, expected)
 	o.live = append(o.live, true)
@@ -94,10 +98,10 @@ func (o *Objects) Mutate(index uint32, value byte) {
 	// Update the allocated data
 	allocation := o.allocations[index]
 	allocSlice := allocation.getSlice()
-	writeToField(allocSlice, int(value))
+	writeToField(allocSlice, value)
 
 	// Update the expected
-	writeToField(o.expected[index][:], int(value))
+	writeToField(o.expected[index][:], value)
 }
 
 func (o *Objects) Free(index uint32) {
@@ -166,62 +170,39 @@ func (o *Objects) Cleanup() {
 	}
 }
 
+type TestStep interface {
+	DoStep(objects *Objects)
+}
+
 // Allocate an object
 type AllocStep struct {
-	objects   *Objects
-	allocFunc func(*Store) *MultitypeAllocation
-	value     byte
+	AllocFuncSelector uint
+	Value             byte
 }
 
-func NewAllocStep(objects *Objects, byteConsumer *fuzzutil.ByteConsumer) *AllocStep {
-	step := &AllocStep{
-		objects:   objects,
-		allocFunc: multitypeAllocFunc(int(byteConsumer.Uint32())),
-		value:     byteConsumer.Byte(),
-	}
-	return step
-}
-
-func (s *AllocStep) DoStep() {
-	s.objects.Alloc(s.allocFunc, s.value)
-	s.objects.CheckAll()
+func (s *AllocStep) DoStep(objects *Objects) {
+	allocFunc := multitypeAllocFunc(s.AllocFuncSelector)
+	objects.Alloc(allocFunc, s.Value)
+	objects.CheckAll()
 }
 
 // Free an object
 type FreeStep struct {
-	objects *Objects
-	index   uint32
+	Index uint32
 }
 
-func NewFreeStep(objects *Objects, byteConsumer *fuzzutil.ByteConsumer) *FreeStep {
-	step := &FreeStep{
-		objects: objects,
-		index:   byteConsumer.Uint32(),
-	}
-	return step
+func (s *FreeStep) DoStep(objects *Objects) {
+	objects.Free(s.Index)
+	objects.CheckAll()
 }
 
-func (s *FreeStep) DoStep() {
-	s.objects.Free(s.index)
-	s.objects.CheckAll()
-}
-
+// Mutate an object
 type MutateStep struct {
-	objects  *Objects
-	index    uint32
-	newValue byte
+	Index    uint32
+	NewValue byte
 }
 
-func NewMutateStep(objects *Objects, byteConsumer *fuzzutil.ByteConsumer) *MutateStep {
-	step := &MutateStep{
-		objects:  objects,
-		index:    byteConsumer.Uint32(),
-		newValue: byteConsumer.Byte(),
-	}
-	return step
-}
-
-func (s *MutateStep) DoStep() {
-	s.objects.Mutate(s.index, s.newValue)
-	s.objects.CheckAll()
+func (s *MutateStep) DoStep(objects *Objects) {
+	objects.Mutate(s.Index, s.NewValue)
+	objects.CheckAll()
 }
