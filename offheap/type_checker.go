@@ -77,14 +77,24 @@ func (p *typePaths) String() string {
 
 func containsNoPointers(t reflect.Type) error {
 	paths := &typePaths{}
-	searchForPointers(t, "", paths)
+	checked := map[reflect.Type]struct{}{}
+	searchForPointers(t, "", paths, checked)
 	if paths.Len() != 0 {
 		return fmt.Errorf("found pointer(s): %s", paths)
 	}
 	return nil
 }
 
-func searchForPointers(t reflect.Type, path string, paths *typePaths) {
+func searchForPointers(t reflect.Type, path string, paths *typePaths, checked map[reflect.Type]struct{}) {
+	if _, ok := checked[t]; ok {
+		// This type has already been checked and can be skipped
+		// Required to avoid infinite recursion
+		return
+	}
+
+	// mark type as checked
+	checked[t] = struct{}{}
+
 	switch t.Kind() {
 	case reflect.Bool:
 
@@ -98,7 +108,7 @@ func searchForPointers(t reflect.Type, path string, paths *typePaths) {
 
 	case reflect.Array:
 		size := strconv.Itoa(t.Len())
-		searchForPointers(t.Elem(), path+"["+size+"]", paths)
+		searchForPointers(t.Elem(), path+"["+size+"]", paths, checked)
 
 	case reflect.Chan:
 		paths.addPath(path + "<" + t.String() + ">")
@@ -124,7 +134,7 @@ func searchForPointers(t reflect.Type, path string, paths *typePaths) {
 	case reflect.Struct:
 		for i := 0; i < t.NumField(); i++ {
 			sV := t.Field(i)
-			searchForPointers(sV.Type, path+"("+t.String()+")"+sV.Name, paths)
+			searchForPointers(sV.Type, path+"("+t.String()+")"+sV.Name, paths, checked)
 		}
 
 	case reflect.UnsafePointer:
