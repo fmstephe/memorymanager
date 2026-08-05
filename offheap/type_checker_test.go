@@ -24,14 +24,6 @@ type badStruct struct {
 	badField string
 }
 
-// We will create a test which uses this struct in the future
-//
-//lint:ignore U1000 this struct actually is unused - but it represents a real bug in our code
-type stringSmugglerStruct struct {
-	//lint:ignore U1000 this field looks unused but is observed by reflection
-	reference RefObject[string]
-}
-
 type manyPointers struct {
 	//lint:ignore U1000 this field looks unused but is observed by reflection
 	chanField chan int
@@ -189,4 +181,36 @@ func TestTypeCaching(t *testing.T) {
 		// Check the type again, still works
 		checker.checkType(typ)
 	}
+}
+
+type goodRefObject struct {
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	reference1 RefObject[int]
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	reference2 RefSlice[int]
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	reference3 RefSlice[[32]int]
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	reference4 RefString
+}
+
+type badRefObject struct {
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	reference1 RefObject[string]
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	reference2 RefObject[[]int]
+	//lint:ignore U1000 this field looks unused but is observed by reflection
+	reference3 RefSlice[string]
+}
+
+func TestGoodRefObjects_checkTypes(t *testing.T) {
+	checker := newTypeChecker()
+
+	assert.NotPanics(t, func() { checker.checkType(reflect.TypeFor[goodRefObject]()) })
+}
+
+func TestBadRefObjects_checkTypes(t *testing.T) {
+	checker := newTypeChecker()
+
+	assert.Panics(t, func() { checker.checkType(reflect.TypeFor[badRefObject]()) })
 }

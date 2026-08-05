@@ -132,6 +132,13 @@ func searchForPointers(t reflect.Type, path string, paths *typePaths, checked ma
 		paths.addPath(path + "<" + t.String() + ">")
 
 	case reflect.Struct:
+		if rt, ok := unwrapRefType(t); ok {
+			searchForPointers(rt, path+"["+t.String()+"]", paths, checked)
+			// No need to search through the reference type's
+			// internal fields, return early
+			return
+		}
+
 		for i := 0; i < t.NumField(); i++ {
 			sV := t.Field(i)
 			searchForPointers(sV.Type, path+"("+t.String()+")"+sV.Name, paths, checked)
@@ -143,4 +150,42 @@ func searchForPointers(t reflect.Type, path string, paths *typePaths, checked ma
 	default:
 		paths.addPath(path + "<" + t.String() + ">")
 	}
+}
+
+func unwrapRefType(t reflect.Type) (reflect.Type, bool) {
+	const offheapPkg = "github.com/fmstephe/memorymanager/offheap"
+	const refStringType = "RefString"
+	const valueMethod = "Value"
+
+	if t.PkgPath() != offheapPkg {
+		return nil, false
+	}
+
+	// The Value() method is attached by point to RefObject.  We know that
+	// we haven't arrived here via a pointer type, because pointer types
+	// are immediately rejected.
+	pt := reflect.PointerTo(t)
+
+	m, ok := pt.MethodByName(valueMethod)
+
+	if !ok {
+		return nil, false
+	}
+
+	if t.Name() == refStringType {
+		// RefString has a Value() method but it's not parameterised
+		// and we don't check it
+		return nil, false
+	}
+
+	// Parameterised type for RefObject/Slice
+	//
+	// This implementation relies on specific details of the offheap package.
+	// It is necessary that the _only_ types in the package which have a
+	// Value() method are RefObject, RefSlice and RefString.  It also
+	// relies on the fact that for parameterised type T RefObject.Value()
+	// returns *T and RefSlice.Value() returns []T. In both cases this
+	// method will return the type T. If any of these details change this
+	// method must also change.
+	return m.Type.Out(0).Elem(), true
 }
