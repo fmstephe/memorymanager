@@ -35,7 +35,7 @@ func (s *nodeStore[T]) allocLeaf(view View) offheap.RefObject[node[T]] {
 }
 
 func (s *nodeStore[T]) newSlice(data T) offheap.RefSlice[T] {
-	slc := offheap.AllocSlice[T](s.nodes, 1, 1)
+	slc := s.nodes.AllocSlice[T](1, 1)
 	slc.Value()[0] = data
 	return slc
 }

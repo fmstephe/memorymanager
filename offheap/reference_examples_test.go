@@ -60,7 +60,7 @@ func ExampleReference_refSlice() {
 
 	// Create a RefSlice
 	var store *offheap.Store = offheap.New()
-	var ref offheap.RefSlice[byte] = offheap.ConcatSlices[byte](store, []byte("ref slice reference"))
+	var ref offheap.RefSlice[byte] = store.ConcatSlices[byte]([]byte("ref slice reference"))
 
 	// Store and retrieve that RefSlice
 	refSliceMap.rMap[1] = ref

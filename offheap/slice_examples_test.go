@@ -13,10 +13,10 @@ import (
 // Calling AllocSlice allocates a slice and returns a RefSlice which acts like
 // a conventional pointer through which you can retrieve the allocated slice
 // via RefSlice.Value()
-func ExampleAllocSlice() {
+func ExampleStore_AllocSlice() {
 	var store *offheap.Store = offheap.New()
 
-	var ref offheap.RefSlice[int] = offheap.AllocSlice[int](store, 1, 2)
+	var ref offheap.RefSlice[int] = store.AllocSlice[int](1, 2)
 
 	// Set the first element in the allocated slice
 	var s1 []int = ref.Value()
@@ -30,14 +30,14 @@ func ExampleAllocSlice() {
 }
 
 // You can allocate a RefSlice by passing in a number of slices to be concatenated together
-func ExampleConcatSlices() {
+func ExampleStore_ConcatSlices() {
 	var store *offheap.Store = offheap.New()
 
 	slice1 := []int{1, 2}
 	slice2 := []int{3, 4}
 	slice3 := []int{5, 6}
 
-	var ref offheap.RefSlice[int] = offheap.ConcatSlices[int](store, slice1, slice2, slice3)
+	var ref offheap.RefSlice[int] = store.ConcatSlices[int](slice1, slice2, slice3)
 
 	var s1 []int = ref.Value()
 
@@ -49,14 +49,14 @@ func ExampleConcatSlices() {
 func ExampleAppend() {
 	var store *offheap.Store = offheap.New()
 
-	var ref1 offheap.RefSlice[int] = offheap.AllocSlice[int](store, 1, 2)
+	var ref1 offheap.RefSlice[int] = store.AllocSlice[int](1, 2)
 
 	// Set the first element in the allocated slice
 	var s1 []int = ref1.Value()
 	s1[0] = 1
 
 	// Append a second element to the slice
-	var ref2 offheap.RefSlice[int] = offheap.Append(store, ref1, 2)
+	var ref2 offheap.RefSlice[int] = store.Append(ref1, 2)
 
 	var s2 []int = ref2.Value()
 
@@ -68,14 +68,14 @@ func ExampleAppend() {
 func ExampleAppend_oldRef() {
 	var store *offheap.Store = offheap.New()
 
-	var ref1 offheap.RefSlice[int] = offheap.AllocSlice[int](store, 1, 2)
+	var ref1 offheap.RefSlice[int] = store.AllocSlice[int](1, 2)
 
 	// Set the first element in the allocated slice
 	var s1 []int = ref1.Value()
 	s1[0] = 1
 
 	// Append a second element to the slice
-	offheap.Append(store, ref1, 2)
+	store.Append(ref1, 2)
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -89,17 +89,17 @@ func ExampleAppend_oldRef() {
 
 // You can append a slice to a RefSlice. This will create a new RefSlice with
 // the original slice and the slice passed in appended together.
-func ExampleAppendSlice() {
+func ExampleStore_AppendSlice() {
 	var store *offheap.Store = offheap.New()
 
-	var ref1 offheap.RefSlice[int] = offheap.AllocSlice[int](store, 1, 2)
+	var ref1 offheap.RefSlice[int] = store.AllocSlice[int](1, 2)
 
 	// Set the first element in the allocated slice
 	var s1 []int = ref1.Value()
 	s1[0] = 1
 
 	// Append a second element to the slice
-	var ref2 offheap.RefSlice[int] = offheap.AppendSlice(store, ref1, []int{2, 3})
+	var ref2 offheap.RefSlice[int] = store.AppendSlice(ref1, []int{2, 3})
 
 	var s2 []int = ref2.Value()
 
@@ -108,17 +108,17 @@ func ExampleAppendSlice() {
 }
 
 // After call to AppendSlice the old RefSlice is no longer valid for use.
-func ExampleAppendSlice_oldRef() {
+func ExampleStore_AppendSlice_oldRef() {
 	var store *offheap.Store = offheap.New()
 
-	var ref1 offheap.RefSlice[int] = offheap.AllocSlice[int](store, 1, 2)
+	var ref1 offheap.RefSlice[int] = store.AllocSlice[int](1, 2)
 
 	// Set the first element in the allocated slice
 	var s1 []int = ref1.Value()
 	s1[0] = 1
 
 	// Append a second element to the slice
-	offheap.AppendSlice(store, ref1, []int{2, 3})
+	store.AppendSlice(ref1, []int{2, 3})
 
 	defer func() {
 		if err := recover(); err != nil {

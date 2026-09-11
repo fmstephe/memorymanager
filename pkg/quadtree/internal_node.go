@@ -88,7 +88,7 @@ func (n *node[T]) insert(x, y float64, list offheap.RefSlice[T], store *nodeStor
 				return
 			}
 			if n.ps[i].sameLoc(x, y) {
-				n.ps[i].list = offheap.AppendSlice(store.nodes, n.ps[i].list, list.Value())
+				n.ps[i].list = store.nodes.AppendSlice(n.ps[i].list, list.Value())
 				return
 			}
 		}

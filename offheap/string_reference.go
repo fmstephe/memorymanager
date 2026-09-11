@@ -66,7 +66,7 @@ func ConcatStrings(s *Store, strs ...string) RefString {
 // externally this function behaves as if a new allocation is made and the old
 // one freed.
 func AppendString(s *Store, into RefString, value string) RefString {
-	pRef, newCapacity := resizeAndInvalidate[byte](s, into.ref, capacityForSlice(into.length), into.length, len(value))
+	pRef, newCapacity := s.resizeAndInvalidate[byte](into.ref, capacityForSlice(into.length), into.length, len(value))
 
 	// We have the capacity available, append the element
 	newRef := newRefString(into.length, pRef)

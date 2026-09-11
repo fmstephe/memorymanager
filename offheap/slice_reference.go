@@ -18,7 +18,7 @@ import (
 //
 // The contents of the slice will be arbitrary. Unlike Go slices acquired via
 // AllocSlice do _not_ have their contents zeroed out.
-func AllocSlice[T any](s *Store, length, requestedCapacity int) RefSlice[T] {
+func (s *Store) AllocSlice[T any](length, requestedCapacity int) RefSlice[T] {
 	t := reflect.TypeFor[T]()
 	s.checker.checkType(t)
 
@@ -33,14 +33,14 @@ func AllocSlice[T any](s *Store, length, requestedCapacity int) RefSlice[T] {
 }
 
 // Allocates a new slice which contains the elements of slices concatenated together
-func ConcatSlices[T any](s *Store, slices ...[]T) RefSlice[T] {
+func (s *Store) ConcatSlices[T any](slices ...[]T) RefSlice[T] {
 	totalLength := 0
 	// TODO check this value for overflow
 	for _, slice := range slices {
 		totalLength += len(slice)
 	}
 
-	r := AllocSlice[T](s, totalLength, totalLength)
+	r := s.AllocSlice[T](totalLength, totalLength)
 	newSlice := r.Value()
 
 	newSlice = newSlice[:0]
@@ -59,8 +59,8 @@ func ConcatSlices[T any](s *Store, slices ...[]T) RefSlice[T] {
 // optimisation which _may_ reuse the existing allocation slot if possible. But
 // externally this function behaves as if a new allocation is made and the old
 // one freed.
-func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
-	pRef, newCapacity := resizeAndInvalidate[T](s, into.ref, into.capacity, into.length, 1)
+func (s *Store) Append[T any](into RefSlice[T], value T) RefSlice[T] {
+	pRef, newCapacity := s.resizeAndInvalidate[T](into.ref, into.capacity, into.length, 1)
 
 	// We have the capacity available, append the element
 	newRef := newRefSlice[T](into.length, newCapacity, pRef)
@@ -79,8 +79,8 @@ func Append[T any](s *Store, into RefSlice[T], value T) RefSlice[T] {
 // optimisation which _may_ reuse the existing allocation slot if possible. But
 // externally this function behaves as if a new allocation is made and the old
 // one freed.
-func AppendSlice[T any](s *Store, into RefSlice[T], fromSlice []T) RefSlice[T] {
-	pRef, newCapacity := resizeAndInvalidate[T](s, into.ref, into.capacity, into.length, len(fromSlice))
+func (s *Store) AppendSlice[T any](into RefSlice[T], fromSlice []T) RefSlice[T] {
+	pRef, newCapacity := s.resizeAndInvalidate[T](into.ref, into.capacity, into.length, len(fromSlice))
 
 	// We have the capacity available, append the slice
 	newRef := newRefSlice[T](into.length, newCapacity, pRef)
@@ -94,7 +94,7 @@ func AppendSlice[T any](s *Store, into RefSlice[T], fromSlice []T) RefSlice[T] {
 // Frees the allocation referenced by r. After this call returns r must never
 // be used again. Any use of the slice referenced by r will have unpredicatable
 // behaviour.
-func FreeSlice[T any](s *Store, r RefSlice[T]) {
+func (s *Store) FreeSlice[T any](r RefSlice[T]) {
 	idx := indexForSlice[T](r.capacity)
 	s.free(idx, r.ref)
 }
@@ -142,7 +142,7 @@ func (r *RefSlice[T]) IsNil() bool {
 // It is important to note that these statistics apply to the size class
 // indicated here. The statistics allocations will capture all allocations for
 // this _size_ including allocations for non-slice types.
-func StatsForSlice[T any](s *Store, capacity int) pointerstore.Stats {
+func (s *Store) StatsForSlice[T any](capacity int) pointerstore.Stats {
 	stats := s.Stats()
 	idx := indexForSlice[T](capacity)
 	return stats[idx]
@@ -154,13 +154,13 @@ func StatsForSlice[T any](s *Store, capacity int) pointerstore.Stats {
 // It is important to note that this config apply to the size class indicated
 // here. The config apply to all allocations for this _size_ including
 // allocations for non-slice types.
-func ConfForSlice[T any](s *Store, capacity int) pointerstore.AllocConfig {
+func (s *Store) ConfForSlice[T any](capacity int) pointerstore.AllocConfig {
 	configs := s.AllocConfigs()
 	idx := indexForSlice[T](capacity)
 	return configs[idx]
 }
 
-func resizeAndInvalidate[T any](s *Store, oldRef pointerstore.RefPointer, oldCapacity, oldLength, extra int) (newRef pointerstore.RefPointer, newCapacity int) {
+func (s *Store) resizeAndInvalidate[T any](oldRef pointerstore.RefPointer, oldCapacity, oldLength, extra int) (newRef pointerstore.RefPointer, newCapacity int) {
 	// Calculate the new length
 	newLength := oldLength + extra
 	// TODO test this overflow case We first need to introduce a new option
