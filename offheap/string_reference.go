@@ -13,13 +13,13 @@ import (
 
 // Allocates a new string whose size and contents will be the same as found in
 // str.
-func AllocStringFromString(s *Store, str string) RefString {
-	return AllocStringFromBytes(s, funsafe.StringToBytes(str))
+func (s *Store) AllocStringFromString(str string) RefString {
+	return s.AllocStringFromBytes(funsafe.StringToBytes(str))
 }
 
 // Allocates a new string whose size and contents will be the same as found in
 // bytes.
-func AllocStringFromBytes(s *Store, bytes []byte) RefString {
+func (s *Store) AllocStringFromBytes(bytes []byte) RefString {
 	idx := indexForSize(len(bytes))
 
 	// Allocate the string
@@ -35,7 +35,7 @@ func AllocStringFromBytes(s *Store, bytes []byte) RefString {
 }
 
 // Allocates a new string which contains the elements of strs concatenated together.
-func ConcatStrings(s *Store, strs ...string) RefString {
+func (s *Store) ConcatStrings(strs ...string) RefString {
 	// Calculate the total string size needed
 	totalLength := 0
 	for _, str := range strs {
@@ -65,7 +65,7 @@ func ConcatStrings(s *Store, strs ...string) RefString {
 // optimisation which _may_ reuse the existing allocation slot if possible. But
 // externally this function behaves as if a new allocation is made and the old
 // one freed.
-func AppendString(s *Store, into RefString, value string) RefString {
+func (s *Store) AppendString(into RefString, value string) RefString {
 	pRef, newCapacity := s.resizeAndInvalidate[byte](into.ref, capacityForSlice(into.length), into.length, len(value))
 
 	// We have the capacity available, append the element
@@ -80,7 +80,7 @@ func AppendString(s *Store, into RefString, value string) RefString {
 // Frees the allocation referenced by r. After this call returns r must never
 // be used again. Any use of the string referenced by r will have
 // unpredicatable behaviour.
-func FreeString(s *Store, r RefString) {
+func (s *Store) FreeString(r RefString) {
 	idx := indexForSize(r.length)
 	s.free(idx, r.ref)
 }
@@ -129,7 +129,7 @@ func (r *RefString) IsNil() bool {
 // It is important to note that these statistics apply to the size class
 // indicated here. The statistics allocations will capture all allocations for
 // this _size_ including allocations for non-slice types.
-func StatsForString(s *Store, length int) pointerstore.Stats {
+func (s *Store) StatsForString(length int) pointerstore.Stats {
 	stats := s.Stats()
 	idx := indexForSize(length)
 	return stats[idx]
@@ -140,7 +140,7 @@ func StatsForString(s *Store, length int) pointerstore.Stats {
 // It is important to note that this config apply to the size class indicated
 // here. The config apply to all allocations for this _size_ including
 // allocations for non-string types.
-func ConfForString(s *Store, length int) pointerstore.AllocConfig {
+func (s *Store) ConfForString(length int) pointerstore.AllocConfig {
 	configs := s.AllocConfigs()
 	idx := indexForSize(length)
 	return configs[idx]

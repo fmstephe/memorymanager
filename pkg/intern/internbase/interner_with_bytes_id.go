@@ -139,7 +139,7 @@ func (i *internerWithBytesIdShard) get(hash uint64, bytes []byte) string {
 	}
 
 	// intern string and then return interned version
-	refString := offheap.AllocStringFromBytes(i.store, bytes)
+	refString := i.store.AllocStringFromBytes(bytes)
 	i.interned[hash] = refString
 
 	i.stats.Interned++

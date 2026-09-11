@@ -112,7 +112,7 @@ func (i *internerWithUint64IdShard[C]) get(converter C) string {
 	}
 
 	// intern int-string and then return interned version
-	refString := offheap.AllocStringFromString(i.store, str)
+	refString := i.store.AllocStringFromString(str)
 	i.interned[identity] = refString
 
 	interned := refString.Value()

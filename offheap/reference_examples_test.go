@@ -31,7 +31,7 @@ func ExampleReference_refString() {
 
 	// Create a RefString
 	var store *offheap.Store = offheap.New()
-	var ref offheap.RefString = offheap.ConcatStrings(store, "ref string reference")
+	var ref offheap.RefString = store.ConcatStrings("ref string reference")
 
 	// Store and retrieve that RefString
 	refStringMap.rMap[1] = ref

@@ -13,10 +13,10 @@ import (
 // Calling AllocStringFromString allocates a string and returns a RefString
 // which acts like a conventional pointer through which you can retrieve the
 // allocated string via RefString.Value()
-func ExampleAllocStringFromString() {
+func ExampleStore_AllocStringFromString() {
 	var store *offheap.Store = offheap.New()
 
-	var ref offheap.RefString = offheap.AllocStringFromString(store, "allocated")
+	var ref offheap.RefString = store.AllocStringFromString("allocated")
 
 	// Set the first element in the allocated slice
 	var s1 string = ref.Value()
@@ -28,10 +28,10 @@ func ExampleAllocStringFromString() {
 // Calling AllocStringFromBytes allocates a string and returns a RefString
 // which acts like a conventional pointer through which you can retrieve the
 // allocated string via RefString.Value()
-func ExampleAllocStringFromBytes() {
+func ExampleStore_AllocStringFromBytes() {
 	var store *offheap.Store = offheap.New()
 
-	var ref offheap.RefString = offheap.AllocStringFromBytes(store, []byte("allocated"))
+	var ref offheap.RefString = store.AllocStringFromBytes([]byte("allocated"))
 
 	// Set the first element in the allocated slice
 	var s1 string = ref.Value()
@@ -41,10 +41,10 @@ func ExampleAllocStringFromBytes() {
 }
 
 // You can allocate a RefString by passing in a number of strings to be concatenated together
-func ExampleConcatStrings() {
+func ExampleStore_ConcatStrings() {
 	var store *offheap.Store = offheap.New()
 
-	var ref offheap.RefString = offheap.ConcatStrings(store, "all", "oca", "ted")
+	var ref offheap.RefString = store.ConcatStrings("all", "oca", "ted")
 
 	var s1 string = ref.Value()
 
@@ -53,13 +53,13 @@ func ExampleConcatStrings() {
 }
 
 // You can append a string to an allocated RefString
-func ExampleAppendString() {
+func ExampleStore_AppendString() {
 	var store *offheap.Store = offheap.New()
 
-	var ref1 offheap.RefString = offheap.AllocStringFromString(store, "allocated")
+	var ref1 offheap.RefString = store.AllocStringFromString("allocated")
 
 	// AppendString a second element to the string
-	var ref2 offheap.RefString = offheap.AppendString(store, ref1, " and appended")
+	var ref2 offheap.RefString = store.AppendString(ref1, " and appended")
 
 	var s2 string = ref2.Value()
 
@@ -68,13 +68,13 @@ func ExampleAppendString() {
 }
 
 // After call to append the old RefString is no longer valid for use
-func ExampleAppendString_oldRef() {
+func ExampleStore_AppendString_oldRef() {
 	var store *offheap.Store = offheap.New()
 
-	var ref1 offheap.RefString = offheap.AllocStringFromString(store, "allocated")
+	var ref1 offheap.RefString = store.AllocStringFromString("allocated")
 
 	// AppendString a second element to the string
-	offheap.AppendString(store, ref1, " and appended")
+	store.AppendString(ref1, " and appended")
 
 	defer func() {
 		if err := recover(); err != nil {

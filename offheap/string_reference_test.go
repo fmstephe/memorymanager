@@ -24,7 +24,7 @@ func Test_String_AllocateAndGet_Simple(t *testing.T) {
 	value := "test string"
 
 	// Allocate it
-	refString := AllocStringFromString(ss, value)
+	refString := ss.AllocStringFromString(value)
 	valueOutString := refString.Value()
 
 	// Assert that we can get the correct string from the Reference
@@ -32,7 +32,7 @@ func Test_String_AllocateAndGet_Simple(t *testing.T) {
 	assert.Equal(t, value, refString.Value())
 
 	// Allocate it
-	refBytes := AllocStringFromBytes(ss, []byte(value))
+	refBytes := ss.AllocStringFromBytes([]byte(value))
 	valueOutBytes := refBytes.Value()
 
 	// Assert that we can get the correct string from the Reference
@@ -57,7 +57,7 @@ func Test_String_AllocateAndGet(t *testing.T) {
 			value := rsm.MakeSizedString(length)
 
 			// Allocate it using the string
-			refString := AllocStringFromString(ss, value)
+			refString := ss.AllocStringFromString(value)
 			valueOutString := refString.Value()
 
 			// Assert that we can get the correct string from the Reference
@@ -65,7 +65,7 @@ func Test_String_AllocateAndGet(t *testing.T) {
 			assert.Equal(t, value, refString.Value())
 
 			// Allocate it using bytes
-			refBytes := AllocStringFromBytes(ss, []byte(value))
+			refBytes := ss.AllocStringFromBytes([]byte(value))
 			valueOutBytes := refBytes.Value()
 
 			// Assert that we can get the correct string from the Reference
@@ -86,8 +86,8 @@ func Test_String_NewFreeGet_Panic(t *testing.T) {
 	// Allocate and free a string value
 	value := "test string"
 
-	ref := AllocStringFromString(ss, value)
-	FreeString(ss, ref)
+	ref := ss.AllocStringFromString(value)
+	ss.FreeString(ref)
 
 	// Assert that calling Value() now panics
 	assert.Panics(t, func() { ref.Value() })
@@ -103,11 +103,11 @@ func Test_String_NewFreeFree_Panic(t *testing.T) {
 
 	// Allocate and free a string value
 	value := "test string"
-	ref := AllocStringFromString(ss, value)
-	FreeString(ss, ref)
+	ref := ss.AllocStringFromString(value)
+	ss.FreeString(ref)
 
 	// Assert that calling FreeStr() now panics
-	assert.Panics(t, func() { FreeString(ss, ref) })
+	assert.Panics(t, func() { ss.FreeString(ref) })
 }
 
 // Demonstrate that when we double free a re-allocated string we still panic.
@@ -118,12 +118,12 @@ func Test_String_NewFreeAllocFree_Panic(t *testing.T) {
 	}()
 
 	value := "test string"
-	r := AllocStringFromString(os, value)
-	FreeString(os, r)
+	r := os.AllocStringFromString(value)
+	os.FreeString(r)
 	// This will re-allocate the just-freed string
-	AllocStringFromString(os, value)
+	os.AllocStringFromString(value)
 
-	assert.Panics(t, func() { FreeString(os, r) })
+	assert.Panics(t, func() { os.FreeString(r) })
 }
 
 // Demonstrate that when we call Value() on a re-allocated RefStr we still panic
@@ -134,10 +134,10 @@ func Test_String_NewFreeAllocGet_Panic(t *testing.T) {
 	}()
 
 	value := "test string"
-	r := AllocStringFromString(os, value)
-	FreeString(os, r)
+	r := os.AllocStringFromString(value)
+	os.FreeString(r)
 	// This will re-allocate the just-freed string
-	AllocStringFromString(os, value)
+	os.AllocStringFromString(value)
 
 	assert.Panics(t, func() { r.Value() })
 }
@@ -167,23 +167,23 @@ func Test_String_SizedStats(t *testing.T) {
 		(1 << 14) + 1,
 	} {
 		t.Run("", func(t *testing.T) {
-			expectedStats := StatsForString(os, length)
+			expectedStats := os.StatsForString(length)
 
 			value := rsm.MakeSizedString(length)
 
-			r1 := AllocStringFromString(os, value)
-			r2 := AllocStringFromString(os, value)
-			FreeString(os, r1)
-			r3 := AllocStringFromString(os, value)
-			FreeString(os, r2)
-			FreeString(os, r3)
+			r1 := os.AllocStringFromString(value)
+			r2 := os.AllocStringFromString(value)
+			os.FreeString(r1)
+			r3 := os.AllocStringFromString(value)
+			os.FreeString(r2)
+			os.FreeString(r3)
 
 			expectedStats.Allocs = 3
 			expectedStats.Frees = 3
 			expectedStats.RawAllocs = 2
 			expectedStats.Reused = 1
 
-			conf := ConfForString(os, length)
+			conf := os.ConfForString(length)
 
 			if conf.ObjectsPerSlab > 1 {
 				// Only expect one slab to be allocated for smaller objects
@@ -193,7 +193,7 @@ func Test_String_SizedStats(t *testing.T) {
 				expectedStats.Slabs = 2
 			}
 
-			actualStats := StatsForString(os, length)
+			actualStats := os.StatsForString(length)
 
 			assert.Equal(t, expectedStats, actualStats, "Bad stats for %d sized string", length)
 		})
@@ -216,8 +216,8 @@ func Test_String_AppendString(t *testing.T) {
 
 				expectedString := firstStr + secondStr
 
-				firstRef := AllocStringFromString(os, firstStr)
-				resultRef := AppendString(os, firstRef, secondStr)
+				firstRef := os.AllocStringFromString(firstStr)
+				resultRef := os.AppendString(firstRef, secondStr)
 
 				assert.Equal(t, expectedString, resultRef.Value())
 				assert.Panics(t, func() { firstRef.Value() })
@@ -280,7 +280,7 @@ func Test_String_ConcatStrings(t *testing.T) {
 			expectedString += str
 		}
 
-		r := ConcatStrings(os, testCase.strs...)
+		r := os.ConcatStrings(testCase.strs...)
 		resultString := r.Value()
 
 		assert.Equal(t, expectedString, resultString)
