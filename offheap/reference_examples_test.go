@@ -89,7 +89,7 @@ func ExampleReference_refObject() {
 
 	// Create a RefObject
 	var store *offheap.Store = offheap.New()
-	var ref offheap.RefObject[int] = offheap.AllocObject[int](store)
+	var ref offheap.RefObject[int] = store.AllocObject[int]()
 	var intValue *int = ref.Value()
 	*intValue = 127
 

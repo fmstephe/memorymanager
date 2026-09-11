@@ -138,35 +138,35 @@ func (a *MultitypeAllocation) free(s *Store) {
 	ref := a.ref
 	switch t := ref.(type) {
 	case RefObject[SizedArrayZero]:
-		FreeObject[SizedArrayZero](s, t)
+		s.FreeObject[SizedArrayZero](t)
 	case RefObject[SizedArray0]:
-		FreeObject[SizedArray0](s, t)
+		s.FreeObject[SizedArray0](t)
 	case RefObject[SizedArray1]:
-		FreeObject[SizedArray1](s, t)
+		s.FreeObject[SizedArray1](t)
 	case RefObject[SizedArray2Small]:
-		FreeObject[SizedArray2Small](s, t)
+		s.FreeObject[SizedArray2Small](t)
 	case RefObject[SizedArray2]:
-		FreeObject[SizedArray2](s, t)
+		s.FreeObject[SizedArray2](t)
 	case RefObject[SizedArray2Large]:
-		FreeObject[SizedArray2Large](s, t)
+		s.FreeObject[SizedArray2Large](t)
 	case RefObject[SizedArray5Small]:
-		FreeObject[SizedArray5Small](s, t)
+		s.FreeObject[SizedArray5Small](t)
 	case RefObject[SizedArray5]:
-		FreeObject[SizedArray5](s, t)
+		s.FreeObject[SizedArray5](t)
 	case RefObject[SizedArray5Large]:
-		FreeObject[SizedArray5Large](s, t)
+		s.FreeObject[SizedArray5Large](t)
 	case RefObject[SizedArray9Small]:
-		FreeObject[SizedArray9Small](s, t)
+		s.FreeObject[SizedArray9Small](t)
 	case RefObject[SizedArray9]:
-		FreeObject[SizedArray9](s, t)
+		s.FreeObject[SizedArray9](t)
 	case RefObject[SizedArray9Large]:
-		FreeObject[SizedArray9Large](s, t)
+		s.FreeObject[SizedArray9Large](t)
 	case RefObject[SizedArray14Small]:
-		FreeObject[SizedArray14Small](s, t)
+		s.FreeObject[SizedArray14Small](t)
 	case RefObject[SizedArray14]:
-		FreeObject[SizedArray14](s, t)
+		s.FreeObject[SizedArray14](t)
 	case RefObject[SizedArray14Large]:
-		FreeObject[SizedArray14Large](s, t)
+		s.FreeObject[SizedArray14Large](t)
 	default:
 		panic(fmt.Errorf("Bad type %+v", t))
 	}
@@ -176,77 +176,77 @@ func multitypeAllocFunc(selector uint) func(*Store) *MultitypeAllocation {
 	switch selector % numberOfTypes {
 	case 0:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArrayZero](os)
+			r := os.AllocObject[SizedArrayZero]()
 			return &MultitypeAllocation{r}
 		}
 	case 1:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArray0](os)
+			r := os.AllocObject[SizedArray0]()
 			return &MultitypeAllocation{r}
 		}
 	case 2:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArray1](os)
+			r := os.AllocObject[SizedArray1]()
 			return &MultitypeAllocation{r}
 		}
 	case 3:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArray2Small](os)
+			r := os.AllocObject[SizedArray2Small]()
 			return &MultitypeAllocation{r}
 		}
 	case 4:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArray2](os)
+			r := os.AllocObject[SizedArray2]()
 			return &MultitypeAllocation{r}
 		}
 	case 5:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArray2Large](os)
+			r := os.AllocObject[SizedArray2Large]()
 			return &MultitypeAllocation{r}
 		}
 	case 6:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArray5Small](os)
+			r := os.AllocObject[SizedArray5Small]()
 			return &MultitypeAllocation{r}
 		}
 	case 7:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArray5](os)
+			r := os.AllocObject[SizedArray5]()
 			return &MultitypeAllocation{r}
 		}
 	case 8:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArray5Large](os)
+			r := os.AllocObject[SizedArray5Large]()
 			return &MultitypeAllocation{r}
 		}
 	case 9:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArray9Small](os)
+			r := os.AllocObject[SizedArray9Small]()
 			return &MultitypeAllocation{r}
 		}
 	case 10:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArray9](os)
+			r := os.AllocObject[SizedArray9]()
 			return &MultitypeAllocation{r}
 		}
 	case 11:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArray9Large](os)
+			r := os.AllocObject[SizedArray9Large]()
 			return &MultitypeAllocation{r}
 		}
 	case 12:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArray14Small](os)
+			r := os.AllocObject[SizedArray14Small]()
 			return &MultitypeAllocation{r}
 		}
 	case 13:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArray14](os)
+			r := os.AllocObject[SizedArray14]()
 			return &MultitypeAllocation{r}
 		}
 	case 14:
 		return func(os *Store) *MultitypeAllocation {
-			r := AllocObject[SizedArray14Large](os)
+			r := os.AllocObject[SizedArray14Large]()
 			return &MultitypeAllocation{r}
 		}
 	default:
@@ -306,12 +306,12 @@ func TestSizedStats(t *testing.T) {
 func testSizedStats[T any](t *testing.T, os *Store) {
 	expectedStats := StatsForType[T](os)
 
-	r1 := AllocObject[T](os)
-	r2 := AllocObject[T](os)
-	FreeObject[T](os, r1)
-	r3 := AllocObject[T](os)
-	FreeObject[T](os, r2)
-	FreeObject[T](os, r3)
+	r1 := os.AllocObject[T]()
+	r2 := os.AllocObject[T]()
+	os.FreeObject[T](r1)
+	r3 := os.AllocObject[T]()
+	os.FreeObject[T](r2)
+	os.FreeObject[T](r3)
 
 	expectedStats.Allocs = 3
 	expectedStats.Frees = 3

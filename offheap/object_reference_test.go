@@ -29,7 +29,7 @@ func Test_Object_NewModifyGet(t *testing.T) {
 	// Create all the objects and modify field
 	refs := make([]RefObject[MutableStruct], allocConf.ObjectsPerSlab*3)
 	for i := range refs {
-		r := AllocObject[MutableStruct](os)
+		r := os.AllocObject[MutableStruct]()
 		s := r.Value()
 		s.Field = i
 		refs[i] = r
@@ -63,7 +63,7 @@ func Test_Object_GetModifyGet(t *testing.T) {
 	// Create all the objects
 	refs := make([]RefObject[MutableStruct], allocConf.ObjectsPerSlab*3)
 	for i := range refs {
-		r := AllocObject[MutableStruct](os)
+		r := os.AllocObject[MutableStruct]()
 		refs[i] = r
 	}
 
@@ -94,8 +94,8 @@ func Test_Object_NewFreeGet_Panic(t *testing.T) {
 		assert.NoError(t, os.Destroy())
 	}()
 
-	r := AllocObject[MutableStruct](os)
-	FreeObject(os, r)
+	r := os.AllocObject[MutableStruct]()
+	os.FreeObject(r)
 
 	assert.Panics(t, func() { r.Value() })
 }
@@ -108,10 +108,10 @@ func Test_Object_NewFreeFree_Panic(t *testing.T) {
 		assert.NoError(t, os.Destroy())
 	}()
 
-	r := AllocObject[MutableStruct](os)
-	FreeObject(os, r)
+	r := os.AllocObject[MutableStruct]()
+	os.FreeObject(r)
 
-	assert.Panics(t, func() { FreeObject(os, r) })
+	assert.Panics(t, func() { os.FreeObject(r) })
 }
 
 // Demonstrate that when we double free a re-allocated object we panic
@@ -121,12 +121,12 @@ func Test_Object_NewFreeAllocFree_Panic(t *testing.T) {
 		assert.NoError(t, os.Destroy())
 	}()
 
-	r := AllocObject[MutableStruct](os)
-	FreeObject(os, r)
+	r := os.AllocObject[MutableStruct]()
+	os.FreeObject(r)
 	// This will re-allocate the just-freed object
-	AllocObject[MutableStruct](os)
+	os.AllocObject[MutableStruct]()
 
-	assert.Panics(t, func() { FreeObject(os, r) })
+	assert.Panics(t, func() { os.FreeObject(r) })
 }
 
 // Demonstrate that the gen check on Free suffers from the ABA problem.
@@ -138,20 +138,20 @@ func Test_Object_NewFree256ReallocFree_NoPanic(t *testing.T) {
 		assert.NoError(t, os.Destroy())
 	}()
 
-	r := AllocObject[MutableStruct](os)
+	r := os.AllocObject[MutableStruct]()
 	oldGen := r.ref.Gen()
-	FreeObject(os, r)
+	os.FreeObject(r)
 
 	// Keep allocating and free the slot until the gen overflows back to
 	// the oldGen value
-	temp := AllocObject[MutableStruct](os)
+	temp := os.AllocObject[MutableStruct]()
 	for temp.ref.Gen() != oldGen {
 		// This will re-allocate the just-freed object
-		FreeObject(os, temp)
-		temp = AllocObject[MutableStruct](os)
+		os.FreeObject(temp)
+		temp = os.AllocObject[MutableStruct]()
 	}
 
-	assert.NotPanics(t, func() { FreeObject(os, r) })
+	assert.NotPanics(t, func() { os.FreeObject(r) })
 }
 
 // Demonstrate that when we get a re-allocated object we panic
@@ -161,10 +161,10 @@ func Test_Object_NewFreeAllocGet_Panic(t *testing.T) {
 		assert.NoError(t, os.Destroy())
 	}()
 
-	r := AllocObject[MutableStruct](os)
-	FreeObject(os, r)
+	r := os.AllocObject[MutableStruct]()
+	os.FreeObject(r)
 	// This will re-allocate the just-freed object
-	AllocObject[MutableStruct](os)
+	os.AllocObject[MutableStruct]()
 
 	assert.Panics(t, func() { r.Value() })
 }
@@ -178,17 +178,17 @@ func Test_Object_NewFree256ReallocGet_NoPanic(t *testing.T) {
 		assert.NoError(t, os.Destroy())
 	}()
 
-	r := AllocObject[MutableStruct](os)
+	r := os.AllocObject[MutableStruct]()
 	oldGen := r.ref.Gen()
-	FreeObject(os, r)
+	os.FreeObject(r)
 
 	// Keep allocating and free the slot until the gen overflows back to
 	// the oldGen value
-	temp := AllocObject[MutableStruct](os)
+	temp := os.AllocObject[MutableStruct]()
 	for temp.ref.Gen() != oldGen {
 		// This will re-allocate the just-freed object
-		FreeObject(os, temp)
-		temp = AllocObject[MutableStruct](os)
+		os.FreeObject(temp)
+		temp = os.AllocObject[MutableStruct]()
 	}
 
 	assert.NotPanics(t, func() { r.Value() })
@@ -210,7 +210,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 	refs := make([]RefObject[MutableStruct], allocConf.ObjectsPerSlab*3)
 
 	for i := range refs {
-		r := AllocObject[MutableStruct](os)
+		r := os.AllocObject[MutableStruct]()
 		refs[i] = r
 	}
 
@@ -227,7 +227,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 
 	// Free all of those objects
 	for _, r := range refs {
-		FreeObject(os, r)
+		os.FreeObject(r)
 	}
 
 	stats = StatsForType[MutableStruct](os)
@@ -243,7 +243,7 @@ func Test_Object_NewFreeNew_ReusesOldObjects(t *testing.T) {
 
 	// Allocate the same number of objects again
 	for range refs {
-		AllocObject[MutableStruct](os)
+		os.AllocObject[MutableStruct]()
 	}
 
 	stats = StatsForType[MutableStruct](os)
@@ -273,23 +273,23 @@ func Test_Object_FreeThenAllocTwice(t *testing.T) {
 	}()
 
 	// Allocate an object
-	r1 := AllocObject[MutableStruct](os)
+	r1 := os.AllocObject[MutableStruct]()
 	o1 := r1.Value()
 	o1.Field = 1
 	// This is an original object - gen is 0
 	assert.Equal(t, byte(0), r1.ref.Gen())
 	// Free it
-	FreeObject(os, r1)
+	os.FreeObject(r1)
 
 	// Allocate another - this should reuse o1
-	r2 := AllocObject[MutableStruct](os)
+	r2 := os.AllocObject[MutableStruct]()
 	o2 := r2.Value()
 	o2.Field = 2
 	// This object is re-allocated - gen is 1
 	assert.Equal(t, byte(1), r2.ref.Gen())
 
 	// Allocate a third, this should be a non-recycled allocation
-	r3 := AllocObject[MutableStruct](os)
+	r3 := os.AllocObject[MutableStruct]()
 	o3 := r3.Value()
 	// This is an original object - gen is 0
 	assert.Equal(t, byte(0), r3.ref.Gen())
@@ -310,10 +310,10 @@ func Test_Object_CheckGenericTypeForPointersInAlloc(t *testing.T) {
 	}()
 
 	// If generic type contains pointers, Alloc will panic
-	assert.Panics(t, func() { AllocObject[*int](os) })
+	assert.Panics(t, func() { os.AllocObject[*int]() })
 
 	// If generic type does not contain pointers, Alloc will not panic
-	assert.NotPanics(t, func() { AllocObject[int](os) })
+	assert.NotPanics(t, func() { os.AllocObject[int]() })
 }
 
 func Test_Object_CannotAllocateVeryBigStruct(t *testing.T) {
@@ -360,7 +360,7 @@ func Test_Object_ZeroSizedType_FullSlab(t *testing.T) {
 	lenTotal := 0
 
 	for range allocConf.ObjectsPerSlab * 24 {
-		r := AllocObject[SizedArrayZero](os)
+		r := os.AllocObject[SizedArrayZero]()
 		lenTotal += len(r.Value().Field[:])
 	}
 

@@ -12,7 +12,7 @@ func BenchmarkAllocWriteRead(b *testing.B) {
 	refs := make([]RefObject[benchStruct], 0, b.N)
 
 	for range b.N {
-		ref := AllocObject[benchStruct](os)
+		ref := os.AllocObject[benchStruct]()
 		refs = append(refs, ref)
 	}
 

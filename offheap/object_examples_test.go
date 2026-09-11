@@ -13,10 +13,10 @@ import (
 // Calling AllocObject allocates an object and returns a RefObject which acts
 // like a conventional pointer through which you can retrieve the allocated
 // object via RefObject.Value()
-func ExampleAllocObject() {
+func ExampleStore_AllocObject() {
 	var store *offheap.Store = offheap.New()
 
-	var ref offheap.RefObject[int] = offheap.AllocObject[int](store)
+	var ref offheap.RefObject[int] = store.AllocObject[int]()
 	var i1 *int = ref.Value()
 
 	var i2 *int = ref.Value()
@@ -30,24 +30,24 @@ func ExampleAllocObject() {
 // You can free memory used by an an allocated object by calling
 // FreeObject(...). The RefObject can no longer be used, and the use of the
 // actual object pointed to will have unpredicatable results.
-func ExampleFreeObject() {
+func ExampleStore_FreeObject() {
 	var store *offheap.Store = offheap.New()
 
-	var ref offheap.RefObject[int] = offheap.AllocObject[int](store)
+	var ref offheap.RefObject[int] = store.AllocObject[int]()
 
-	offheap.FreeObject(store, ref)
+	store.FreeObject(ref)
 	// You must never use ref again
 }
 
 // You can free memory used by an an allocated object by calling
 // FreeObject(...). The RefObject can no longer be used, and the use of the
 // actual object pointed to will have unpredicatable results.
-func ExampleFreeObject_useAfterFreePanics() {
+func ExampleStore_FreeObject_useAfterFreePanics() {
 	var store *offheap.Store = offheap.New()
 
-	var ref offheap.RefObject[int] = offheap.AllocObject[int](store)
+	var ref offheap.RefObject[int] = store.AllocObject[int]()
 
-	offheap.FreeObject(store, ref)
+	store.FreeObject(ref)
 	// You must never use ref again
 
 	defer func() {
@@ -63,7 +63,7 @@ func ExampleFreeObject_useAfterFreePanics() {
 // You can allocate objects of complex types, including types with fields which
 // are also of type RefObject. This allows us to build large datastructures,
 // like trees in this example.
-func ExampleAllocObject_complexType() {
+func ExampleStore_AllocObject_complexType() {
 	type Node struct {
 		left  offheap.RefObject[Node]
 		right offheap.RefObject[Node]
@@ -71,15 +71,15 @@ func ExampleAllocObject_complexType() {
 
 	var store *offheap.Store = offheap.New()
 
-	var refParent offheap.RefObject[Node] = offheap.AllocObject[Node]((store))
+	var refParent offheap.RefObject[Node] = store.AllocObject[Node]()
 
 	var parent *Node = refParent.Value()
 
-	var refLeft offheap.RefObject[Node] = offheap.AllocObject[Node]((store))
+	var refLeft offheap.RefObject[Node] = store.AllocObject[Node]()
 
 	parent.left = refLeft
 
-	var refRight offheap.RefObject[Node] = offheap.AllocObject[Node]((store))
+	var refRight offheap.RefObject[Node] = store.AllocObject[Node]()
 
 	parent.right = refRight
 
@@ -94,7 +94,7 @@ func ExampleAllocObject_complexType() {
 
 // You cannot allocate a string type. Strings contain pointers interally and
 // are not allowed.
-func ExampleAllocObject_badTypeString() {
+func ExampleStore_AllocObject_badTypeString() {
 	type BadStruct struct {
 		//lint:ignore U1000 this field looks unused but is observed by reflection
 		stringsHavePointers string
@@ -107,13 +107,13 @@ func ExampleAllocObject_badTypeString() {
 	}()
 
 	var store *offheap.Store = offheap.New()
-	offheap.AllocObject[BadStruct](store)
+	store.AllocObject[BadStruct]()
 	// Output: Can't allocate strings
 }
 
 // You cannot allocate a map type. Maps contain pointers interally and
 // are not allowed.
-func ExampleAllocObject_badTypeMap() {
+func ExampleStore_AllocObject_badTypeMap() {
 	type BadStruct struct {
 		//lint:ignore U1000 this field looks unused but is observed by reflection
 		mapsHavePointers map[int]int
@@ -126,13 +126,13 @@ func ExampleAllocObject_badTypeMap() {
 	}()
 
 	var store *offheap.Store = offheap.New()
-	offheap.AllocObject[BadStruct](store)
+	store.AllocObject[BadStruct]()
 	// Output: Can't allocate maps
 }
 
 // You cannot allocate a slice type. Slices contain pointers interally and
 // are not allowed.
-func ExampleAllocObject_badTypeSlice() {
+func ExampleStore_AllocObject_badTypeSlice() {
 	type BadStruct struct {
 		//lint:ignore U1000 this field looks unused but is observed by reflection
 		slicesHavePointers []int
@@ -145,12 +145,12 @@ func ExampleAllocObject_badTypeSlice() {
 	}()
 
 	var store *offheap.Store = offheap.New()
-	offheap.AllocObject[BadStruct](store)
+	store.AllocObject[BadStruct]()
 	// Output: Can't allocate slices (as an object)
 }
 
 // You cannot allocate a pointer type (obviously).
-func ExampleAllocObject_badTypePointer() {
+func ExampleStore_AllocObject_badTypePointer() {
 	type BadStruct struct {
 		//lint:ignore U1000 this field looks unused but is observed by reflection
 		pointersHavePointers *int
@@ -163,6 +163,6 @@ func ExampleAllocObject_badTypePointer() {
 	}()
 
 	var store *offheap.Store = offheap.New()
-	offheap.AllocObject[BadStruct](store)
+	store.AllocObject[BadStruct]()
 	// Output: Can't allocate pointers
 }

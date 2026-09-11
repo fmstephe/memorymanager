@@ -18,7 +18,7 @@ import (
 // The values of fields in the newly allocated object will be arbitrary. Unlike
 // Go allocations objects acquired via AllocObject do _not_ have their contents
 // zeroed out.
-func AllocObject[T any](s *Store) RefObject[T] {
+func (s *Store) AllocObject[T any]() RefObject[T] {
 	t := reflect.TypeFor[T]()
 	s.checker.checkType(t)
 
@@ -32,7 +32,7 @@ func AllocObject[T any](s *Store) RefObject[T] {
 // Frees the allocation referenced by r. After this call returns r must never
 // be used again. Any use of the object referenced by r will have
 // unpredicatable behaviour.
-func FreeObject[T any](s *Store, r RefObject[T]) {
+func (s *Store) FreeObject[T any](r RefObject[T]) {
 	idx := indexForType[T]()
 	s.free(idx, r.ref)
 }
