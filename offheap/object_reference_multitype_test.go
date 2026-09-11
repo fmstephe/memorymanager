@@ -138,35 +138,35 @@ func (a *MultitypeAllocation) free(s *Store) {
 	ref := a.ref
 	switch t := ref.(type) {
 	case RefObject[SizedArrayZero]:
-		s.FreeObject[SizedArrayZero](t)
+		s.FreeObject(t)
 	case RefObject[SizedArray0]:
-		s.FreeObject[SizedArray0](t)
+		s.FreeObject(t)
 	case RefObject[SizedArray1]:
-		s.FreeObject[SizedArray1](t)
+		s.FreeObject(t)
 	case RefObject[SizedArray2Small]:
-		s.FreeObject[SizedArray2Small](t)
+		s.FreeObject(t)
 	case RefObject[SizedArray2]:
-		s.FreeObject[SizedArray2](t)
+		s.FreeObject(t)
 	case RefObject[SizedArray2Large]:
-		s.FreeObject[SizedArray2Large](t)
+		s.FreeObject(t)
 	case RefObject[SizedArray5Small]:
-		s.FreeObject[SizedArray5Small](t)
+		s.FreeObject(t)
 	case RefObject[SizedArray5]:
-		s.FreeObject[SizedArray5](t)
+		s.FreeObject(t)
 	case RefObject[SizedArray5Large]:
-		s.FreeObject[SizedArray5Large](t)
+		s.FreeObject(t)
 	case RefObject[SizedArray9Small]:
-		s.FreeObject[SizedArray9Small](t)
+		s.FreeObject(t)
 	case RefObject[SizedArray9]:
-		s.FreeObject[SizedArray9](t)
+		s.FreeObject(t)
 	case RefObject[SizedArray9Large]:
-		s.FreeObject[SizedArray9Large](t)
+		s.FreeObject(t)
 	case RefObject[SizedArray14Small]:
-		s.FreeObject[SizedArray14Small](t)
+		s.FreeObject(t)
 	case RefObject[SizedArray14]:
-		s.FreeObject[SizedArray14](t)
+		s.FreeObject(t)
 	case RefObject[SizedArray14Large]:
-		s.FreeObject[SizedArray14Large](t)
+		s.FreeObject(t)
 	default:
 		panic(fmt.Errorf("Bad type %+v", t))
 	}
@@ -308,10 +308,10 @@ func testSizedStats[T any](t *testing.T, os *Store) {
 
 	r1 := os.AllocObject[T]()
 	r2 := os.AllocObject[T]()
-	os.FreeObject[T](r1)
+	os.FreeObject(r1)
 	r3 := os.AllocObject[T]()
-	os.FreeObject[T](r2)
-	os.FreeObject[T](r3)
+	os.FreeObject(r2)
+	os.FreeObject(r3)
 
 	expectedStats.Allocs = 3
 	expectedStats.Frees = 3

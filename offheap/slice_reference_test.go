@@ -185,10 +185,10 @@ func Test_Slice_SizedStats(t *testing.T) {
 
 			r1 := os.AllocSlice[MutableStruct](capacity, capacity)
 			r2 := os.AllocSlice[MutableStruct](capacity, capacity)
-			os.FreeSlice[MutableStruct](r1)
+			os.FreeSlice(r1)
 			r3 := os.AllocSlice[MutableStruct](capacity, capacity)
-			os.FreeSlice[MutableStruct](r2)
-			os.FreeSlice[MutableStruct](r3)
+			os.FreeSlice(r2)
+			os.FreeSlice(r3)
 
 			expectedStats.Allocs = 3
 			expectedStats.Frees = 3
